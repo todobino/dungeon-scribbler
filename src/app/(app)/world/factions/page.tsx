@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { FACTION_REPUTATION_SCALE, getFactionReputationLabel, getFactionReputationColorClass } from "@/lib/constants";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const FACTIONS_STORAGE_KEY_PREFIX = 'dungeonScribblerFactions_';
 const getFactionsStorageKey = (campaignId: string) => `${FACTIONS_STORAGE_KEY_PREFIX}${campaignId}`;
