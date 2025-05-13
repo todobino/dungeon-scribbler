@@ -12,12 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, ShieldCheck, Users, Trash2, Edit3, Eye, Library, Target, Activity, FileText, UserCircle2, Home, Link2 } from "lucide-react";
+import { PlusCircle, ShieldCheck, Users, Trash2, Edit3, Eye, Library, Target, Activity, FileText, UserCircle2, Home, Link2, UserCog, Brain, Users2, Clapperboard, Wand2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { FACTION_REPUTATION_SCALE, getFactionReputationLabel, getFactionReputationColorClass } from "@/lib/constants";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { generateFactionIntroduction, type GenerateFactionIntroductionInput } from "@/ai/flows/faction-intro-generator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const FACTIONS_STORAGE_KEY_PREFIX = 'dungeonScribblerFactions_';
 const getFactionsStorageKey = (campaignId: string) => `${FACTIONS_STORAGE_KEY_PREFIX}${campaignId}`;
@@ -28,6 +30,7 @@ export default function FactionsPage() {
 
   const [factions, setFactions] = useState<Faction[]>([]);
   const [isLoadingFactions, setIsLoadingFactions] = useState(true);
+  const [isGeneratingIntro, setIsGeneratingIntro] = useState(false);
 
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -43,6 +46,10 @@ export default function FactionsPage() {
     headquarters: "",
     allies: "",
     enemies: "",
+    lieutenant: "",
+    philosophy: "",
+    supportingCast: "",
+    introductionScene: "",
   };
   const [factionFormData, setFactionFormData] = useState(initialFormState);
 
@@ -63,8 +70,8 @@ export default function FactionsPage() {
         setFactions([]);
       }
       setIsLoadingFactions(false);
-    } else if (!isLoadingCampaigns) { // if no active campaign and campaigns are loaded
-      setFactions([]); // Clear factions if no active campaign
+    } else if (!isLoadingCampaigns) { 
+      setFactions([]); 
       setIsLoadingFactions(false);
     }
   }, [activeCampaign, isLoadingCampaigns]);
@@ -90,10 +97,37 @@ export default function FactionsPage() {
     setFactionFormData(prev => ({ ...prev, reputation: value[0] }));
   };
 
+  const handleGenerateIntroScene = async () => {
+    if (!factionFormData.name || !activeCampaign) {
+      toast({ title: "Missing Information", description: "Faction Name is required to generate an introduction.", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingIntro(true);
+    try {
+      const input: GenerateFactionIntroductionInput = {
+        factionName: factionFormData.name,
+        factionGoals: factionFormData.goals,
+        factionPhilosophy: factionFormData.philosophy,
+        factionLeader: factionFormData.leader,
+        factionLieutenant: factionFormData.lieutenant,
+        factionSupportingCast: factionFormData.supportingCast,
+        factionReputation: factionFormData.reputation,
+        campaignSetting: activeCampaign.name,
+      };
+      const result = await generateFactionIntroduction(input);
+      setFactionFormData(prev => ({ ...prev, introductionScene: result.introductionScene }));
+      toast({ title: "Introduction Scene Generated!", description: "The scene has been added to the form." });
+    } catch (error) {
+      console.error("Error generating introduction scene:", error);
+      toast({ title: "Generation Failed", description: "Could not generate introduction scene. Please try again.", variant: "destructive" });
+    }
+    setIsGeneratingIntro(false);
+  };
+
   const handleSubmitFaction = () => {
     if (!activeCampaign) return;
     if (!factionFormData.name.trim() || !factionFormData.goals.trim()) {
-      toast({ title: "Missing Information", description: "Faction Name and Goals are required.", variant: "destructive" });
+      toast({ title: "Missing Information", description: "Faction Name and Primary Goals are required.", variant: "destructive" });
       return;
     }
 
@@ -132,6 +166,10 @@ export default function FactionsPage() {
       headquarters: faction.headquarters || "",
       allies: faction.allies || "",
       enemies: faction.enemies || "",
+      lieutenant: faction.lieutenant || "",
+      philosophy: faction.philosophy || "",
+      supportingCast: faction.supportingCast || "",
+      introductionScene: faction.introductionScene || "",
     });
     setIsFormDialogOpen(true);
   };
@@ -151,8 +189,8 @@ export default function FactionsPage() {
     const colorClass = getFactionReputationColorClass(reputation);
     
     let badgeVariant: "default" | "secondary" | "destructive" = "secondary";
-    if (reputation >= FACTION_REPUTATION_SCALE.MAX - 2) badgeVariant = "default"; // Allied / Trusted
-    else if (reputation <= FACTION_REPUTATION_SCALE.MIN + 2) badgeVariant = "destructive"; // Sworn Enemy / Hostile
+    if (reputation >= FACTION_REPUTATION_SCALE.MAX - 2) badgeVariant = "default";
+    else if (reputation <= FACTION_REPUTATION_SCALE.MIN + 2) badgeVariant = "destructive";
 
     return <Badge variant={badgeVariant} className={cn(colorClass, "font-semibold")}>{label}</Badge>;
   };
@@ -183,7 +221,7 @@ export default function FactionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Factions</h1>
+        <h1 className="text-3xl font-bold">Factions in {activeCampaign.name}</h1>
         <Button onClick={openAddDialog}>
           <PlusCircle className="mr-2 h-5 w-5" /> Add New Faction
         </Button>
@@ -223,6 +261,12 @@ export default function FactionsPage() {
                   <Target className="h-5 w-5 mt-0.5 text-primary shrink-0" />
                   <p className="text-sm text-muted-foreground line-clamp-3"><span className="font-medium text-card-foreground">Goals:</span> {faction.goals}</p>
                 </div>
+                 {faction.philosophy && (
+                    <div className="flex items-start gap-2 mb-2">
+                        <Brain className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                        <p className="text-sm text-muted-foreground line-clamp-2"><span className="font-medium text-card-foreground">Philosophy:</span> {faction.philosophy}</p>
+                    </div>
+                 )}
               </CardContent>
               <CardFooter className="flex justify-between gap-2">
                 <Button variant="outline" size="sm" onClick={() => openViewDialog(faction)} className="flex-1">
@@ -260,7 +304,7 @@ export default function FactionsPage() {
                 <Input id="name" name="name" value={factionFormData.name} onChange={handleInputChange} placeholder="e.g., The Shadow Syndicate" />
               </div>
               <div>
-                <Label htmlFor="goals" className="flex items-center gap-1"><Target className="h-4 w-4" />Goals*</Label>
+                <Label htmlFor="goals" className="flex items-center gap-1"><Target className="h-4 w-4" />Primary Goals*</Label>
                 <Textarea id="goals" name="goals" value={factionFormData.goals} onChange={handleInputChange} placeholder="Describe the faction's primary objectives..." rows={3} />
               </div>
               <div>
@@ -286,8 +330,29 @@ export default function FactionsPage() {
                 <Input id="leader" name="leader" value={factionFormData.leader} onChange={handleInputChange} placeholder="e.g., Lord Valerius" />
               </div>
               <div>
+                <Label htmlFor="lieutenant" className="flex items-center gap-1"><UserCog className="h-4 w-4" />Lieutenant (Optional)</Label>
+                <Input id="lieutenant" name="lieutenant" value={factionFormData.lieutenant} onChange={handleInputChange} placeholder="e.g., Commander Anya Sharma" />
+              </div>
+              <div>
                 <Label htmlFor="headquarters" className="flex items-center gap-1"><Home className="h-4 w-4" />Headquarters (Optional)</Label>
                 <Input id="headquarters" name="headquarters" value={factionFormData.headquarters} onChange={handleInputChange} placeholder="e.g., The Obsidian Spire" />
+              </div>
+              <div>
+                <Label htmlFor="philosophy" className="flex items-center gap-1"><Brain className="h-4 w-4" />Philosophy/Ideology (Optional)</Label>
+                <Textarea id="philosophy" name="philosophy" value={factionFormData.philosophy} onChange={handleInputChange} placeholder="Describe the faction's core beliefs, values, or methods..." rows={3} />
+              </div>
+               <div>
+                <Label htmlFor="supportingCast" className="flex items-center gap-1"><Users2 className="h-4 w-4" />Supporting Cast (Optional)</Label>
+                <Textarea id="supportingCast" name="supportingCast" value={factionFormData.supportingCast} onChange={handleInputChange} placeholder="Key members, notable figures, contacts..." rows={3} />
+              </div>
+              <div>
+                <Label htmlFor="introductionScene" className="flex items-center gap-1"><Clapperboard className="h-4 w-4" />Introduction Scene (Optional)</Label>
+                <Textarea id="introductionScene" name="introductionScene" value={factionFormData.introductionScene} onChange={handleInputChange} placeholder="How might the party first encounter or hear about this faction?" rows={4} />
+                <Button onClick={handleGenerateIntroScene} disabled={isGeneratingIntro || !factionFormData.name} variant="outline" size="sm" className="mt-2">
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  {isGeneratingIntro ? "Generating..." : "Generate with AI"}
+                </Button>
+                {isGeneratingIntro && <Skeleton className="h-20 w-full mt-2" />}
               </div>
               <div>
                 <Label htmlFor="allies" className="flex items-center gap-1"><Link2 className="h-4 w-4" />Allies (Optional)</Label>
@@ -305,7 +370,7 @@ export default function FactionsPage() {
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsFormDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitFaction}>{editingFaction ? "Save Changes" : "Add Faction"}</Button>
+            <Button onClick={handleSubmitFaction} disabled={isGeneratingIntro}>{editingFaction ? "Save Changes" : "Add Faction"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -324,9 +389,13 @@ export default function FactionsPage() {
               </DialogHeader>
               <ScrollArea className="max-h-[70vh] p-1 pr-3">
                 <div className="space-y-4 py-4">
-                  <div><h4 className="font-semibold text-primary flex items-center gap-1"><Target className="h-4 w-4"/>Goals:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.goals}</p></div>
+                  <div><h4 className="font-semibold text-primary flex items-center gap-1"><Target className="h-4 w-4"/>Primary Goals:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.goals}</p></div>
                   {viewingFaction.leader && <div><h4 className="font-semibold text-primary flex items-center gap-1"><UserCircle2 className="h-4 w-4"/>Leader:</h4><p className="text-sm pl-5">{viewingFaction.leader}</p></div>}
+                  {viewingFaction.lieutenant && <div><h4 className="font-semibold text-primary flex items-center gap-1"><UserCog className="h-4 w-4"/>Lieutenant:</h4><p className="text-sm pl-5">{viewingFaction.lieutenant}</p></div>}
                   {viewingFaction.headquarters && <div><h4 className="font-semibold text-primary flex items-center gap-1"><Home className="h-4 w-4"/>Headquarters:</h4><p className="text-sm pl-5">{viewingFaction.headquarters}</p></div>}
+                  {viewingFaction.philosophy && <div><h4 className="font-semibold text-primary flex items-center gap-1"><Brain className="h-4 w-4"/>Philosophy:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.philosophy}</p></div>}
+                  {viewingFaction.supportingCast && <div><h4 className="font-semibold text-primary flex items-center gap-1"><Users2 className="h-4 w-4"/>Supporting Cast:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.supportingCast}</p></div>}
+                  {viewingFaction.introductionScene && <div><h4 className="font-semibold text-primary flex items-center gap-1"><Clapperboard className="h-4 w-4"/>Introduction Scene:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.introductionScene}</p></div>}
                   {viewingFaction.allies && <div><h4 className="font-semibold text-primary flex items-center gap-1"><Link2 className="h-4 w-4"/>Allies:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.allies}</p></div>}
                   {viewingFaction.enemies && <div><h4 className="font-semibold text-primary flex items-center gap-1"><Link2 className="h-4 w-4"/>Enemies:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.enemies}</p></div>}
                   {viewingFaction.notes && <div><h4 className="font-semibold text-primary flex items-center gap-1"><FileText className="h-4 w-4"/>Notes:</h4><p className="text-sm whitespace-pre-wrap pl-5">{viewingFaction.notes}</p></div>}
@@ -347,3 +416,4 @@ export default function FactionsPage() {
     </div>
   );
 }
+
