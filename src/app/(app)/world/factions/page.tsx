@@ -1,7 +1,6 @@
-
 "use client";
 
-import type { Faction } from "@/lib/types";
+import type { Faction, NPC, Location } from "@/lib/types";
 import { useState, useEffect, useCallback } from "react";
 import { useCampaign } from "@/contexts/campaign-context";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const FACTIONS_STORAGE_KEY_PREFIX = 'dungeonScribblerFactions_';
 const getFactionsStorageKey = (campaignId: string) => `${FACTIONS_STORAGE_KEY_PREFIX}${campaignId}`;
+
+const NPCS_STORAGE_KEY = 'dungeonScribblerNpcs'; // Global NPC list
+const LOCATIONS_STORAGE_KEY_PREFIX = 'dungeonScribblerLocations_';
+const getLocationsStorageKey = (campaignId: string) => `${LOCATIONS_STORAGE_KEY_PREFIX}${campaignId}`;
+
 
 export default function FactionsPage() {
   const { activeCampaign, isLoadingCampaigns } = useCampaign();
@@ -124,6 +128,50 @@ export default function FactionsPage() {
     setIsGeneratingIntro(false);
   };
 
+  const ensureNpcExists = (name: string, role: string, factionName: string) => {
+    if (!name.trim()) return;
+    try {
+      const storedNpcs = localStorage.getItem(NPCS_STORAGE_KEY);
+      let npcsList: NPC[] = storedNpcs ? JSON.parse(storedNpcs) : [];
+      if (!npcsList.find(npc => npc.name === name.trim())) {
+        const newNpc: NPC = {
+          id: Date.now().toString() + Math.random().toString(36).substring(2,7), // more unique id
+          name: name.trim(),
+          description: `${role} of ${factionName}`,
+          occupation: role,
+          // Other NPC fields can be populated later via NPC Builder
+        };
+        npcsList.push(newNpc);
+        localStorage.setItem(NPCS_STORAGE_KEY, JSON.stringify(npcsList));
+      }
+    } catch (error) {
+      console.error(`Failed to ensure NPC "${name}" exists:`, error);
+    }
+  };
+
+  const ensureLocationExists = (name: string, factionName: string, campaignId: string) => {
+    if (!name.trim()) return;
+    try {
+      const locationsKey = getLocationsStorageKey(campaignId);
+      const storedLocations = localStorage.getItem(locationsKey);
+      let locationsList: Location[] = storedLocations ? JSON.parse(storedLocations) : [];
+      if (!locationsList.find(loc => loc.name === name.trim())) {
+        const newLocation: Location = {
+          id: Date.now().toString() + Math.random().toString(36).substring(2,7),
+          campaignId: campaignId,
+          name: name.trim(),
+          description: `Headquarters of ${factionName}`,
+          // Other Location fields can be populated later
+        };
+        locationsList.push(newLocation);
+        localStorage.setItem(locationsKey, JSON.stringify(locationsList));
+      }
+    } catch (error) {
+      console.error(`Failed to ensure Location "${name}" exists:`, error);
+    }
+  };
+
+
   const handleSubmitFaction = () => {
     if (!activeCampaign) return;
     if (!factionFormData.name.trim() || !factionFormData.goals.trim()) {
@@ -131,19 +179,33 @@ export default function FactionsPage() {
       return;
     }
 
+    let currentFaction: Faction;
+
     if (editingFaction) {
-      const updatedFaction: Faction = { ...editingFaction, ...factionFormData };
-      setFactions(factions.map(f => f.id === updatedFaction.id ? updatedFaction : f));
-      toast({ title: "Faction Updated", description: `"${updatedFaction.name}" has been updated.` });
+      currentFaction = { ...editingFaction, ...factionFormData };
+      setFactions(factions.map(f => f.id === currentFaction.id ? currentFaction : f));
+      toast({ title: "Faction Updated", description: `"${currentFaction.name}" has been updated.` });
     } else {
-      const newFaction: Faction = {
+      currentFaction = {
         ...factionFormData,
         id: Date.now().toString(),
         campaignId: activeCampaign.id,
       };
-      setFactions([...factions, newFaction]);
-      toast({ title: "Faction Added", description: `"${newFaction.name}" has been added.` });
+      setFactions([...factions, currentFaction]);
+      toast({ title: "Faction Added", description: `"${currentFaction.name}" has been added.` });
     }
+
+    // Ensure NPCs and Locations exist
+    if (currentFaction.leader) {
+      ensureNpcExists(currentFaction.leader, "Leader", currentFaction.name);
+    }
+    if (currentFaction.lieutenant) {
+      ensureNpcExists(currentFaction.lieutenant, "Lieutenant", currentFaction.name);
+    }
+    if (currentFaction.headquarters) {
+      ensureLocationExists(currentFaction.headquarters, currentFaction.name, activeCampaign.id);
+    }
+    
     setIsFormDialogOpen(false);
     setEditingFaction(null);
     setFactionFormData(initialFormState);
@@ -252,6 +314,11 @@ export default function FactionsPage() {
                 <CardDescription className="flex items-center gap-1 text-sm">
                   <UserCircle2 className="h-4 w-4" /> Leader: {faction.leader || "N/A"}
                 </CardDescription>
+                {faction.lieutenant && (
+                    <CardDescription className="flex items-center gap-1 text-sm">
+                        <UserCog className="h-4 w-4" /> Lieutenant: {faction.lieutenant}
+                    </CardDescription>
+                )}
                  <CardDescription className="flex items-center gap-1 text-sm">
                   <Home className="h-4 w-4" /> HQ: {faction.headquarters || "N/A"}
                 </CardDescription>
@@ -416,4 +483,3 @@ export default function FactionsPage() {
     </div>
   );
 }
-

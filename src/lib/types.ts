@@ -88,7 +88,7 @@ export interface Faction {
   id: string;
   campaignId: string; // Associate faction with a specific campaign
   name: string;
-  goals: string; // Renamed from 'goal' to 'goals' to match page usage
+  goals: string; 
   reputation: number; // Scale from -5 (Sworn Enemy) to 5 (Sworn Ally)
   notes?: string;
   leader?: string;
@@ -97,7 +97,16 @@ export interface Faction {
   enemies?: string; // Text description of enemy groups/factions
   lieutenant?: string;
   philosophy?: string;
-  supportingCast?: string; // Comma-separated list or free text
+  supportingCast?: string; 
   introductionScene?: string;
 }
 
+export interface Location {
+  id: string;
+  campaignId: string; 
+  name: string;
+  description?: string;
+  mapId?: string; 
+  factionId?: string; 
+  notes?: string;
+}
