@@ -78,4 +78,7 @@ export interface Combatant {
   type: 'player' | 'enemy';
   color?: string; // For player characters
   playerId?: string; // To link back to PlayerCharacter if needed
+  ac?: number;      // Armor Class
+  hp?: number;      // Max Hit Points
+  currentHp?: number; // Current Hit Points
 }

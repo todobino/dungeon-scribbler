@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5 } from "lucide-react";
+import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5, Heart, Shield } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { rollDie } from "@/lib/dice-utils";
 
@@ -35,6 +35,11 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>(""); 
   const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
   const [rollEnemyInitiativeFlag, setRollEnemyInitiativeFlag] = useState<boolean>(false);
+  const [enemyAC, setEnemyAC] = useState<string>("");
+  const [enemyHP, setEnemyHP] = useState<string>("");
+  
+  const [damageInputs, setDamageInputs] = useState<Record<string, string>>({});
+
 
   const combatantRefs = useRef<Map<string, HTMLLIElement | null>>(new Map());
 
@@ -81,15 +86,16 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     }
 
     const newCombatant: Combatant = {
-      id: `${uniqueId}-player-${selectedPlayerToAdd.id}-${Date.now()}`, // Added Date.now() for more uniqueness
+      id: `${uniqueId}-player-${selectedPlayerToAdd.id}-${Date.now()}`,
       name: selectedPlayerToAdd.name,
       initiative: initiativeValue,
       type: 'player',
       color: selectedPlayerToAdd.color,
       playerId: selectedPlayerToAdd.id,
+      // AC for players will be read from activeCampaignParty directly
     };
     setCombatants(prev => [...prev, newCombatant]);
-    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0); // Set turn if it's the first combatant
+    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0);
     setIsAddPlayerDialogOpen(false);
     setSelectedPlayerToAdd(null);
     setPlayerInitiative("");
@@ -106,6 +112,19 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
       console.error("Invalid Quantity: Must be a positive number.");
       return;
     }
+
+    const acValue = enemyAC.trim() === "" ? undefined : parseInt(enemyAC);
+    const hpValue = enemyHP.trim() === "" ? undefined : parseInt(enemyHP);
+
+    if (enemyAC.trim() !== "" && (isNaN(acValue!) || acValue! < 0) ) {
+        console.error("Invalid AC: Must be a non-negative number.");
+        return;
+    }
+    if (enemyHP.trim() !== "" && (isNaN(hpValue!) || hpValue! <= 0)) {
+        console.error("Invalid HP: Must be a positive number.");
+        return;
+    }
+
 
     const newEnemies: Combatant[] = [];
 
@@ -133,24 +152,59 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         name: currentEnemyName,
         initiative: initiativeValue,
         type: 'enemy',
+        ac: acValue,
+        hp: hpValue,
+        currentHp: hpValue,
       });
     }
     
     setCombatants(prev => [...prev, ...newEnemies]);
-    if (currentTurnIndex === null && combatants.length === 0 && newEnemies.length > 0) setCurrentTurnIndex(0); // Set turn if these are the first combatants
+    if (currentTurnIndex === null && combatants.length === 0 && newEnemies.length > 0) setCurrentTurnIndex(0);
     
     setIsAddEnemyDialogOpen(false);
     setEnemyName("");
     setEnemyInitiativeInput("");
     setEnemyQuantityInput("1");
     setRollEnemyInitiativeFlag(false);
+    setEnemyAC("");
+    setEnemyHP("");
+  };
+
+  const handleDamageInputChange = (combatantId: string, value: string) => {
+    setDamageInputs(prev => ({ ...prev, [combatantId]: value }));
+  };
+
+  const handleApplyDamage = (combatantId: string, type: 'damage' | 'heal') => {
+    const amountStr = damageInputs[combatantId];
+    if (!amountStr) return;
+    const amount = parseInt(amountStr);
+    if (isNaN(amount) || amount <= 0) {
+      console.error("Invalid amount: Must be a positive number.");
+      return;
+    }
+
+    setCombatants(prevCombatants =>
+      prevCombatants.map(combatant => {
+        if (combatant.id === combatantId && combatant.type === 'enemy' && combatant.hp !== undefined) {
+          let newHp = combatant.currentHp ?? combatant.hp!; // Fallback to max HP if currentHP is somehow undefined
+          if (type === 'damage') {
+            newHp = Math.max(0, newHp - amount);
+          } else { // heal
+            newHp = Math.min(combatant.hp!, newHp + amount);
+          }
+          return { ...combatant, currentHp: newHp };
+        }
+        return combatant;
+      })
+    );
+    setDamageInputs(prev => ({ ...prev, [combatantId]: "" })); // Clear input
   };
 
   const removeCombatant = (id: string) => {
     const combatantToRemoveIndex = combatants.findIndex(c => c.id === id);
     setCombatants(prev => {
         const newCombatants = prev.filter(c => c.id !== id);
-        combatantRefs.current.delete(id); // Clean up ref
+        combatantRefs.current.delete(id); 
 
         if (newCombatants.length === 0) {
             setCurrentTurnIndex(null);
@@ -159,7 +213,6 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                 if (currentTurnIndex >= newCombatants.length) {
                     setCurrentTurnIndex(newCombatants.length > 0 ? newCombatants.length - 1 : null);
                 }
-                // else, currentTurnIndex remains valid for the new item at that position or will be handled by next/prev
             } else if (combatantToRemoveIndex < currentTurnIndex) {
                 setCurrentTurnIndex(currentTurnIndex - 1);
             }
@@ -182,6 +235,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     setCombatants([]);
     setCurrentTurnIndex(null);
     combatantRefs.current.clear();
+    setDamageInputs({});
   };
 
   const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
@@ -212,19 +266,63 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                   <li 
                     key={c.id}
                     ref={(el) => combatantRefs.current.set(c.id, el)}
-                    className={`p-2.5 rounded-md flex items-center justify-between transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
+                    className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
                     style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
                   >
-                    <div className="flex items-center">
-                      <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
-                      <div>
-                        <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
-                        <p className="text-xs text-muted-foreground">{c.type === 'player' ? 'Player' : 'Enemy'}</p>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center">
+                        <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
+                        <div>
+                          <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {c.type === 'player' ? 'Player' : 'Enemy'}
+                            {c.type === 'player' && (() => {
+                              const player = activeCampaignParty.find(p => p.id === c.playerId);
+                              return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null;
+                            })()}
+                          </p>
+                        </div>
                       </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeCombatant(c.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeCombatant(c.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
+                    {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground border-t border-border pt-1.5 mt-1">
+                        {c.ac !== undefined && <div className="flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> AC: {c.ac}</div>}
+                        {c.hp !== undefined && <div className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> HP: {c.currentHp ?? c.hp}/{c.hp}</div>}
+                      </div>
+                    )}
+
+                    {c.type === 'enemy' && c.hp !== undefined && (
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <Input
+                          type="number"
+                          placeholder="Amt"
+                          className="h-8 text-sm w-20 px-2 py-1"
+                          value={damageInputs[c.id] || ""}
+                          onChange={(e) => handleDamageInputChange(c.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="px-2 py-1 h-8 text-xs"
+                          onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}
+                        >
+                          Hit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700"
+                          onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}
+                        >
+                          Heal
+                        </Button>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -266,7 +364,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                 >
                   <option value="" disabled>Select a player</option>
                   {availablePartyMembers.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (Lvl {p.level} {p.race} {p.class})</option>
+                    <option key={p.id} value={p.id}>{p.name} (Lvl {p.level} {p.race} {p.class} - AC: {p.armorClass})</option>
                   ))}
                 </select>
               ) : (
@@ -297,6 +395,16 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
               <Label htmlFor="enemy-name">Enemy Name</Label>
               <Input id="enemy-name" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} placeholder="e.g., Goblin" />
             </div>
+             <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="enemy-ac">AC (Optional)</Label>
+                <Input id="enemy-ac" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} placeholder="e.g., 13" />
+              </div>
+              <div>
+                <Label htmlFor="enemy-hp">HP (Optional)</Label>
+                <Input id="enemy-hp" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} placeholder="e.g., 7" />
+              </div>
+            </div>
             <div>
               <Label htmlFor="enemy-quantity">Quantity</Label>
               <Input id="enemy-quantity" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} placeholder="1" min="1" />
@@ -325,6 +433,8 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
               setEnemyInitiativeInput("");
               setEnemyQuantityInput("1");
               setRollEnemyInitiativeFlag(false);
+              setEnemyAC("");
+              setEnemyHP("");
             }}>Cancel</Button>
             <Button onClick={handleAddEnemy}>Add Enemy</Button>
           </DialogFooter>
@@ -333,4 +443,3 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     </>
   );
 }
-
