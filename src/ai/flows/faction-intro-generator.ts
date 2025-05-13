@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateFactionIntroductionInputSchema = z.object({
+const GenerateFactionIntroductionInputSchema = z.object({
   factionName: z.string().describe('The name of the faction.'),
   factionGoals: z.string().describe('The primary goals or objectives of the faction.'),
   factionPhilosophy: z.string().optional().describe('The core beliefs, ideology, or methods of the faction.'),
@@ -23,7 +23,7 @@ export const GenerateFactionIntroductionInputSchema = z.object({
 });
 export type GenerateFactionIntroductionInput = z.infer<typeof GenerateFactionIntroductionInputSchema>;
 
-export const GenerateFactionIntroductionOutputSchema = z.object({
+const GenerateFactionIntroductionOutputSchema = z.object({
   introductionScene: z.string().describe('A compelling and descriptive introduction scene for how the party might first encounter or learn about this faction. This should be a few paragraphs long.'),
 });
 export type GenerateFactionIntroductionOutput = z.infer<typeof GenerateFactionIntroductionOutputSchema>;
@@ -85,3 +85,4 @@ const factionIntroductionGeneratorFlow = ai.defineFlow(
     return output;
   }
 );
+
