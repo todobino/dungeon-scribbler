@@ -323,9 +323,11 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                 <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
                 </Button>
             </div>
-            <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full" disabled={availablePartyMembers.length === 0}>
-               <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
-            </Button>
+            {availablePartyMembers.length > 0 && (
+                <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full">
+                    <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
+                </Button>
+            )}
           </div>
 
           <div className="flex-grow flex flex-col min-h-0 mt-2">
@@ -411,7 +413,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
           )}
 
           <SheetFooter className="mt-auto pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">Close Tracker</Button>
+            {/* Close Tracker button removed here */}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -542,3 +544,4 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     </>
   );
 }
+
