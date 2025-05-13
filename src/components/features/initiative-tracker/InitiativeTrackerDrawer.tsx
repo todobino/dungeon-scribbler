@@ -1,4 +1,4 @@
-tsx
+
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
@@ -333,3 +333,4 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     </>
   );
 }
+
