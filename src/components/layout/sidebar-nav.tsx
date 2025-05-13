@@ -13,6 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarTrigger,
+  SidebarSeparator, // Added import
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +21,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { useCampaign } from "@/contexts/campaign-context";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Users, Shield, Wand, User, ChevronDown, ChevronRight } from "lucide-react"; // Added Chevron icons
+import { Users } from "lucide-react"; 
 
 export function SidebarNav() {
   const pathname = usePathname();
