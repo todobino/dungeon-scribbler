@@ -1,12 +1,15 @@
+import type { DndClass } from './constants';
+
 export interface PlayerCharacter {
   id: string;
   name: string;
   level: number;
-  class: string;
+  class: DndClass;
   armorClass: number;
   // Placeholder for abilities, ideally fetched or structured from SRD data
   abilities?: string[]; 
   racialTraits?: string[];
+  // race?: string; // Optional: Add if form collects race
 }
 
 export interface NPC {
@@ -58,7 +61,7 @@ export interface MapData {
 }
 
 export interface MapMarker {
-  id: string;
+  id:string;
   x: number; // percentage
   y: number; // percentage
   noteId?: string; // Link to a campaign note
@@ -69,9 +72,11 @@ export interface Campaign {
   id: string;
   name: string;
   description?: string;
-  characters: PlayerCharacter[];
-  npcs: NPC[];
-  notes: CampaignNote[];
-  maps: MapData[];
-  // other campaign specific data
+  // Data for each feature will be associated with the campaign
+  // For now, these are not directly on the Campaign object but stored
+  // in localStorage keyed by campaign ID.
+  // characters: PlayerCharacter[];
+  // npcs: NPC[];
+  // notes: CampaignNote[];
+  // maps: MapData[];
 }

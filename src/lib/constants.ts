@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -14,6 +14,7 @@ export interface NavItem {
 export const APP_NAME = "Dungeon Scribbler";
 
 export const NAV_ITEMS: NavItem[] = [
+  { label: 'Current Campaign', href: '/campaign-management', icon: Library },
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Party Manager', href: '/party-manager', icon: Users },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
@@ -34,3 +35,10 @@ export const ADVANCED_NAV_ITEMS: NavItem[] = [
 export const SETTINGS_NAV_ITEMS: NavItem[] = [
  { label: 'Settings', href: '/settings', icon: Cog, disabled: true },
 ];
+
+export const DND_CLASSES = [
+  "Artificer", "Barbarian", "Bard", "Cleric", "Druid", "Fighter", 
+  "Monk", "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard"
+] as const;
+
+export type DndClass = typeof DND_CLASSES[number];

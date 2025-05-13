@@ -1,125 +1,143 @@
+
 "use client";
 
 import type { PlayerCharacter } from "@/lib/types";
+import type { DndClass } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, User, Shield, Wand, Users, Edit3, Trash2, Eye, BookOpen } from "lucide-react";
+import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DND_CLASSES } from "@/lib/constants";
+import { useCampaign } from "@/contexts/campaign-context";
+import Link from "next/link";
 
-// Mock SRD data - in a real app, this would come from a database or API
+// Mock SRD data (remains for details dialog)
 const mockAbilities: Record<string, Record<number, string[]>> = {
-  Fighter: {
-    1: ["Second Wind", "Fighting Style"],
-    2: ["Action Surge"],
-    3: ["Martial Archetype"],
-  },
-  Wizard: {
-    1: ["Spellcasting", "Arcane Recovery"],
-    2: ["Arcane Tradition"],
-    3: ["Cantrip Formulas"],
-  },
-  Rogue: {
-    1: ["Expertise", "Sneak Attack", "Thieves' Cant"],
-    2: ["Cunning Action"],
-    3: ["Roguish Archetype"],
-  },
+  Fighter: { 1: ["Second Wind", "Fighting Style"], 2: ["Action Surge"], 3: ["Martial Archetype"]},
+  Wizard: { 1: ["Spellcasting", "Arcane Recovery"], 2: ["Arcane Tradition"], 3: ["Cantrip Formulas"]},
+  Rogue: { 1: ["Expertise", "Sneak Attack", "Thieves' Cant"], 2: ["Cunning Action"], 3: ["Roguish Archetype"]},
+  Cleric: { 1: ["Spellcasting", "Divine Domain"], 2: ["Channel Divinity"], 3: ["Divine Domain feature"]},
+  Bard: { 1: ["Spellcasting", "Bardic Inspiration"], 2: ["Jack of All Trades", "Song of Rest"], 3: ["Bard College"]},
+  // Add more classes as needed
 };
-
 const mockRacialTraits: Record<string, string[]> = {
-  Human: ["Versatile", "Skilled"],
-  Elf: ["Darkvision", "Fey Ancestry", "Trance"],
-  Dwarf: ["Darkvision", "Dwarven Resilience", "Stonecunning"],
+  Human: ["Versatile", "Skilled"], Elf: ["Darkvision", "Fey Ancestry", "Trance"], Dwarf: ["Darkvision", "Dwarven Resilience", "Stonecunning"],
 };
 
 
 export default function PartyManagerPage() {
-  const [characters, setCharacters] = useState<PlayerCharacter[]>([]);
+  const { 
+    activeCampaign, 
+    activeCampaignParty, 
+    isLoadingCampaigns, 
+    isLoadingParty,
+    addCharacterToActiveCampaign,
+    deleteCharacterFromActiveCampaign
+  } = useCampaign();
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [currentCharacterDetails, setCurrentCharacterDetails] = useState<PlayerCharacter | null>(null);
 
-  const [newCharacter, setNewCharacter] = useState({
+  const initialNewCharacterState = {
     name: "",
     level: 1,
-    class: "Fighter",
+    class: DND_CLASSES[0], // Default to the first class in the list
     armorClass: 10,
-  });
+  };
+  const [newCharacter, setNewCharacter] = useState<{name: string; level: number; class: DndClass; armorClass: number}>(initialNewCharacterState);
 
-  const handleAddCharacter = () => {
-    if (newCharacter.name && newCharacter.class) {
-      const characterToAdd: PlayerCharacter = {
-        id: Date.now().toString(), // simple unique id
-        ...newCharacter,
-      };
-      setCharacters([...characters, characterToAdd]);
-      setNewCharacter({ name: "", level: 1, class: "Fighter", armorClass: 10 });
+  const handleAddCharacter = async () => {
+    if (newCharacter.name && newCharacter.class && activeCampaign) {
+      await addCharacterToActiveCampaign(newCharacter);
+      setNewCharacter(initialNewCharacterState);
       setIsAddDialogOpen(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-    setNewCharacter({
-      ...newCharacter,
+    setNewCharacter((prev) => ({
+      ...prev,
       [name]: type === 'number' ? parseInt(value) || 0 : value,
-    });
+    }));
+  };
+
+  const handleClassChange = (value: string) => {
+    setNewCharacter((prev) => ({
+      ...prev,
+      class: value as DndClass,
+    }));
   };
 
   const openDetailsDialog = (character: PlayerCharacter) => {
     const abilities = mockAbilities[character.class]?.[character.level] || ["No specific abilities listed for this level."];
-    const racialTraits = mockRacialTraits[character.race || "Human"] || ["No specific racial traits listed."]; // Assuming Human if race not specified
+    const racialTraits = mockRacialTraits[(character as any).race || "Human"] || ["No specific racial traits listed."];
     setCurrentCharacterDetails({...character, abilities, racialTraits});
     setIsDetailsDialogOpen(true);
   };
   
-  // Effect to load characters from local storage (example of client-side persistence)
-  useEffect(() => {
-    const storedCharacters = localStorage.getItem("dungeonScribblerCharacters");
-    if (storedCharacters) {
-      setCharacters(JSON.parse(storedCharacters));
+  const handleDeleteCharacter = async (id: string) => {
+    if (activeCampaign) {
+      await deleteCharacterFromActiveCampaign(id);
     }
-  }, []);
-
-  // Effect to save characters to local storage
-  useEffect(() => {
-    localStorage.setItem("dungeonScribblerCharacters", JSON.stringify(characters));
-  }, [characters]);
-
-  const handleDeleteCharacter = (id: string) => {
-    setCharacters(characters.filter(char => char.id !== id));
   };
+
+  if (isLoadingCampaigns || isLoadingParty) {
+    return <div className="text-center p-10">Loading party data...</div>;
+  }
+
+  if (!activeCampaign) {
+    return (
+      <Card className="text-center py-12">
+        <CardHeader>
+          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+          <CardTitle className="mt-4">No Active Campaign</CardTitle>
+          <CardDescription>Please select or create a campaign to manage your party.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/campaign-management">
+              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <TooltipProvider>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Party Manager</h1>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Button onClick={() => { setNewCharacter(initialNewCharacterState); setIsAddDialogOpen(true); }}>
             <PlusCircle className="mr-2 h-5 w-5" /> Add Character
           </Button>
         </div>
 
-        {characters.length === 0 ? (
+        {activeCampaignParty.length === 0 ? (
           <Card className="text-center py-12">
             <CardHeader>
               <Users className="mx-auto h-16 w-16 text-muted-foreground" />
-              <CardTitle className="mt-4">No Characters Yet</CardTitle>
-              <CardDescription>Start by adding your first player character to the party.</CardDescription>
+              <CardTitle className="mt-4">No Characters Yet in {activeCampaign.name}</CardTitle>
+              <CardDescription>Start by adding your first player character to the party for this campaign.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => setIsAddDialogOpen(true)}>
+              <Button onClick={() => { setNewCharacter(initialNewCharacterState); setIsAddDialogOpen(true); }}>
                 <PlusCircle className="mr-2 h-5 w-5" /> Add Your First Character
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {characters.map((char) => (
+            {activeCampaignParty.map((char) => (
               <Card key={char.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -159,7 +177,7 @@ export default function PartyManagerPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Character</DialogTitle>
-              <DialogDescription>Fill in the details for the new player character.</DialogDescription>
+              <DialogDescription>Fill in the details for the new player character in {activeCampaign?.name}.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
@@ -168,7 +186,18 @@ export default function PartyManagerPage() {
               </div>
               <div>
                 <Label htmlFor="class">Class</Label>
-                <Input id="class" name="class" value={newCharacter.class} onChange={handleInputChange} placeholder="e.g., Fighter, Wizard" />
+                <Select name="class" value={newCharacter.class} onValueChange={handleClassChange}>
+                  <SelectTrigger id="class">
+                    <SelectValue placeholder="Select a class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DND_CLASSES.map((className) => (
+                      <SelectItem key={className} value={className}>
+                        {className}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="level">Level</Label>
@@ -181,7 +210,7 @@ export default function PartyManagerPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddCharacter}>Add Character</Button>
+              <Button onClick={handleAddCharacter} disabled={!newCharacter.name.trim()}>Add Character</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -191,7 +220,7 @@ export default function PartyManagerPage() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-2xl">{currentCharacterDetails?.name}</DialogTitle>
-              <DialogDescription>Level {currentCharacterDetails?.level} {currentCharacterDetails?.class} {currentCharacterDetails?.race && `(${currentCharacterDetails.race})`}</DialogDescription>
+              <DialogDescription>Level {currentCharacterDetails?.level} {currentCharacterDetails?.class} {(currentCharacterDetails as any)?.race && `(${(currentCharacterDetails as any).race})`}</DialogDescription>
             </DialogHeader>
             {currentCharacterDetails && (
               <ScrollArea className="max-h-[60vh] p-1">
