@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask } from "lucide-react";
+import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask, ChevronsRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DND_CLASSES, PREDEFINED_COLORS } from "@/lib/constants";
@@ -55,6 +55,7 @@ export default function PartyManagerPage() {
     class: DND_CLASSES[0],
     race: "", 
     armorClass: 10,
+    initiativeModifier: 0,
     color: PREDEFINED_COLORS[0].value,
   };
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
@@ -163,6 +164,7 @@ export default function PartyManagerPage() {
       class: character.class,
       race: character.race,
       armorClass: character.armorClass,
+      initiativeModifier: character.initiativeModifier || 0,
       color: character.color || PREDEFINED_COLORS[0].value,
     });
     setIsFormDialogOpen(true);
@@ -316,6 +318,10 @@ export default function PartyManagerPage() {
                 <User className="mr-2 h-5 w-5 text-primary" />
                 <span>Level: {char.level}</span>
               </div>
+              <div className="flex items-center">
+                <ChevronsRight className="mr-2 h-5 w-5 text-primary" />
+                <span>Initiative Mod: {char.initiativeModifier !== undefined ? (char.initiativeModifier >= 0 ? `+${char.initiativeModifier}` : char.initiativeModifier) : '+0'}</span>
+              </div>
             </CardContent>
             <CardFooter className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => openDetailsDialog(char)}>
@@ -403,6 +409,10 @@ export default function PartyManagerPage() {
               <div>
                 <Label htmlFor="armorClass">Armor Class</Label>
                 <Input id="armorClass" name="armorClass" type="number" value={characterFormData.armorClass} onChange={handleInputChange} />
+              </div>
+              <div>
+                <Label htmlFor="initiativeModifier">Initiative Modifier</Label>
+                <Input id="initiativeModifier" name="initiativeModifier" type="number" value={characterFormData.initiativeModifier || 0} onChange={handleInputChange} placeholder="e.g., 2" />
               </div>
               <div>
                 <Label htmlFor="color">Character Color</Label>

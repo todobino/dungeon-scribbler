@@ -7,6 +7,7 @@ import type { DndClass } from '@/lib/constants';
 
 // Define a type for the character data used in add/update functions
 // Omit 'id' as it's generated, 'abilities' and 'racialTraits' as they are derived/lookup
+// initiativeModifier is now part of PlayerCharacter, so it will be included here.
 export type CharacterFormData = Omit<PlayerCharacter, 'id' | 'abilities' | 'racialTraits'>;
 
 
@@ -129,7 +130,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     const newCharacter: PlayerCharacter = {
       ...characterData,
       id: Date.now().toString(),
-      // Abilities and racialTraits would be derived/looked up, not part of form data
+      initiativeModifier: characterData.initiativeModifier || 0, // Ensure default
     };
     setActiveCampaignParty(prevParty => [...prevParty, newCharacter]);
   }, [activeCampaignId]);
@@ -140,7 +141,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       return;
     }
     setActiveCampaignParty(prevParty => 
-      prevParty.map(char => char.id === updatedCharacter.id ? updatedCharacter : char)
+      prevParty.map(char => char.id === updatedCharacter.id ? {...updatedCharacter, initiativeModifier: updatedCharacter.initiativeModifier || 0} : char)
     );
   }, [activeCampaignId]);
 

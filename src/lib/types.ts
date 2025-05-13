@@ -6,7 +6,8 @@ export interface PlayerCharacter {
   level: number;
   class: DndClass;
   armorClass: number;
-  race: string; // Added race, making it required
+  race: string; 
+  initiativeModifier?: number; // Added for initiative bonus
   color?: string;
   abilities?: string[]; 
   racialTraits?: string[];
@@ -82,3 +83,4 @@ export interface Combatant {
   hp?: number;      // Max Hit Points
   currentHp?: number; // Current Hit Points
 }
+

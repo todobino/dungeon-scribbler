@@ -5,7 +5,7 @@ import type { PlayerCharacter } from "@/lib/types";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookOpen, Users, VenetianMask } from "lucide-react"; // Added VenetianMask
+import { BookOpen, Users, VenetianMask, ChevronsRight, Shield } from "lucide-react"; 
 
 // Mock SRD data
 const mockAbilities: Record<string, Record<number, string[]>> = {
@@ -77,7 +77,18 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
           <div className="space-y-6 py-4 pr-4">
             <div>
               <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
-                <VenetianMask className="mr-2 h-5 w-5" /> {/* Icon for Race */}
+                 {/* Using Shield as a generic stats icon */}
+                <Shield className="mr-2 h-5 w-5" /> 
+                Core Stats
+              </h3>
+              <ul className="list-disc list-inside space-y-1 pl-2">
+                <li>Armor Class: {character.armorClass}</li>
+                <li>Initiative Modifier: {character.initiativeModifier !== undefined ? (character.initiativeModifier >= 0 ? `+${character.initiativeModifier}` : character.initiativeModifier) : '+0'}</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
+                <VenetianMask className="mr-2 h-5 w-5" /> 
                 Racial Traits ({displayRace})
               </h3>
               {racialTraits.length > 0 ? (

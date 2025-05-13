@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5, Heart, Shield } from "lucide-react";
+import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5, Heart, Shield, ChevronsRightIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { rollDie } from "@/lib/dice-utils";
 
@@ -26,9 +26,10 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   const [currentTurnIndex, setCurrentTurnIndex] = useState<number | null>(null);
   const uniqueId = useId();
 
-  const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
+  const [isAddFriendlyDialogOpen, setIsAddFriendlyDialogOpen] = useState(false);
   const [selectedPlayerToAdd, setSelectedPlayerToAdd] = useState<PlayerCharacter | null>(null);
-  const [playerInitiative, setPlayerInitiative] = useState<string>("");
+  const [allyNameInput, setAllyNameInput] = useState<string>("");
+  const [friendlyInitiativeInput, setFriendlyInitiativeInput] = useState<string>("");
 
   const [isAddEnemyDialogOpen, setIsAddEnemyDialogOpen] = useState(false);
   const [enemyName, setEnemyName] = useState("");
@@ -70,35 +71,76 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     return isNaN(num) ? 0 : num;
   };
 
-  const handleAddPlayer = () => {
-    if (!selectedPlayerToAdd || playerInitiative === "") {
-      console.error("Missing Information: Please select a player and enter their initiative.");
-      return;
-    }
-    const initiativeValue = parseInt(playerInitiative);
-    if (isNaN(initiativeValue)) {
+  const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
+  const isAllyMode = availablePartyMembers.length === 0;
+
+
+  const handleAddFriendly = () => {
+    const initiativeValue = parseInt(friendlyInitiativeInput);
+    if (isNaN(initiativeValue) || friendlyInitiativeInput.trim() === "") {
       console.error("Invalid Initiative: Initiative must be a number.");
       return;
     }
-    if (combatants.find(c => c.playerId === selectedPlayerToAdd.id)) {
-      console.warn("Player Already Added:", selectedPlayerToAdd.name, "is already in the initiative order.");
-      return;
+
+    let name: string;
+    let playerId: string | undefined = undefined;
+    let color: string | undefined = undefined;
+    let finalInitiative = initiativeValue;
+
+
+    if (isAllyMode) {
+      if (!allyNameInput.trim()) {
+        console.error("Missing Information: Ally name cannot be empty.");
+        return;
+      }
+      name = allyNameInput.trim();
+    } else { // Player mode
+      if (!selectedPlayerToAdd) {
+        console.error("Missing Information: Please select a player.");
+        return;
+      }
+      if (combatants.find(c => c.playerId === selectedPlayerToAdd.id)) {
+        console.warn("Player Already Added:", selectedPlayerToAdd.name, "is already in the initiative order.");
+        // Optionally clear selection and close dialog
+        setIsAddFriendlyDialogOpen(false);
+        setSelectedPlayerToAdd(null);
+        setFriendlyInitiativeInput("");
+        return;
+      }
+      name = selectedPlayerToAdd.name;
+      playerId = selectedPlayerToAdd.id;
+      color = selectedPlayerToAdd.color;
     }
 
     const newCombatant: Combatant = {
-      id: `${uniqueId}-player-${selectedPlayerToAdd.id}-${Date.now()}`,
-      name: selectedPlayerToAdd.name,
-      initiative: initiativeValue,
-      type: 'player',
-      color: selectedPlayerToAdd.color,
-      playerId: selectedPlayerToAdd.id,
-      // AC for players will be read from activeCampaignParty directly
+      id: `${uniqueId}-${isAllyMode ? 'ally' : 'player'}-${playerId || name.replace(/\s+/g, '')}-${Date.now()}`,
+      name,
+      initiative: finalInitiative,
+      type: 'player', // Allies are still 'player' type for initiative purposes
+      color,
+      playerId,
     };
+    
     setCombatants(prev => [...prev, newCombatant]);
-    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0);
-    setIsAddPlayerDialogOpen(false);
+    if (currentTurnIndex === null && (combatants.length > 0 || combatants.length === 0 && [newCombatant].length > 0)) {
+       setCurrentTurnIndex(0);
+    }
+    
+    // Reset states
+    setIsAddFriendlyDialogOpen(false);
     setSelectedPlayerToAdd(null);
-    setPlayerInitiative("");
+    setAllyNameInput("");
+    setFriendlyInitiativeInput("");
+  };
+
+  const handleRollFriendlyInitiative = () => {
+    let mod = 0;
+    if (!isAllyMode && selectedPlayerToAdd) {
+      mod = selectedPlayerToAdd.initiativeModifier || 0;
+    }
+    // For allies (isAllyMode === true), mod remains 0 (flat d20 roll)
+    const roll = rollDie(20) + mod;
+    setFriendlyInitiativeInput(roll.toString());
   };
   
   const handleAddEnemy = () => {
@@ -124,7 +166,6 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         console.error("Invalid HP: Must be a positive number.");
         return;
     }
-
 
     const newEnemies: Combatant[] = [];
 
@@ -159,7 +200,9 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     }
     
     setCombatants(prev => [...prev, ...newEnemies]);
-    if (currentTurnIndex === null && combatants.length === 0 && newEnemies.length > 0) setCurrentTurnIndex(0);
+     if (currentTurnIndex === null && (combatants.length > 0 || (combatants.length === 0 && newEnemies.length > 0 ))) {
+       setCurrentTurnIndex(0);
+    }
     
     setIsAddEnemyDialogOpen(false);
     setEnemyName("");
@@ -186,10 +229,10 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     setCombatants(prevCombatants =>
       prevCombatants.map(combatant => {
         if (combatant.id === combatantId && combatant.type === 'enemy' && combatant.hp !== undefined) {
-          let newHp = combatant.currentHp ?? combatant.hp!; // Fallback to max HP if currentHP is somehow undefined
+          let newHp = combatant.currentHp ?? combatant.hp!; 
           if (type === 'damage') {
             newHp = Math.max(0, newHp - amount);
-          } else { // heal
+          } else { 
             newHp = Math.min(combatant.hp!, newHp + amount);
           }
           return { ...combatant, currentHp: newHp };
@@ -197,7 +240,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         return combatant;
       })
     );
-    setDamageInputs(prev => ({ ...prev, [combatantId]: "" })); // Clear input
+    setDamageInputs(prev => ({ ...prev, [combatantId]: "" })); 
   };
 
   const removeCombatant = (id: string) => {
@@ -237,8 +280,30 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     combatantRefs.current.clear();
     setDamageInputs({});
   };
+  
+  const handleRollAllPlayerInitiatives = () => {
+    if (availablePartyMembers.length === 0) return;
 
-  const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
+    const newCombatantsFromParty: Combatant[] = availablePartyMembers.map(player => {
+      const initiativeRoll = rollDie(20) + (player.initiativeModifier || 0);
+      return {
+        id: `${uniqueId}-player-${player.id}-${Date.now()}`,
+        name: player.name,
+        initiative: initiativeRoll,
+        type: 'player',
+        color: player.color,
+        playerId: player.id,
+      };
+    });
+
+    setCombatants(prev => [...prev, ...newCombatantsFromParty]);
+    if (currentTurnIndex === null && (combatants.length === 0 && newCombatantsFromParty.length > 0)) {
+      setCurrentTurnIndex(0);
+    }
+  };
+
+
+  const addPlayerButtonLabel = availablePartyMembers.length > 0 ? "Add Player" : "Add Ally";
 
   return (
     <>
@@ -248,12 +313,18 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
             <SheetTitle className="flex items-center"><ListOrdered className="mr-2 h-6 w-6 text-primary"/>Initiative Tracker</SheetTitle>
           </SheetHeader>
           
-          <div className="py-2 flex gap-2">
-            <Button onClick={() => setIsAddPlayerDialogOpen(true)} variant="outline" className="flex-1">
-              <Users className="mr-2 h-4 w-4" /> Add Player
-            </Button>
-            <Button onClick={() => setIsAddEnemyDialogOpen(true)} variant="outline" className="flex-1">
-              <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
+          <div className="py-2 flex flex-col gap-2">
+            <div className="flex gap-2">
+                <Button onClick={() => setIsAddFriendlyDialogOpen(true)} variant="outline" className="flex-1">
+                {isAllyMode ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
+                {addPlayerButtonLabel}
+                </Button>
+                <Button onClick={() => setIsAddEnemyDialogOpen(true)} variant="outline" className="flex-1">
+                <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
+                </Button>
+            </div>
+            <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full" disabled={availablePartyMembers.length === 0}>
+               <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
             </Button>
           </div>
 
@@ -275,8 +346,8 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                         <div>
                           <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {c.type === 'player' ? 'Player' : 'Enemy'}
-                            {c.type === 'player' && (() => {
+                            {c.type === 'player' ? (isAllyMode && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
+                            {c.type === 'player' && c.playerId && (() => {
                               const player = activeCampaignParty.find(p => p.id === c.playerId);
                               return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null;
                             })()}
@@ -345,40 +416,68 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         </SheetContent>
       </Sheet>
 
-      {/* Add Player Dialog */}
-      <Dialog open={isAddPlayerDialogOpen} onOpenChange={setIsAddPlayerDialogOpen}>
+      {/* Add Friendly (Player/Ally) Dialog */}
+      <Dialog open={isAddFriendlyDialogOpen} onOpenChange={setIsAddFriendlyDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Player to Initiative</DialogTitle>
-            <DialogDescription>Select a player character and enter their initiative roll.</DialogDescription>
+            <DialogTitle>{isAllyMode ? "Add Ally to Initiative" : "Add Player to Initiative"}</DialogTitle>
+            <DialogDescription>
+              {isAllyMode ? "Enter the ally's name and initiative." : "Select a player character and enter or roll their initiative."}
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-3">
+            {isAllyMode ? (
+              <div>
+                <Label htmlFor="ally-name">Ally Name</Label>
+                <Input id="ally-name" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} placeholder="e.g., Sir Reginald" />
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="player-select">Player Character</Label>
+                {availablePartyMembers.length > 0 ? (
+                  <select
+                    id="player-select"
+                    value={selectedPlayerToAdd?.id || ""}
+                    onChange={(e) => setSelectedPlayerToAdd(activeCampaignParty.find(p => p.id === e.target.value) || null)}
+                    className="w-full mt-1 p-2 border rounded-md bg-background"
+                  >
+                    <option value="" disabled>Select a player</option>
+                    {availablePartyMembers.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} (Lvl {p.level} {p.race} {p.class} - AC: {p.armorClass} / Init Mod: {p.initiativeModifier ?? 0})</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-1">All party members already added.</p>
+                )}
+              </div>
+            )}
             <div>
-              <Label htmlFor="player-select">Player Character</Label>
-              {availablePartyMembers.length > 0 ? (
-                <select
-                  id="player-select"
-                  value={selectedPlayerToAdd?.id || ""}
-                  onChange={(e) => setSelectedPlayerToAdd(activeCampaignParty.find(p => p.id === e.target.value) || null)}
-                  className="w-full mt-1 p-2 border rounded-md bg-background"
-                >
-                  <option value="" disabled>Select a player</option>
-                  {availablePartyMembers.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (Lvl {p.level} {p.race} {p.class} - AC: {p.armorClass})</option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-sm text-muted-foreground mt-1">All party members already added or no party members available.</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="player-initiative">Initiative Roll</Label>
-              <Input id="player-initiative" type="number" value={playerInitiative} onChange={(e) => setPlayerInitiative(e.target.value)} placeholder="e.g., 15" />
+              <Label htmlFor="friendly-initiative">Initiative</Label>
+              <div className="flex gap-2 items-center">
+                <Input id="friendly-initiative" type="number" value={friendlyInitiativeInput} onChange={(e) => setFriendlyInitiativeInput(e.target.value)} placeholder="e.g., 15" className="flex-grow" />
+                {!isAllyMode && selectedPlayerToAdd && (
+                  <Button onClick={handleRollFriendlyInitiative} variant="outline" size="sm" className="shrink-0">
+                    <Dice5 className="mr-1 h-4 w-4"/> Roll (d20 +{selectedPlayerToAdd.initiativeModifier || 0})
+                  </Button>
+                )}
+                 {isAllyMode && (
+                    <Button onClick={handleRollFriendlyInitiative} variant="outline" size="sm" className="shrink-0">
+                        <Dice5 className="mr-1 h-4 w-4"/> Roll (d20)
+                    </Button>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPlayerDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddPlayer} disabled={!selectedPlayerToAdd || availablePartyMembers.length === 0}>Add Player</Button>
+            <Button variant="outline" onClick={() => {
+                setIsAddFriendlyDialogOpen(false);
+                setSelectedPlayerToAdd(null);
+                setAllyNameInput("");
+                setFriendlyInitiativeInput("");
+            }}>Cancel</Button>
+            <Button onClick={handleAddFriendly} disabled={(!isAllyMode && !selectedPlayerToAdd) || (isAllyMode && !allyNameInput.trim())}>
+              {isAllyMode ? "Add Ally" : "Add Player"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
