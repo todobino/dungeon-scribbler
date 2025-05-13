@@ -5,7 +5,7 @@ import type { PlayerCharacter } from "@/lib/types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, APP_NAME, ADVANCED_NAV_ITEMS, SETTINGS_NAV_ITEMS, type NavItem } from "@/lib/constants";
+import { NAV_ITEMS, APP_NAME, ADVANCED_NAV_ITEMS, SETTINGS_NAV_ITEMS, WORLD_NAV_ITEMS, type NavItem } from "@/lib/constants";
 import {
   Sidebar,
   SidebarHeader,
@@ -167,7 +167,10 @@ export function SidebarNav() {
           
           <SidebarSeparator className="my-2 group-data-[collapsible=icon]:hidden" />
 
-          {renderNavItems(NAV_ITEMS.filter(item => item.href !== '/campaign-management' && item.href !== '/dashboard'), "Core Features")}
+          {renderNavItems(WORLD_NAV_ITEMS, "World Management")}
+          <SidebarSeparator className="my-4" />
+          
+          {renderNavItems(NAV_ITEMS.filter(item => item.href !== '/campaign-management'), "Core Features")}
           <SidebarSeparator className="my-4" />
           {renderNavItems(ADVANCED_NAV_ITEMS, "Advanced Tools")}
         </SidebarContent>
@@ -188,3 +191,4 @@ export function SidebarNav() {
 export function MobileSidebarTrigger() {
     return <SidebarTrigger className="md:hidden fixed top-4 left-4 z-50 bg-background/80 backdrop-blur-sm" />;
 }
+

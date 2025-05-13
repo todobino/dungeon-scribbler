@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -22,6 +22,12 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Campaign Journal', href: '/campaign-journal', icon: BookText },
   { label: 'Random Tables', href: '/random-tables', icon: Dice5 },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
+];
+
+export const WORLD_NAV_ITEMS: NavItem[] = [
+  { label: 'Factions', href: '/world/factions', icon: ShieldIcon, disabled: true },
+  { label: 'Locations', href: '/world/locations', icon: MapPinIcon, disabled: true },
+  { label: 'NPCs List', href: '/world/npcs', icon: Users, disabled: true }, // Renamed to NPCs List for clarity
 ];
 
 export const ADVANCED_NAV_ITEMS: NavItem[] = [
@@ -66,3 +72,4 @@ export const PREDEFINED_COLORS = [
 ] as const;
 
 export type PredefinedColor = typeof PREDEFINED_COLORS[number];
+
