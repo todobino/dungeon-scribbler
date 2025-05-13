@@ -1,6 +1,7 @@
 
 "use client";
 
+import type { PlayerCharacter } from "@/lib/types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarTrigger,
-  SidebarSeparator, // Added import
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,10 +23,19 @@ import { Badge } from "@/components/ui/badge";
 import { useCampaign } from "@/contexts/campaign-context";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Users } from "lucide-react"; 
+import React, { useState } from "react";
+import { CharacterDetailsDialog } from "@/components/features/party-manager/character-details-dialog";
 
 export function SidebarNav() {
   const pathname = usePathname();
   const { activeCampaign, activeCampaignParty, isLoadingCampaigns, isLoadingParty } = useCampaign();
+  const [isCharacterDetailsDialogOpen, setIsCharacterDetailsDialogOpen] = useState(false);
+  const [characterForDetails, setCharacterForDetails] = useState<PlayerCharacter | null>(null);
+
+  const openCharacterDetailsDialog = (character: PlayerCharacter) => {
+    setCharacterForDetails(character);
+    setIsCharacterDetailsDialogOpen(true);
+  };
 
   const renderNavItems = (items: NavItem[], title?: string) => (
     <>
@@ -72,6 +82,7 @@ export function SidebarNav() {
 
 
   return (
+    <>
     <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
@@ -110,15 +121,24 @@ export function SidebarNav() {
                         <span>Current Party ({activeCampaignParty.length})</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="pt-1 pb-0 pl-2 pr-1 text-xs">
+                  <AccordionContent className="pt-1 pb-0 pl-1 pr-1 text-xs">
                     {isLoadingParty ? (
                       <p className="text-sidebar-foreground/70 py-1 px-1">Loading party...</p>
                     ) : activeCampaignParty.length === 0 ? (
                       <p className="text-sidebar-foreground/70 py-1 px-1">No characters in party.</p>
                     ) : (
-                      <ul className="space-y-1 max-h-48 overflow-y-auto">
+                      <ul className="space-y-1 max-h-64 overflow-y-auto"> {/* Adjusted max-h */}
                         {activeCampaignParty.map(char => (
-                          <li key={char.id} className="p-1.5 rounded hover:bg-sidebar-accent/80 text-sidebar-foreground/90">
+                          <li 
+                            key={char.id} 
+                            className="relative p-1.5 pl-3 rounded hover:bg-sidebar-accent/80 text-sidebar-foreground/90 cursor-pointer"
+                            onClick={() => openCharacterDetailsDialog(char)}
+                            title={`View ${char.name} details`}
+                          >
+                            <div 
+                              className="absolute left-0 top-0 bottom-0 w-1 rounded-l" 
+                              style={{ backgroundColor: char.color || 'hsl(var(--sidebar-border))' }}
+                            />
                             <div className="font-medium truncate">{char.name}</div>
                             <div className="text-xs text-sidebar-foreground/70 truncate">Lvl {char.level} {char.class} - AC: {char.armorClass}</div>
                           </li>
@@ -142,6 +162,12 @@ export function SidebarNav() {
         {renderNavItems(SETTINGS_NAV_ITEMS)}
       </SidebarFooter>
     </Sidebar>
+    <CharacterDetailsDialog
+        character={characterForDetails}
+        isOpen={isCharacterDetailsDialogOpen}
+        onOpenChange={setIsCharacterDetailsDialogOpen}
+    />
+    </>
   );
 }
 

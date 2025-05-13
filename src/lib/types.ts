@@ -6,6 +6,7 @@ export interface PlayerCharacter {
   level: number;
   class: DndClass;
   armorClass: number;
+  color?: string; // Added color property
   // Placeholder for abilities, ideally fetched or structured from SRD data
   abilities?: string[]; 
   racialTraits?: string[];
@@ -80,3 +81,4 @@ export interface Campaign {
   // notes: CampaignNote[];
   // maps: MapData[];
 }
+

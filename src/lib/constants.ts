@@ -42,3 +42,26 @@ export const DND_CLASSES = [
 ] as const;
 
 export type DndClass = typeof DND_CLASSES[number];
+
+export const PREDEFINED_COLORS = [
+  { name: 'Red', value: '#ef4444' }, // red-500
+  { name: 'Orange', value: '#f97316' }, // orange-500
+  { name: 'Amber', value: '#f59e0b' }, // amber-500
+  { name: 'Yellow', value: '#eab308' }, // yellow-500
+  { name: 'Lime', value: '#84cc16' }, // lime-500
+  { name: 'Green', value: '#22c55e' }, // green-500
+  { name: 'Emerald', value: '#10b981' }, // emerald-500
+  { name: 'Teal', value: '#14b8a6' }, // teal-500
+  { name: 'Cyan', value: '#06b6d4' }, // cyan-500
+  { name: 'Sky', value: '#0ea5e9' }, // sky-500
+  { name: 'Blue', value: '#3b82f6' }, // blue-500
+  { name: 'Indigo', value: '#6366f1' }, // indigo-500
+  { name: 'Violet', value: '#8b5cf6' }, // violet-500
+  { name: 'Purple', value: '#a855f7' }, // purple-500
+  { name: 'Fuchsia', value: '#d946ef' }, // fuchsia-500
+  { name: 'Pink', value: '#ec4899' }, // pink-500
+  { name: 'Rose', value: '#f43f5e' }, // rose-500
+  { name: 'Slate', value: '#64748b' }, // slate-500
+] as const;
+
+export type PredefinedColor = typeof PREDEFINED_COLORS[number];

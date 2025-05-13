@@ -6,6 +6,10 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { Campaign, PlayerCharacter } from '@/lib/types';
 import type { DndClass } from '@/lib/constants';
 
+// Define a type for the character data used in add/update functions
+export type CharacterFormData = Omit<PlayerCharacter, 'id'>;
+
+
 interface CampaignContextType {
   campaigns: Campaign[];
   activeCampaign: Campaign | null;
@@ -14,9 +18,10 @@ interface CampaignContextType {
   isLoadingParty: boolean;
   addCampaign: (name: string) => Promise<Campaign>;
   setActiveCampaignId: (id: string | null) => void;
-  addCharacterToActiveCampaign: (characterData: Omit<PlayerCharacter, 'id' | 'class'> & { class: DndClass} ) => Promise<void>;
+  addCharacterToActiveCampaign: (characterData: CharacterFormData) => Promise<void>;
+  updateCharacterInActiveCampaign: (character: PlayerCharacter) => Promise<void>;
   deleteCharacterFromActiveCampaign: (characterId: string) => Promise<void>;
-  // updateCharacterInActiveCampaign: (character: PlayerCharacter) => Promise<void>; // For future use
+  levelUpActiveParty: () => Promise<void>;
   getCampaignById: (id: string) => Campaign | undefined;
 }
 
@@ -120,7 +125,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     return campaigns.find(c => c.id === id);
   }, [campaigns]);
 
-  const addCharacterToActiveCampaign = useCallback(async (characterData: Omit<PlayerCharacter, 'id' | 'class'> & { class: DndClass}) => {
+  const addCharacterToActiveCampaign = useCallback(async (characterData: CharacterFormData) => {
     if (!activeCampaignId) {
       console.warn("Cannot add character: No active campaign.");
       return;
@@ -132,12 +137,32 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setActiveCampaignParty(prevParty => [...prevParty, newCharacter]);
   }, [activeCampaignId]);
 
+  const updateCharacterInActiveCampaign = useCallback(async (updatedCharacter: PlayerCharacter) => {
+    if (!activeCampaignId) {
+      console.warn("Cannot update character: No active campaign.");
+      return;
+    }
+    setActiveCampaignParty(prevParty => 
+      prevParty.map(char => char.id === updatedCharacter.id ? updatedCharacter : char)
+    );
+  }, [activeCampaignId]);
+
   const deleteCharacterFromActiveCampaign = useCallback(async (characterId: string) => {
     if (!activeCampaignId) {
       console.warn("Cannot delete character: No active campaign.");
       return;
     }
     setActiveCampaignParty(prevParty => prevParty.filter(char => char.id !== characterId));
+  }, [activeCampaignId]);
+
+  const levelUpActiveParty = useCallback(async () => {
+    if (!activeCampaignId) {
+      console.warn("Cannot level up party: No active campaign.");
+      return;
+    }
+    setActiveCampaignParty(prevParty => 
+      prevParty.map(char => ({ ...char, level: char.level + 1 }))
+    );
   }, [activeCampaignId]);
 
   const activeCampaign = activeCampaignId ? campaigns.find(c => c.id === activeCampaignId) || null : null;
@@ -152,7 +177,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       addCampaign, 
       setActiveCampaignId,
       addCharacterToActiveCampaign,
+      updateCharacterInActiveCampaign,
       deleteCharacterFromActiveCampaign,
+      levelUpActiveParty,
       getCampaignById
     }}>
       {children}
@@ -167,3 +194,4 @@ export function useCampaign() {
   }
   return context;
 }
+
