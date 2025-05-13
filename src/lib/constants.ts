@@ -15,8 +15,9 @@ export const APP_NAME = "Dungeon Scribbler";
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Party Manager', href: '/party-manager', icon: Users },
+  // Dashboard is removed, Party Manager access is moved.
+  // { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }, 
+  // { label: 'Party Manager', href: '/party-manager', icon: Users },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Campaign Journal', href: '/campaign-journal', icon: BookText },
   { label: 'Random Tables', href: '/random-tables', icon: Dice5 },

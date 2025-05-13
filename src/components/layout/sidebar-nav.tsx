@@ -22,7 +22,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { useCampaign } from "@/contexts/campaign-context";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Users } from "lucide-react"; 
+import { Users, Edit3 } from "lucide-react"; 
 import React, { useState } from "react";
 import { CharacterDetailsDialog } from "@/components/features/party-manager/character-details-dialog";
 
@@ -85,7 +85,7 @@ export function SidebarNav() {
     <>
     <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
+        <Link href="/campaign-management" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
             <Image src="https://picsum.photos/seed/dungeonsidebar/40/40" alt="Logo" width={32} height={32} className="rounded-md" data-ai-hint="fantasy scroll"/>
           <SidebarMenuLabel>
             <h1 className="text-xl font-semibold text-sidebar-foreground whitespace-nowrap">
@@ -115,12 +115,26 @@ export function SidebarNav() {
             {activeCampaign && (
               <Accordion type="single" collapsible className="w-full text-sidebar-foreground group-data-[collapsible=icon]:hidden">
                 <AccordionItem value="party-list" className="border-none">
-                  <AccordionTrigger className="py-1 px-2 text-xs hover:bg-sidebar-accent hover:no-underline rounded-md data-[state=open]:bg-sidebar-accent">
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-between py-1 px-2 hover:bg-sidebar-accent rounded-md group-data-[collapsible=icon]:hidden">
+                    <AccordionTrigger className="flex-grow p-0 text-left hover:no-underline data-[state=open]:bg-transparent hover:bg-transparent">
+                      <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-sidebar-foreground/80" />
                         <span>Current Party ({activeCampaignParty.length})</span>
-                    </div>
-                  </AccordionTrigger>
+                      </div>
+                    </AccordionTrigger>
+                    <Button
+                        asChild
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-sidebar-foreground/80 hover:text-sidebar-foreground focus-visible:ring-0 focus-visible:ring-offset-0 shrink-0"
+                        aria-label="Edit Party"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Link href="/party-manager">
+                          <Edit3 className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                  </div>
                   <AccordionContent className="pt-1 pb-0 pl-1 pr-1 text-xs">
                     {isLoadingParty ? (
                       <p className="text-sidebar-foreground/70 py-1 px-1">Loading party...</p>
@@ -153,7 +167,7 @@ export function SidebarNav() {
           
           <SidebarSeparator className="my-2 group-data-[collapsible=icon]:hidden" />
 
-          {renderNavItems(NAV_ITEMS.filter(item => item.href !== '/campaign-management'), "Core Features")}
+          {renderNavItems(NAV_ITEMS.filter(item => item.href !== '/campaign-management' && item.href !== '/dashboard'), "Core Features")}
           <SidebarSeparator className="my-4" />
           {renderNavItems(ADVANCED_NAV_ITEMS, "Advanced Tools")}
         </SidebarContent>

@@ -27,7 +27,7 @@ export default function HomePage() {
           </p>
           <div className="flex justify-center">
             <Button asChild size="lg" className="text-lg px-8 py-6 shadow-lg hover:shadow-primary/50 transition-shadow duration-300">
-              <Link href="/dashboard">
+              <Link href="/campaign-management">
                 <Zap className="mr-2 h-6 w-6" />
                 Enter the Forge
               </Link>
