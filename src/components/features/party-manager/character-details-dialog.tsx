@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { PlayerCharacter } from "@/lib/types";
@@ -51,9 +52,16 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
   if (!character) return null;
 
   const abilities = mockAbilities[character.class]?.[character.level] || [];
-  // Attempt to match race, trying a capitalized version first.
-  const raceKey = character.race.charAt(0).toUpperCase() + character.race.slice(1);
-  const racialTraits = mockRacialTraits[raceKey] || mockRacialTraits[character.race] || [];
+  
+  let raceKey = "";
+  let racialTraits: string[] = [];
+  let displayRace = character.race || "Unknown Race";
+
+  if (character.race && typeof character.race === 'string' && character.race.length > 0) {
+    raceKey = character.race.charAt(0).toUpperCase() + character.race.slice(1);
+    racialTraits = mockRacialTraits[raceKey] || mockRacialTraits[character.race] || [];
+    displayRace = character.race;
+  }
 
 
   return (
@@ -62,7 +70,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
         <DialogHeader>
           <DialogTitle className="text-2xl">{character.name}</DialogTitle>
           <DialogDescription>
-            Level {character.level} {character.race} {character.class}
+            Level {character.level} {displayRace} {character.class}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] p-1">
@@ -70,7 +78,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
             <div>
               <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
                 <VenetianMask className="mr-2 h-5 w-5" /> {/* Icon for Race */}
-                Racial Traits ({character.race})
+                Racial Traits ({displayRace})
               </h3>
               {racialTraits.length > 0 ? (
                 <ul className="list-disc list-inside space-y-1 pl-2">
@@ -78,7 +86,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
                     <li key={`trait-${index}`}>{trait}</li>
                   ))}
                 </ul>
-              ) : <p className="text-muted-foreground italic">No specific racial traits listed for {character.race}.</p>}
+              ) : <p className="text-muted-foreground italic">No specific racial traits listed for {displayRace}.</p>}
             </div>
             <div>
               <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
