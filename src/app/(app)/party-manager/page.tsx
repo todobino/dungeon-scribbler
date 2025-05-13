@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask } from "lucide-react"; // Added VenetianMask for Race
+import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DND_CLASSES, PREDEFINED_COLORS } from "@/lib/constants";
@@ -18,6 +18,7 @@ import { useCampaign, type CharacterFormData } from "@/contexts/campaign-context
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { CharacterDetailsDialog } from "@/components/features/party-manager/character-details-dialog";
+import { LevelDiscrepancyDialog } from "@/components/features/party-manager/level-discrepancy-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -30,7 +31,8 @@ export default function PartyManagerPage() {
     addCharacterToActiveCampaign,
     updateCharacterInActiveCampaign,
     deleteCharacterFromActiveCampaign,
-    levelUpActiveParty
+    incrementPartyLevel,
+    setPartyLevel
   } = useCampaign();
   const { toast } = useToast();
 
@@ -42,6 +44,10 @@ export default function PartyManagerPage() {
 
   const [isLevelSyncDialogOpen, setIsLevelSyncDialogOpen] = useState(false);
   const [levelSyncDetails, setLevelSyncDetails] = useState<{ characterId: string; newLevel: number; allFormData: CharacterFormData } | null>(null);
+
+  const [isLevelDiscrepancyDialogOpen, setIsLevelDiscrepancyDialogOpen] = useState(false);
+  const [partyUniqueLevels, setPartyUniqueLevels] = useState<number[]>([]);
+
 
   const initialCharacterFormState: CharacterFormData = {
     name: "",
@@ -71,9 +77,13 @@ export default function PartyManagerPage() {
           await updateCharacterInActiveCampaign({ ...editingCharacter, ...characterFormData });
           toast({ title: "Character Updated", description: `${characterFormData.name} has been updated.` });
         }
-      } else {
-        await addCharacterToActiveCampaign(characterFormData);
-        toast({ title: "Character Added", description: `${characterFormData.name} has been added to the party.` });
+      } else { // Adding new character
+        let dataToAdd = { ...characterFormData };
+        if (linkedPartyLevel && activeCampaignParty.length > 0) {
+          dataToAdd.level = activeCampaignParty[0].level; // Ensure new char has party level
+        }
+        await addCharacterToActiveCampaign(dataToAdd);
+        toast({ title: "Character Added", description: `${dataToAdd.name} has been added to the party.` });
       }
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
@@ -91,19 +101,16 @@ export default function PartyManagerPage() {
     if (syncAll) {
       toast({ title: "Syncing Party Levels...", description: `Updating all characters to Level ${newLevel}.` });
       try {
-        for (const char of activeCampaignParty) {
-          if (char.id === characterId) {
-            await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData, level: newLevel });
-          } else {
-            await updateCharacterInActiveCampaign({ ...char, level: newLevel });
-          }
-        }
+        await setPartyLevel(newLevel); // Use new context function
+        // Update the specific character that triggered this, in case other form data changed
+        await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData, level: newLevel });
         toast({ title: "Party Levels Synced!", description: `All characters set to Level ${newLevel}.` });
       } catch (error) {
         console.error("Error syncing party levels:", error);
         toast({ title: "Error Syncing Levels", description: "Could not update all characters.", variant: "destructive" });
       }
     } else {
+      // Only update this character
       await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData });
       toast({ title: "Character Updated", description: `${allFormData.name} has been updated to Level ${newLevel}. Other party members remain unchanged.` });
     }
@@ -140,7 +147,11 @@ export default function PartyManagerPage() {
 
   const openAddDialog = () => {
     setEditingCharacter(null);
-    setCharacterFormData(initialCharacterFormState);
+    let newCharLevel = 1;
+    if (linkedPartyLevel && activeCampaignParty.length > 0) {
+      newCharLevel = activeCampaignParty[0].level;
+    }
+    setCharacterFormData({...initialCharacterFormState, level: newCharLevel});
     setIsFormDialogOpen(true);
   };
 
@@ -169,14 +180,45 @@ export default function PartyManagerPage() {
     }
   };
 
-  const handleLevelUpParty = async () => {
+  const handleLevelUpPartyButton = async () => {
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
-      await levelUpActiveParty();
+      await incrementPartyLevel();
       toast({ title: "Party Leveled Up!", description: "All party members have gained a level." });
     } else {
        toast({ title: "Action Not Allowed", description: "Enable 'Link Party Level' and ensure there are characters in the party.", variant: "destructive" });
     }
   };
+
+  const handleLinkedPartyLevelChange = (newCheckedState: boolean) => {
+    if (newCheckedState) { // Trying to turn ON
+      if (activeCampaignParty.length > 0) {
+        const uniqueLevels = [...new Set(activeCampaignParty.map(c => c.level))];
+        if (uniqueLevels.length > 1) {
+          setPartyUniqueLevels(uniqueLevels.sort((a,b) => a-b));
+          setIsLevelDiscrepancyDialogOpen(true);
+          // Do NOT setLinkedPartyLevel(true) yet. Dialog will handle it.
+          return; // Exit early, dialog will set linkedPartyLevel
+        }
+      }
+      // No discrepancy, no party members, or party.length === 1
+      setLinkedPartyLevel(true);
+    } else { // Trying to turn OFF
+      setLinkedPartyLevel(false);
+    }
+  };
+
+  const handleLevelDiscrepancyConfirm = async (selectedLevel: number) => {
+    await setPartyLevel(selectedLevel);
+    setLinkedPartyLevel(true);
+    setIsLevelDiscrepancyDialogOpen(false);
+    toast({ title: "Party Levels Synced", description: `All characters set to Level ${selectedLevel}.` });
+  };
+
+  const handleLevelDiscrepancyCancel = () => {
+    setLinkedPartyLevel(false); // Ensure switch reflects cancellation
+    setIsLevelDiscrepancyDialogOpen(false);
+  };
+
 
   if (isLoadingCampaigns || isLoadingParty) {
     return <div className="text-center p-10">Loading party data...</div>;
@@ -200,6 +242,10 @@ export default function PartyManagerPage() {
       </Card>
     );
   }
+  
+  const isAddingNewCharacter = !editingCharacter;
+  const isLevelInputDisabled = linkedPartyLevel && isAddingNewCharacter && activeCampaignParty.length > 0;
+
 
   return (
     <div className="space-y-6">
@@ -214,17 +260,16 @@ export default function PartyManagerPage() {
             <Switch
               id="link-level-switch"
               checked={linkedPartyLevel}
-              onCheckedChange={setLinkedPartyLevel}
+              onCheckedChange={handleLinkedPartyLevelChange}
             />
           </div>
            <Button 
-            onClick={handleLevelUpParty} 
+            onClick={handleLevelUpPartyButton} 
             disabled={!linkedPartyLevel || activeCampaignParty.length === 0}
             className="w-full sm:w-auto"
           >
             <ArrowUpCircle className="mr-2 h-5 w-5" /> Level Up Party (+1)
           </Button>
-          {/* "Add Character" button removed from here */}
         </div>
       </div>
 
@@ -282,7 +327,6 @@ export default function PartyManagerPage() {
             </CardFooter>
           </Card>
         ))}
-        {/* Add New Character Card */}
         <Card
           className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[280px]"
           onClick={openAddDialog}
@@ -341,7 +385,20 @@ export default function PartyManagerPage() {
               </div>
               <div>
                 <Label htmlFor="level">Level</Label>
-                <Input id="level" name="level" type="number" value={characterFormData.level} onChange={handleInputChange} min="1" />
+                <Input 
+                  id="level" 
+                  name="level" 
+                  type="number" 
+                  value={characterFormData.level} 
+                  onChange={handleInputChange} 
+                  min="1" 
+                  disabled={isLevelInputDisabled}
+                />
+                 {isLevelInputDisabled && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Level is linked to party (Level {activeCampaignParty[0]?.level || 1}). Unlink "Link Party Level" to set a different starting level.
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="armorClass">Armor Class</Label>
@@ -391,9 +448,7 @@ export default function PartyManagerPage() {
         onOpenChange={setIsDetailsDialogOpen}
       />
 
-      <AlertDialog open={isLevelSyncDialogOpen} onOpenChange={(isOpen) => {
-          setIsLevelSyncDialogOpen(isOpen);
-        }}>
+      <AlertDialog open={isLevelSyncDialogOpen} onOpenChange={setIsLevelSyncDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Party Level Sync</AlertDialogTitle>
@@ -412,6 +467,14 @@ export default function PartyManagerPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <LevelDiscrepancyDialog
+        isOpen={isLevelDiscrepancyDialogOpen}
+        onOpenChange={setIsLevelDiscrepancyDialogOpen}
+        partyLevels={partyUniqueLevels}
+        onConfirmSync={handleLevelDiscrepancyConfirm}
+        onCancel={handleLevelDiscrepancyCancel}
+      />
 
     </div>
   );

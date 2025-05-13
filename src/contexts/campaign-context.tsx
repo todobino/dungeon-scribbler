@@ -21,7 +21,8 @@ interface CampaignContextType {
   addCharacterToActiveCampaign: (characterData: CharacterFormData) => Promise<void>;
   updateCharacterInActiveCampaign: (character: PlayerCharacter) => Promise<void>;
   deleteCharacterFromActiveCampaign: (characterId: string) => Promise<void>;
-  levelUpActiveParty: () => Promise<void>;
+  incrementPartyLevel: () => Promise<void>;
+  setPartyLevel: (targetLevel: number) => Promise<void>;
   getCampaignById: (id: string) => Campaign | undefined;
 }
 
@@ -151,13 +152,27 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setActiveCampaignParty(prevParty => prevParty.filter(char => char.id !== characterId));
   }, [activeCampaignId]);
 
-  const levelUpActiveParty = useCallback(async () => {
+  const incrementPartyLevel = useCallback(async () => {
     if (!activeCampaignId) {
       console.warn("Cannot level up party: No active campaign.");
       return;
     }
     setActiveCampaignParty(prevParty => 
       prevParty.map(char => ({ ...char, level: char.level + 1 }))
+    );
+  }, [activeCampaignId]);
+
+  const setPartyLevel = useCallback(async (targetLevel: number) => {
+    if (!activeCampaignId) {
+      console.warn("Cannot set party level: No active campaign.");
+      return;
+    }
+    if (targetLevel <= 0) {
+      console.warn("Cannot set party level: Target level must be positive.");
+      return;
+    }
+    setActiveCampaignParty(prevParty => 
+      prevParty.map(char => ({ ...char, level: targetLevel }))
     );
   }, [activeCampaignId]);
 
@@ -175,7 +190,8 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       addCharacterToActiveCampaign,
       updateCharacterInActiveCampaign,
       deleteCharacterFromActiveCampaign,
-      levelUpActiveParty,
+      incrementPartyLevel,
+      setPartyLevel,
       getCampaignById
     }}>
       {children}
