@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, APP_NAME, ADVANCED_NAV_ITEMS, SETTINGS_NAV_ITEMS, type NavItem } from "@/lib/constants";
 import {
-  SidebarProvider,
   Sidebar,
   SidebarHeader,
   SidebarContent,
@@ -63,28 +62,26 @@ export function SidebarNav() {
   );
 
   return (
-    <SidebarProvider defaultOpen>
-      <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border">
-        <SidebarHeader className="p-4 border-b border-sidebar-border">
-          <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-             <Image src="https://picsum.photos/seed/dungeonsidebar/40/40" alt="Logo" width={32} height={32} className="rounded-md" data-ai-hint="fantasy scroll"/>
-            <h1 className="text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden whitespace-nowrap">
-              {APP_NAME}
-            </h1>
-          </Link>
-        </SidebarHeader>
-        <ScrollArea className="flex-grow">
-          <SidebarContent className="p-2">
-            {renderNavItems(NAV_ITEMS, "Core Features")}
-            <SidebarSeparator className="my-4" />
-            {renderNavItems(ADVANCED_NAV_ITEMS, "Advanced Tools")}
-          </SidebarContent>
-        </ScrollArea>
-        <SidebarFooter className="p-2 border-t border-sidebar-border">
-          {renderNavItems(SETTINGS_NAV_ITEMS)}
-        </SidebarFooter>
-      </Sidebar>
-    </SidebarProvider>
+    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="p-4 border-b border-sidebar-border">
+        <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
+            <Image src="https://picsum.photos/seed/dungeonsidebar/40/40" alt="Logo" width={32} height={32} className="rounded-md" data-ai-hint="fantasy scroll"/>
+          <h1 className="text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden whitespace-nowrap">
+            {APP_NAME}
+          </h1>
+        </Link>
+      </SidebarHeader>
+      <ScrollArea className="flex-grow">
+        <SidebarContent className="p-2">
+          {renderNavItems(NAV_ITEMS, "Core Features")}
+          <SidebarSeparator className="my-4" />
+          {renderNavItems(ADVANCED_NAV_ITEMS, "Advanced Tools")}
+        </SidebarContent>
+      </ScrollArea>
+      <SidebarFooter className="p-2 border-t border-sidebar-border">
+        {renderNavItems(SETTINGS_NAV_ITEMS)}
+      </SidebarFooter>
+    </Sidebar>
   );
 }
 
