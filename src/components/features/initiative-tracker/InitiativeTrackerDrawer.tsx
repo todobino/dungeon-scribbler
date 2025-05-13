@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useId } from "react";
@@ -7,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"; // SheetDescription removed
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"; // DialogClose removed, as it's part of DialogFooter now
+import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5 } from "lucide-react";
+// Removed useToast as toasts are no longer used.
+import { Switch } from "@/components/ui/switch";
+import { rollDie } from "@/lib/dice-utils";
+
 
 interface InitiativeTrackerDrawerProps {
   open: boolean;
@@ -21,7 +25,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   const { activeCampaignParty } = useCampaign();
   const [combatants, setCombatants] = useState<Combatant[]>([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState<number | null>(null);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toasts removed
   const uniqueId = useId();
 
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
@@ -30,26 +34,40 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
 
   const [isAddEnemyDialogOpen, setIsAddEnemyDialogOpen] = useState(false);
   const [enemyName, setEnemyName] = useState("");
-  const [enemyInitiative, setEnemyInitiative] = useState("");
+  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>(""); // For fixed value or modifier
+  const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
+  const [rollEnemyInitiativeFlag, setRollEnemyInitiativeFlag] = useState<boolean>(false);
 
   useEffect(() => {
-    // Sort combatants whenever the list changes
     const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name));
-    setCombatants(sorted);
-  }, [combatants.length]); // Re-sort only when length changes to avoid issues with direct state update and sort
+    // Only update if the sorted order is actually different to prevent infinite loops
+    if (JSON.stringify(sorted) !== JSON.stringify(combatants)) {
+        setCombatants(sorted);
+    }
+  }, [combatants]); // Re-sort when combatants list changes
+
+  const parseModifierString = (modStr: string): number => {
+    modStr = modStr.trim();
+    if (modStr === "") return 0;
+    const num = parseInt(modStr);
+    return isNaN(num) ? 0 : num;
+  };
 
   const handleAddPlayer = () => {
     if (!selectedPlayerToAdd || playerInitiative === "") {
-      toast({ title: "Missing Information", description: "Please select a player and enter their initiative.", variant: "destructive" });
+      // toast({ title: "Missing Information", description: "Please select a player and enter their initiative.", variant: "destructive" }); // Toast removed
+      console.error("Missing Information: Please select a player and enter their initiative.");
       return;
     }
     const initiativeValue = parseInt(playerInitiative);
     if (isNaN(initiativeValue)) {
-      toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive" });
+      // toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive" }); // Toast removed
+      console.error("Invalid Initiative: Initiative must be a number.");
       return;
     }
     if (combatants.find(c => c.playerId === selectedPlayerToAdd.id)) {
-      toast({ title: "Player Already Added", description: `${selectedPlayerToAdd.name} is already in the initiative order.`, variant: "destructive" });
+      // toast({ title: "Player Already Added", description: `${selectedPlayerToAdd.name} is already in the initiative order.`, variant: "destructive" }); // Toast removed
+      console.warn("Player Already Added:", selectedPlayerToAdd.name, "is already in the initiative order.");
       return;
     }
 
@@ -61,57 +79,88 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
       color: selectedPlayerToAdd.color,
       playerId: selectedPlayerToAdd.id,
     };
-    setCombatants(prev => [...prev, newCombatant].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name)));
-    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0); // Start combat if first one added
+    setCombatants(prev => [...prev, newCombatant]);
+    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0);
     setIsAddPlayerDialogOpen(false);
     setSelectedPlayerToAdd(null);
     setPlayerInitiative("");
-    toast({ title: "Player Added", description: `${selectedPlayerToAdd.name} added to initiative.` });
+    // toast({ title: "Player Added", description: `${selectedPlayerToAdd.name} added to initiative.` }); // Toast removed
   };
   
   const handleAddEnemy = () => {
-    if (!enemyName.trim() || enemyInitiative === "") {
-      toast({ title: "Missing Information", description: "Please enter enemy name and initiative.", variant: "destructive" });
+    if (!enemyName.trim()) {
+      // toast({ title: "Missing Information", description: "Please enter enemy name.", variant: "destructive" }); // Toast removed
+      console.error("Missing Information: Please enter enemy name.");
       return;
     }
-    const initiativeValue = parseInt(enemyInitiative);
-    if (isNaN(initiativeValue)) {
-      toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive" });
+
+    const quantity = parseInt(enemyQuantityInput) || 1;
+    if (quantity <= 0) {
+      console.error("Invalid Quantity: Must be a positive number.");
       return;
     }
-    const newCombatant: Combatant = {
-      id: `${uniqueId}-enemy-${Date.now()}`,
-      name: enemyName.trim(),
-      initiative: initiativeValue,
-      type: 'enemy',
-    };
-    setCombatants(prev => [...prev, newCombatant].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name)));
-    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0); // Start combat if first one added
+
+    const newEnemies: Combatant[] = [];
+
+    for (let i = 0; i < quantity; i++) {
+      let initiativeValue: number;
+      const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
+
+      if (rollEnemyInitiativeFlag) {
+        const modifier = parseModifierString(enemyInitiativeInput);
+        initiativeValue = rollDie(20) + modifier;
+      } else {
+        if (enemyInitiativeInput === "") {
+          // toast({ title: "Missing Information", description: "Please enter initiative value or roll for enemy.", variant: "destructive" }); // Toast removed
+          console.error("Missing Information: Please enter initiative value or roll for enemy.");
+          return; // Stop if fixed initiative is expected but not provided
+        }
+        initiativeValue = parseInt(enemyInitiativeInput);
+        if (isNaN(initiativeValue)) {
+          // toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive" }); // Toast removed
+          console.error("Invalid Initiative: Initiative must be a number.");
+          return; // Stop if initiative is not a number
+        }
+      }
+      
+      newEnemies.push({
+        id: `${uniqueId}-enemy-${Date.now()}-${i}`,
+        name: currentEnemyName,
+        initiative: initiativeValue,
+        type: 'enemy',
+      });
+    }
+    
+    setCombatants(prev => [...prev, ...newEnemies]);
+    if (currentTurnIndex === null && combatants.length === 0 && newEnemies.length > 0) setCurrentTurnIndex(0);
+    
     setIsAddEnemyDialogOpen(false);
     setEnemyName("");
-    setEnemyInitiative("");
-    toast({ title: "Enemy Added", description: `${newCombatant.name} added to initiative.` });
+    setEnemyInitiativeInput("");
+    setEnemyQuantityInput("1");
+    setRollEnemyInitiativeFlag(false);
+    // toast({ title: "Enemy Added", description: `${newEnemies.length > 1 ? `${newEnemies.length} enemies` : newEnemies[0].name} added to initiative.`}); // Toast removed
   };
 
   const removeCombatant = (id: string) => {
+    const combatantToRemoveIndex = combatants.findIndex(c => c.id === id);
     setCombatants(prev => {
-      const newCombatants = prev.filter(c => c.id !== id);
-      if (newCombatants.length === 0) {
-        setCurrentTurnIndex(null);
-      } else if (currentTurnIndex !== null) {
-        // Adjust currentTurnIndex if the removed combatant affects it
-        const removedCombatant = prev.find(c => c.id === id);
-        const originalIndex = prev.findIndex(c => c.id === id);
-        if (removedCombatant && currentTurnIndex === originalIndex) {
-           // If current turn was removed, try to stay on same effective turn or move to next
-           setCurrentTurnIndex(currentTurnIndex % newCombatants.length);
-        } else if (currentTurnIndex > originalIndex) {
-           setCurrentTurnIndex(currentTurnIndex - 1);
+        const newCombatants = prev.filter(c => c.id !== id);
+        if (newCombatants.length === 0) {
+            setCurrentTurnIndex(null);
+        } else if (currentTurnIndex !== null) {
+            if (currentTurnIndex === combatantToRemoveIndex) {
+                // If current turn was removed, stay on the same "effective" turn index if possible, wrapping around
+                setCurrentTurnIndex(currentTurnIndex % newCombatants.length);
+            } else if (currentTurnIndex > combatantToRemoveIndex) {
+                // If removed combatant was before current turn, decrement index
+                setCurrentTurnIndex(currentTurnIndex - 1);
+            }
+            // If removed combatant was after current turn, index remains valid or will be handled by next/prev logic
         }
-      }
-      return newCombatants;
+        return newCombatants;
     });
-    toast({ title: "Combatant Removed" });
+    // toast({ title: "Combatant Removed" }); // Toast removed
   };
 
   const nextTurn = () => {
@@ -127,7 +176,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   const endCombat = () => {
     setCombatants([]);
     setCurrentTurnIndex(null);
-    toast({ title: "Combat Ended", description: "Initiative order has been cleared." });
+    // toast({ title: "Combat Ended", description: "Initiative order has been cleared." }); // Toast removed
   };
 
   const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
@@ -138,7 +187,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col">
           <SheetHeader>
             <SheetTitle className="flex items-center"><ListOrdered className="mr-2 h-6 w-6 text-primary"/>Initiative Tracker</SheetTitle>
-            <SheetDescription>Manage combat turn order. Add party members and enemies.</SheetDescription>
+            {/* SheetDescription removed */}
           </SheetHeader>
           
           <div className="py-2 flex gap-2">
@@ -236,20 +285,42 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Enemy to Initiative</DialogTitle>
-            <DialogDescription>Enter the enemy's name and initiative roll.</DialogDescription>
+            <DialogDescription>Enter enemy details. You can add multiple and roll their initiative.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-3">
             <div>
               <Label htmlFor="enemy-name">Enemy Name</Label>
-              <Input id="enemy-name" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} placeholder="e.g., Goblin Boss" />
+              <Input id="enemy-name" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} placeholder="e.g., Goblin" />
             </div>
             <div>
-              <Label htmlFor="enemy-initiative">Initiative Roll</Label>
-              <Input id="enemy-initiative" type="number" value={enemyInitiative} onChange={(e) => setEnemyInitiative(e.target.value)} placeholder="e.g., 12" />
+              <Label htmlFor="enemy-quantity">Quantity</Label>
+              <Input id="enemy-quantity" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} placeholder="1" min="1" />
+            </div>
+            <div className="flex items-center space-x-2 pt-2">
+              <Switch id="roll-enemy-initiative" checked={rollEnemyInitiativeFlag} onCheckedChange={setRollEnemyInitiativeFlag} />
+              <Label htmlFor="roll-enemy-initiative" className="cursor-pointer">Roll Initiative for Enemy?</Label>
+            </div>
+            <div>
+              <Label htmlFor="enemy-initiative-input">
+                {rollEnemyInitiativeFlag ? "Initiative Modifier (e.g., +2 or -1)" : "Fixed Initiative Value"}
+              </Label>
+              <Input 
+                id="enemy-initiative-input" 
+                value={enemyInitiativeInput} 
+                onChange={(e) => setEnemyInitiativeInput(e.target.value)} 
+                placeholder={rollEnemyInitiativeFlag ? "e.g., 2 or -1" : "e.g., 12"} 
+                type={rollEnemyInitiativeFlag ? "text" : "number"} // Allow "+" for modifier
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddEnemyDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => {
+              setIsAddEnemyDialogOpen(false);
+              setEnemyName("");
+              setEnemyInitiativeInput("");
+              setEnemyQuantityInput("1");
+              setRollEnemyInitiativeFlag(false);
+            }}>Cancel</Button>
             <Button onClick={handleAddEnemy}>Add Enemy</Button>
           </DialogFooter>
         </DialogContent>
@@ -257,3 +328,5 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     </>
   );
 }
+
+    

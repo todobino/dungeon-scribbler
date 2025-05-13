@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useId } from "react";
@@ -7,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-import { Dice5, Zap } from "lucide-react";
+import { Dice5, Zap, Trash2 } from "lucide-react"; // Added Trash2 for Clear Log
 import { parseDiceNotation, rollMultipleDice, type ParsedDiceNotation } from "@/lib/dice-utils";
-import { useToast } from "@/hooks/use-toast";
+// Removed useToast as toasts are no longer used.
+import { cn } from "@/lib/utils";
 
 interface DiceRollerDrawerProps {
   open: boolean;
@@ -37,7 +39,7 @@ export function DiceRollerDrawer({ open, onOpenChange }: DiceRollerDrawerProps) 
   const [inputValue, setInputValue] = useState("");
   const [rollMode, setRollMode] = useState<RollMode>("normal");
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toasts removed
   const uniqueId = useId();
 
   const handleRoll = () => {
@@ -45,12 +47,15 @@ export function DiceRollerDrawer({ open, onOpenChange }: DiceRollerDrawerProps) 
     const parsed = parseDiceNotation(notationToParse);
 
     if (parsed.error) {
-      toast({ title: "Invalid Dice Notation", description: parsed.error, variant: "destructive" });
+      // toast({ title: "Invalid Dice Notation", description: parsed.error, variant: "destructive" }); // Toast removed
+      console.error("Invalid Dice Notation:", parsed.error);
+      // Optionally, provide non-toast feedback here if desired, e.g., setting an error message in state.
       return;
     }
 
     if (parsed.sides <= 0 || parsed.count <= 0) {
-      toast({ title: "Invalid Dice", description: "Dice sides and count must be positive.", variant: "destructive" });
+      // toast({ title: "Invalid Dice", description: "Dice sides and count must be positive.", variant: "destructive" }); // Toast removed
+      console.error("Invalid Dice: Dice sides and count must be positive.");
       return;
     }
     
@@ -67,12 +72,12 @@ export function DiceRollerDrawer({ open, onOpenChange }: DiceRollerDrawerProps) 
       detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
     } else { // Advantage or Disadvantage
       if (parsed.count !== 1 || parsed.sides !== 20) {
-         toast({ title: "Invalid Roll for Mode", description: "Advantage/Disadvantage typically applies to a single d20 roll.", variant: "destructive" });
-         // Fallback to normal roll for non-1d20 advantage/disadvantage for simplicity for now
+        //  toast({ title: "Invalid Roll for Mode", description: "Advantage/Disadvantage typically applies to a single d20 roll.", variant: "destructive" }); // Toast removed
+         console.warn("Advantage/Disadvantage typically applies to a single d20 roll. Proceeding with a normal roll for non-1d20.");
           const { rolls, sum } = rollMultipleDice(parsed.count, parsed.sides);
           resultRolls = rolls;
           finalResult = sum + parsed.modifier;
-          detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "") + Math.abs(parsed.modifier) : ""} = ${finalResult} (Mode ignored)`;
+          detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "") + Math.abs(parsed.modifier) : ""} = ${finalResult} (Mode ignored for non-1d20)`;
 
       } else {
         const roll1Result = rollMultipleDice(1, 20);
@@ -133,7 +138,7 @@ export function DiceRollerDrawer({ open, onOpenChange }: DiceRollerDrawerProps) 
               id="dice-notation" 
               value={inputValue} 
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="1d20" 
+              placeholder="e.g., 2d6+3, d20" 
             />
           </div>
           
@@ -155,12 +160,25 @@ export function DiceRollerDrawer({ open, onOpenChange }: DiceRollerDrawerProps) 
             </RadioGroup>
           </div>
 
-          <Button onClick={handleRoll} className="w-full">
-            <Zap className="mr-2 h-5 w-5" /> Roll
+          <Button 
+            onClick={handleRoll} 
+            className={cn(
+              "w-full",
+              rollMode === "advantage" && "border-2 border-green-500 hover:border-green-600",
+              rollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600"
+            )}
+          >
+            <Zap className="mr-2 h-5 w-5" /> 
+            {inputValue.trim() === "" ? "Roll d20" : "Roll"}
           </Button>
 
           <div className="flex-grow flex flex-col min-h-0">
-            <Label className="mb-1">Roll Log</Label>
+            <div className="flex justify-between items-center mb-1">
+              <Label>Roll Log</Label>
+              <Button variant="ghost" size="sm" onClick={() => setRollLog([])} className="text-xs text-muted-foreground hover:text-foreground">
+                <Trash2 className="mr-1 h-3 w-3" /> Clear Log
+              </Button>
+            </div>
             <ScrollArea className="border rounded-md p-2 flex-grow bg-muted/30 h-full">
               {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
               <div className="space-y-3">
@@ -183,3 +201,5 @@ export function DiceRollerDrawer({ open, onOpenChange }: DiceRollerDrawerProps) 
     </Sheet>
   );
 }
+
+    
