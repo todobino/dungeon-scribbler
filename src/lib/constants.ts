@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const WORLD_NAV_ITEMS: NavItem[] = [
-  { label: 'Factions', href: '/world/factions', icon: ShieldIcon, disabled: true },
+  { label: 'Factions', href: '/world/factions', icon: ShieldCheck, disabled: false },
   { label: 'Locations', href: '/world/locations', icon: MapPinIcon, disabled: true },
   { label: 'NPCs List', href: '/world/npcs', icon: Users, disabled: true }, // Renamed to NPCs List for clarity
 ];
@@ -73,3 +73,33 @@ export const PREDEFINED_COLORS = [
 
 export type PredefinedColor = typeof PREDEFINED_COLORS[number];
 
+export const FACTION_REPUTATION_SCALE = {
+  MIN: -5, // Sworn Enemy
+  MAX: 5,  // Sworn Ally
+  STEP: 1,
+  LABELS: {
+    "-5": "Sworn Enemy",
+    "-4": "Hostile",
+    "-3": "Unfriendly",
+    "-2": "Wary",
+    "-1": "Disliked",
+    "0": "Neutral",
+    "1": "Liked",
+    "2": "Friendly",
+    "3": "Trusted",
+    "4": "Allied",
+    "5": "Sworn Ally",
+  } as Record<string, string>,
+};
+
+export const getFactionReputationLabel = (reputation: number): string => {
+  return FACTION_REPUTATION_SCALE.LABELS[reputation.toString()] || "Unknown";
+};
+
+export const getFactionReputationColorClass = (reputation: number): string => {
+  if (reputation <= -3) return "text-destructive";
+  if (reputation < 0) return "text-orange-500"; // Using a Tailwind color directly
+  if (reputation === 0) return "text-muted-foreground";
+  if (reputation < 3) return "text-blue-500"; // Using a Tailwind color directly
+  return "text-green-500"; // Using a Tailwind color directly
+};

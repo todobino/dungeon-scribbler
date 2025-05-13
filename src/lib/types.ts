@@ -84,3 +84,15 @@ export interface Combatant {
   currentHp?: number; // Current Hit Points
 }
 
+export interface Faction {
+  id: string;
+  campaignId: string; // Associate faction with a specific campaign
+  name: string;
+  goals: string;
+  reputation: number; // Scale from -5 (Sworn Enemy) to 5 (Sworn Ally)
+  notes?: string;
+  leader?: string;
+  headquarters?: string;
+  allies?: string; // Text description of allied groups/factions
+  enemies?: string; // Text description of enemy groups/factions
+}
