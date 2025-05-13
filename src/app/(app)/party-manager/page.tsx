@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { PlayerCharacter } from "@/lib/types";
@@ -53,7 +54,7 @@ export default function PartyManagerPage() {
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
 
   const handleFormSubmit = async () => {
-    if (characterFormData.name && characterFormData.class && characterFormData.race && activeCampaign) {
+    if (characterFormData.name?.trim() && characterFormData.class && characterFormData.race?.trim() && activeCampaign) {
       if (editingCharacter) {
         const originalLevel = editingCharacter.level;
         const newLevel = characterFormData.level;
@@ -374,7 +375,12 @@ export default function PartyManagerPage() {
                 setLevelSyncDetails(null);
                 setIsLevelSyncDialogOpen(false);
             }}>Cancel</Button>
-            <Button onClick={handleFormSubmit} disabled={!characterFormData.name.trim() || !characterFormData.race.trim()}>{editingCharacter ? "Save Changes" : "Add Character"}</Button>
+            <Button 
+              onClick={handleFormSubmit} 
+              disabled={!characterFormData.name?.trim() || !characterFormData.race?.trim()}
+            >
+              {editingCharacter ? "Save Changes" : "Add Character"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -410,3 +416,4 @@ export default function PartyManagerPage() {
     </div>
   );
 }
+
