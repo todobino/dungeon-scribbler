@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette } from "lucide-react";
@@ -39,6 +40,9 @@ export default function PartyManagerPage() {
   const [currentCharacterDetails, setCurrentCharacterDetails] = useState<PlayerCharacter | null>(null);
   const [linkedPartyLevel, setLinkedPartyLevel] = useState(false);
 
+  const [isLevelSyncDialogOpen, setIsLevelSyncDialogOpen] = useState(false);
+  const [levelSyncDetails, setLevelSyncDetails] = useState<{ characterId: string; newLevel: number; allFormData: CharacterFormData } | null>(null);
+
   const initialCharacterFormState: CharacterFormData = {
     name: "",
     level: 1,
@@ -51,17 +55,71 @@ export default function PartyManagerPage() {
   const handleFormSubmit = async () => {
     if (characterFormData.name && characterFormData.class && activeCampaign) {
       if (editingCharacter) {
-        await updateCharacterInActiveCampaign({ ...editingCharacter, ...characterFormData });
-        toast({ title: "Character Updated", description: `${characterFormData.name} has been updated.` });
+        const originalLevel = editingCharacter.level;
+        const newLevel = characterFormData.level;
+
+        if (linkedPartyLevel && newLevel !== originalLevel && activeCampaignParty.length > 1) {
+          setLevelSyncDetails({
+            characterId: editingCharacter.id,
+            newLevel: newLevel,
+            allFormData: { ...characterFormData } 
+          });
+          setIsLevelSyncDialogOpen(true);
+          // Main form dialog remains open, decision handled by AlertDialog
+          return; 
+        } else {
+          await updateCharacterInActiveCampaign({ ...editingCharacter, ...characterFormData });
+          toast({ title: "Character Updated", description: `${characterFormData.name} has been updated.` });
+        }
       } else {
         await addCharacterToActiveCampaign(characterFormData);
         toast({ title: "Character Added", description: `${characterFormData.name} has been added to the party.` });
       }
+      // Common cleanup for non-sync path or if sync condition not met
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
       setIsFormDialogOpen(false);
     }
   };
+
+  const handleLevelSyncConfirmation = async (syncAll: boolean) => {
+    if (!levelSyncDetails || !editingCharacter) return; // Should not happen if dialog was opened correctly
+
+    const { characterId, newLevel, allFormData } = levelSyncDetails;
+
+    if (syncAll) {
+      toast({ title: "Syncing Party Levels...", description: `Updating all characters to Level ${newLevel}.` });
+      // Update all characters, including the one being edited.
+      // Use a try-catch block for robustness if multiple async operations are involved.
+      try {
+        for (const char of activeCampaignParty) {
+          if (char.id === characterId) {
+            // This is the character being edited, apply all form data and the new level.
+            await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData, level: newLevel });
+          } else {
+            // Other characters, just update their level.
+            await updateCharacterInActiveCampaign({ ...char, level: newLevel });
+          }
+        }
+        toast({ title: "Party Levels Synced!", description: `All characters set to Level ${newLevel}.` });
+      } catch (error) {
+        console.error("Error syncing party levels:", error);
+        toast({ title: "Error Syncing Levels", description: "Could not update all characters.", variant: "destructive" });
+      }
+    } else {
+      // Only update the character being edited with its form data (which includes the new level)
+      await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData });
+      toast({ title: "Character Updated", description: `${allFormData.name} has been updated to Level ${newLevel}. Other party members remain unchanged.` });
+    }
+
+    // Cleanup after either action
+    setIsLevelSyncDialogOpen(false);
+    setLevelSyncDetails(null);
+    setCharacterFormData(initialCharacterFormState);
+    setEditingCharacter(null);
+    setIsFormDialogOpen(false); // Close the main form dialog
+  };
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -235,9 +293,11 @@ export default function PartyManagerPage() {
 
       {/* Add/Edit Character Dialog */}
       <Dialog open={isFormDialogOpen} onOpenChange={(isOpen) => {
-          if (!isOpen) {
+          if (!isOpen) { // If dialog is closed (e.g. by Cancel button or overlay click)
             setEditingCharacter(null); 
             setCharacterFormData(initialCharacterFormState);
+            setLevelSyncDetails(null); // Also clear any pending sync
+            setIsLevelSyncDialogOpen(false); // Ensure sync dialog is also closed
           }
           setIsFormDialogOpen(isOpen);
         }}>
@@ -298,7 +358,13 @@ export default function PartyManagerPage() {
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsFormDialogOpen(false); setEditingCharacter(null); setCharacterFormData(initialCharacterFormState);}}>Cancel</Button>
+            <Button variant="outline" onClick={() => { 
+                setIsFormDialogOpen(false); 
+                setEditingCharacter(null); 
+                setCharacterFormData(initialCharacterFormState);
+                setLevelSyncDetails(null); // Clear sync details on cancel
+                setIsLevelSyncDialogOpen(false);
+            }}>Cancel</Button>
             <Button onClick={handleFormSubmit} disabled={!characterFormData.name.trim()}>{editingCharacter ? "Save Changes" : "Add Character"}</Button>
           </DialogFooter>
         </DialogContent>
@@ -310,7 +376,38 @@ export default function PartyManagerPage() {
         isOpen={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
       />
+
+      {/* Party Level Sync Confirmation Dialog */}
+      <AlertDialog open={isLevelSyncDialogOpen} onOpenChange={(isOpen) => {
+          setIsLevelSyncDialogOpen(isOpen);
+          // If dialog is closed without an explicit action (e.g., Esc, X button),
+          // we effectively cancel the pending sync operation.
+          // The main form dialog is still open, user can click its cancel or save again.
+          if (!isOpen && levelSyncDetails) {
+            // If user explicitly closed alert without choosing, we might want to clear levelSyncDetails
+            // to prevent re-prompt if they hit "Save" on main form again with same values.
+            // For now, this simply closes the alert. If they save main form, it will re-evaluate.
+          }
+        }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Party Level Sync</AlertDialogTitle>
+            <AlertDialogDescription>
+              Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
+              Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
+              No, only this character
+            </Button>
+            <Button onClick={() => handleLevelSyncConfirmation(true)}>
+              Yes, sync all to Level {levelSyncDetails?.newLevel}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
-
