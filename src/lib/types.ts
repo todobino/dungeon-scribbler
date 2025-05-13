@@ -6,11 +6,10 @@ export interface PlayerCharacter {
   level: number;
   class: DndClass;
   armorClass: number;
-  color?: string; // Added color property
-  // Placeholder for abilities, ideally fetched or structured from SRD data
+  race: string; // Added race, making it required
+  color?: string;
   abilities?: string[]; 
   racialTraits?: string[];
-  // race?: string; // Optional: Add if form collects race
 }
 
 export interface NPC {
@@ -23,7 +22,6 @@ export interface NPC {
   personalityTraits?: string;
   backstory?: string;
   motivations?: string;
-  // Links to other entities
   linkedQuestIds?: string[];
   linkedRegionIds?: string[];
   linkedFactionIds?: string[];
@@ -32,10 +30,9 @@ export interface NPC {
 export interface CampaignNote {
   id: string;
   title: string;
-  content: string; // For simplicity, string. Rich text/nested bullets are complex.
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
-  // Links to other entities
+  content: string; 
+  createdAt: string; 
+  updatedAt: string; 
   linkedNpcIds?: string[];
   linkedLocationIds?: string[];
 }
@@ -43,7 +40,7 @@ export interface CampaignNote {
 export interface RandomTableOption {
   id: string;
   value: string;
-  weight?: number; // Optional weight for an option
+  weight?: number; 
 }
 
 export interface RandomTable {
@@ -56,16 +53,15 @@ export interface RandomTable {
 export interface MapData {
   id: string;
   name: string;
-  imageUrl: string; // URL of the uploaded map image
-  // Markers and linked notes would go here in a more advanced version
+  imageUrl: string; 
   markers?: MapMarker[];
 }
 
 export interface MapMarker {
   id:string;
-  x: number; // percentage
-  y: number; // percentage
-  noteId?: string; // Link to a campaign note
+  x: number; 
+  y: number; 
+  noteId?: string; 
   description?: string;
 }
 
@@ -73,12 +69,13 @@ export interface Campaign {
   id: string;
   name: string;
   description?: string;
-  // Data for each feature will be associated with the campaign
-  // For now, these are not directly on the Campaign object but stored
-  // in localStorage keyed by campaign ID.
-  // characters: PlayerCharacter[];
-  // npcs: NPC[];
-  // notes: CampaignNote[];
-  // maps: MapData[];
 }
 
+export interface Combatant {
+  id: string;
+  name: string;
+  initiative: number;
+  type: 'player' | 'enemy';
+  color?: string; // For player characters
+  playerId?: string; // To link back to PlayerCharacter if needed
+}

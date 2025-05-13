@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ReactNode } from 'react';
@@ -7,7 +6,8 @@ import type { Campaign, PlayerCharacter } from '@/lib/types';
 import type { DndClass } from '@/lib/constants';
 
 // Define a type for the character data used in add/update functions
-export type CharacterFormData = Omit<PlayerCharacter, 'id'>;
+// Omit 'id' as it's generated, 'abilities' and 'racialTraits' as they are derived/lookup
+export type CharacterFormData = Omit<PlayerCharacter, 'id' | 'abilities' | 'racialTraits'>;
 
 
 interface CampaignContextType {
@@ -38,7 +38,6 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
   const [isLoadingParty, setIsLoadingParty] = useState(false);
 
-  // Load campaigns and active campaign ID from localStorage
   useEffect(() => {
     try {
       const storedCampaigns = localStorage.getItem(CAMPAIGNS_STORAGE_KEY);
@@ -55,14 +54,12 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setIsLoadingCampaigns(false);
   }, []);
 
-  // Save campaigns to localStorage
   useEffect(() => {
     if (!isLoadingCampaigns) {
       localStorage.setItem(CAMPAIGNS_STORAGE_KEY, JSON.stringify(campaigns));
     }
   }, [campaigns, isLoadingCampaigns]);
 
-  // Save active campaign ID to localStorage
   useEffect(() => {
     if (!isLoadingCampaigns) {
       if (activeCampaignId) {
@@ -73,7 +70,6 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
   }, [activeCampaignId, isLoadingCampaigns]);
 
-  // Load party for the active campaign
   useEffect(() => {
     if (activeCampaignId) {
       setIsLoadingParty(true);
@@ -95,7 +91,6 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
   }, [activeCampaignId]);
 
-  // Save party for the active campaign to localStorage
   useEffect(() => {
     if (activeCampaignId && !isLoadingParty) {
       try {
@@ -111,7 +106,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const addCampaign = useCallback(async (name: string) => {
     const newCampaign: Campaign = { id: Date.now().toString(), name };
     setCampaigns(prev => [...prev, newCampaign]);
-    if (!activeCampaignId) { // Automatically set as active if no campaign is active
+    if (!activeCampaignId) { 
       setActiveCampaignIdState(newCampaign.id);
     }
     return newCampaign;
@@ -133,6 +128,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     const newCharacter: PlayerCharacter = {
       ...characterData,
       id: Date.now().toString(),
+      // Abilities and racialTraits would be derived/looked up, not part of form data
     };
     setActiveCampaignParty(prevParty => [...prevParty, newCharacter]);
   }, [activeCampaignId]);
@@ -194,4 +190,3 @@ export function useCampaign() {
   }
   return context;
 }
-

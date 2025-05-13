@@ -1,13 +1,12 @@
-
 "use client";
 
 import type { PlayerCharacter } from "@/lib/types";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookOpen, Users } from "lucide-react";
+import { BookOpen, Users, VenetianMask } from "lucide-react"; // Added VenetianMask
 
-// Mock SRD data (as it was in PartyManagerPage)
+// Mock SRD data
 const mockAbilities: Record<string, Record<number, string[]>> = {
   Fighter: { 1: ["Second Wind", "Fighting Style"], 2: ["Action Surge"], 3: ["Martial Archetype"]},
   Wizard: { 1: ["Spellcasting", "Arcane Recovery"], 2: ["Arcane Tradition"], 3: ["Cantrip Formulas"]},
@@ -23,15 +22,22 @@ const mockAbilities: Record<string, Record<number, string[]>> = {
   Sorcerer: { 1: ["Spellcasting", "Sorcerous Origin"], 2: ["Font of Magic"], 3: ["Metamagic"] },
   Warlock: { 1: ["Otherworldly Patron", "Pact Magic"], 2: ["Eldritch Invocations"], 3: ["Pact Boon"] },
 };
+
+// Ensure keys are capitalized to match potential input
 const mockRacialTraits: Record<string, string[]> = {
-  Human: ["Versatile", "Skilled"], Elf: ["Darkvision", "Fey Ancestry", "Trance"], Dwarf: ["Darkvision", "Dwarven Resilience", "Stonecunning"],
-  // Add more races if needed for completeness, or rely on dynamic data in a real app
+  Human: ["Versatile", "Skilled"], 
+  Elf: ["Darkvision", "Fey Ancestry", "Trance"], 
+  Dwarf: ["Darkvision", "Dwarven Resilience", "Stonecunning"],
   Dragonborn: ["Draconic Ancestry", "Breath Weapon", "Damage Resistance"],
   Gnome: ["Darkvision", "Gnome Cunning"],
-  "Half-Elf": ["Darkvision", "Fey Ancestry", "Skill Versatility"],
+  "Half-Elf": ["Darkvision", "Fey Ancestry", "Skill Versatility"], // Key with hyphen
+  "Half Elf": ["Darkvision", "Fey Ancestry", "Skill Versatility"], // Key with space
   Halfling: ["Lucky", "Brave", "Halfling Nimbleness"],
-  "Half-Orc": ["Darkvision", "Menacing", "Relentless Endurance", "Savage Attacks"],
+  "Half-Orc": ["Darkvision", "Menacing", "Relentless Endurance", "Savage Attacks"], // Key with hyphen
+  "Half Orc": ["Darkvision", "Menacing", "Relentless Endurance", "Savage Attacks"], // Key with space
   Tiefling: ["Darkvision", "Hellish Resistance", "Infernal Legacy"],
+  Orc: ["Darkvision", "Powerful Build", "Aggressive"], // Added Orc
+  Goblin: ["Darkvision", "Fury of the Small", "Nimble Escape"], // Added Goblin
 };
 
 
@@ -44,10 +50,10 @@ interface CharacterDetailsDialogProps {
 export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: CharacterDetailsDialogProps) {
   if (!character) return null;
 
-  // Populate abilities and racial traits (assuming character object might not have them directly)
-  const abilities = mockAbilities[character.class]?.[character.level] || ["No specific abilities listed for this class/level."];
-  // Assuming 'race' might not be on PlayerCharacter, defaulting to Human for traits. A real app would need race data.
-  const racialTraits = mockRacialTraits[(character as any).race || "Human"] || ["No specific racial traits listed."];
+  const abilities = mockAbilities[character.class]?.[character.level] || [];
+  // Attempt to match race, trying a capitalized version first.
+  const raceKey = character.race.charAt(0).toUpperCase() + character.race.slice(1);
+  const racialTraits = mockRacialTraits[raceKey] || mockRacialTraits[character.race] || [];
 
 
   return (
@@ -56,36 +62,36 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
         <DialogHeader>
           <DialogTitle className="text-2xl">{character.name}</DialogTitle>
           <DialogDescription>
-            Level {character.level} {character.class} {(character as any).race && `(${(character as any).race})`}
+            Level {character.level} {character.race} {character.class}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] p-1">
           <div className="space-y-6 py-4 pr-4">
             <div>
               <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
+                <VenetianMask className="mr-2 h-5 w-5" /> {/* Icon for Race */}
+                Racial Traits ({character.race})
+              </h3>
+              {racialTraits.length > 0 ? (
+                <ul className="list-disc list-inside space-y-1 pl-2">
+                  {racialTraits.map((trait, index) => (
+                    <li key={`trait-${index}`}>{trait}</li>
+                  ))}
+                </ul>
+              ) : <p className="text-muted-foreground italic">No specific racial traits listed for {character.race}.</p>}
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
                 <BookOpen className="mr-2 h-5 w-5" />
                 Class Abilities (Level {character.level})
               </h3>
-              {abilities.length > 0 && abilities[0] !== "No specific abilities listed for this class/level." ? (
+              {abilities.length > 0 ? (
                 <ul className="list-disc list-inside space-y-1 pl-2">
                   {abilities.map((ability, index) => (
                     <li key={`ability-${index}`}>{ability}</li>
                   ))}
                 </ul>
               ) : <p className="text-muted-foreground italic">No class abilities listed for this class/level.</p>}
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
-                <Users className="mr-2 h-5 w-5" />
-                Racial Traits
-              </h3>
-              {racialTraits.length > 0 && racialTraits[0] !== "No specific racial traits listed." ? (
-                <ul className="list-disc list-inside space-y-1 pl-2">
-                  {racialTraits.map((trait, index) => (
-                    <li key={`trait-${index}`}>{trait}</li>
-                  ))}
-                </ul>
-              ) : <p className="text-muted-foreground italic">No racial traits listed for this race (or default race).</p>}
             </div>
              <p className="text-xs text-muted-foreground pt-4">
               Note: Abilities and traits are based on D&D 5e SRD information and may vary. This is a simplified representation.
