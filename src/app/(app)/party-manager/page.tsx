@@ -1,3 +1,4 @@
+tsx
 "use client";
 
 import type { PlayerCharacter } from "@/lib/types";
@@ -46,7 +47,7 @@ export default function PartyManagerPage() {
     name: "",
     level: 1,
     class: DND_CLASSES[0],
-    race: "", // Added race field
+    race: "", 
     armorClass: 10,
     color: PREDEFINED_COLORS[0].value,
   };
@@ -203,7 +204,7 @@ export default function PartyManagerPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Party Manager</h1>
+        <h1 className="text-3xl font-bold">Party Manager for {activeCampaign.name}</h1>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
           <div className="flex items-center space-x-2 p-2 border rounded-md bg-card w-full sm:w-auto justify-between">
             <Label htmlFor="link-level-switch" className="flex items-center gap-1 cursor-pointer">
@@ -223,72 +224,79 @@ export default function PartyManagerPage() {
           >
             <ArrowUpCircle className="mr-2 h-5 w-5" /> Level Up Party (+1)
           </Button>
-          <Button onClick={openAddDialog} className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add Character
-          </Button>
+          {/* "Add Character" button removed from here */}
         </div>
       </div>
 
-      {activeCampaignParty.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardHeader>
-            <Users className="mx-auto h-16 w-16 text-muted-foreground" />
-            <CardTitle className="mt-4">No Characters Yet in {activeCampaign.name}</CardTitle>
-            <CardDescription>Start by adding your first player character to the party for this campaign.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={openAddDialog}>
-              <PlusCircle className="mr-2 h-5 w-5" /> Add Your First Character
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activeCampaignParty.map((char) => (
-            <Card 
-              key={char.id} 
-              className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col border-l-4"
-              style={{ borderColor: char.color || 'hsl(var(--border))' }}
-            >
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-2xl">{char.name}</CardTitle>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive -mt-2 -mr-2" onClick={() => handleDeleteCharacter(char.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <CardDescription>Level {char.level} {char.race} {char.class}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow space-y-3">
-                 <div className="flex items-center">
-                  <VenetianMask className="mr-2 h-5 w-5 text-primary" /> {/* Icon for Race */}
-                  <span>Race: {char.race}</span>
-                </div>
-                <div className="flex items-center">
-                  <Shield className="mr-2 h-5 w-5 text-primary" />
-                  <span>Armor Class: {char.armorClass}</span>
-                </div>
-                <div className="flex items-center">
-                  <Wand className="mr-2 h-5 w-5 text-primary" />
-                  <span>Class: {char.class}</span>
-                </div>
-                <div className="flex items-center">
-                  <User className="mr-2 h-5 w-5 text-primary" />
-                  <span>Level: {char.level}</span>
-                </div>
-              </CardContent>
-              <CardFooter className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => openDetailsDialog(char)}>
-                  <Eye className="mr-2 h-4 w-4" /> View
-                </Button>
-                <Button variant="secondary" className="flex-1" onClick={() => openEditDialog(char)}>
-                  <Edit3 className="mr-2 h-4 w-4" /> Edit
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+      {activeCampaignParty.length === 0 && (
+         <Card className="text-center py-6 bg-muted/50">
+            <CardHeader>
+              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+              <CardTitle className="mt-3">Your Party is Empty</CardTitle>
+              <CardDescription>Add your first character using the 'Add Character' card below.</CardDescription>
+            </CardHeader>
+          </Card>
       )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {activeCampaignParty.map((char) => (
+          <Card 
+            key={char.id} 
+            className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col border-l-4"
+            style={{ borderColor: char.color || 'hsl(var(--border))' }}
+          >
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-2xl">{char.name}</CardTitle>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive -mt-2 -mr-2" onClick={() => handleDeleteCharacter(char.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription>Level {char.level} {char.race} {char.class}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow space-y-3">
+               <div className="flex items-center">
+                <VenetianMask className="mr-2 h-5 w-5 text-primary" /> 
+                <span>Race: {char.race}</span>
+              </div>
+              <div className="flex items-center">
+                <Shield className="mr-2 h-5 w-5 text-primary" />
+                <span>Armor Class: {char.armorClass}</span>
+              </div>
+              <div className="flex items-center">
+                <Wand className="mr-2 h-5 w-5 text-primary" />
+                <span>Class: {char.class}</span>
+              </div>
+              <div className="flex items-center">
+                <User className="mr-2 h-5 w-5 text-primary" />
+                <span>Level: {char.level}</span>
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => openDetailsDialog(char)}>
+                <Eye className="mr-2 h-4 w-4" /> View
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => openEditDialog(char)}>
+                <Edit3 className="mr-2 h-4 w-4" /> Edit
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+        {/* Add New Character Card */}
+        <Card
+          className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[280px]"
+          onClick={openAddDialog}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openAddDialog(); }}
+          aria-label="Add new character"
+        >
+          <PlusCircle className="h-12 w-12 text-muted-foreground group-hover:text-primary mb-3 transition-colors" />
+          <p className="text-lg font-medium text-muted-foreground group-hover:text-primary transition-colors">Add Character</p>
+          <p className="text-sm text-muted-foreground text-center mt-1">Click to add a new character to the party.</p>
+        </Card>
+      </div>
+
 
       <Dialog open={isFormDialogOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {

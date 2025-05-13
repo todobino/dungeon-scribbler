@@ -1,17 +1,16 @@
-
+tsx
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import type { PlayerCharacter, Combatant } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"; // SheetDescription removed
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"; // DialogClose removed, as it's part of DialogFooter now
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5 } from "lucide-react";
-// Removed useToast as toasts are no longer used.
 import { Switch } from "@/components/ui/switch";
 import { rollDie } from "@/lib/dice-utils";
 
@@ -25,7 +24,6 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   const { activeCampaignParty } = useCampaign();
   const [combatants, setCombatants] = useState<Combatant[]>([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState<number | null>(null);
-  // const { toast } = useToast(); // Toasts removed
   const uniqueId = useId();
 
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
@@ -34,17 +32,31 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
 
   const [isAddEnemyDialogOpen, setIsAddEnemyDialogOpen] = useState(false);
   const [enemyName, setEnemyName] = useState("");
-  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>(""); // For fixed value or modifier
+  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>(""); 
   const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
   const [rollEnemyInitiativeFlag, setRollEnemyInitiativeFlag] = useState<boolean>(false);
 
+  const combatantRefs = useRef<Map<string, HTMLLIElement | null>>(new Map());
+
   useEffect(() => {
     const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name));
-    // Only update if the sorted order is actually different to prevent infinite loops
     if (JSON.stringify(sorted) !== JSON.stringify(combatants)) {
         setCombatants(sorted);
     }
-  }, [combatants]); // Re-sort when combatants list changes
+  }, [combatants]);
+
+  useEffect(() => {
+    if (currentTurnIndex !== null && combatants.length > 0) {
+      const activeCombatantId = combatants[currentTurnIndex]?.id;
+      if (activeCombatantId) {
+        const activeElement = combatantRefs.current.get(activeCombatantId);
+        activeElement?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }
+    }
+  }, [currentTurnIndex, combatants]);
 
   const parseModifierString = (modStr: string): number => {
     modStr = modStr.trim();
@@ -55,24 +67,21 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
 
   const handleAddPlayer = () => {
     if (!selectedPlayerToAdd || playerInitiative === "") {
-      // toast({ title: "Missing Information", description: "Please select a player and enter their initiative.", variant: "destructive" }); // Toast removed
       console.error("Missing Information: Please select a player and enter their initiative.");
       return;
     }
     const initiativeValue = parseInt(playerInitiative);
     if (isNaN(initiativeValue)) {
-      // toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive" }); // Toast removed
       console.error("Invalid Initiative: Initiative must be a number.");
       return;
     }
     if (combatants.find(c => c.playerId === selectedPlayerToAdd.id)) {
-      // toast({ title: "Player Already Added", description: `${selectedPlayerToAdd.name} is already in the initiative order.`, variant: "destructive" }); // Toast removed
       console.warn("Player Already Added:", selectedPlayerToAdd.name, "is already in the initiative order.");
       return;
     }
 
     const newCombatant: Combatant = {
-      id: `${uniqueId}-player-${selectedPlayerToAdd.id}`,
+      id: `${uniqueId}-player-${selectedPlayerToAdd.id}-${Date.now()}`, // Added Date.now() for more uniqueness
       name: selectedPlayerToAdd.name,
       initiative: initiativeValue,
       type: 'player',
@@ -80,16 +89,14 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
       playerId: selectedPlayerToAdd.id,
     };
     setCombatants(prev => [...prev, newCombatant]);
-    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0);
+    if (currentTurnIndex === null && combatants.length === 0) setCurrentTurnIndex(0); // Set turn if it's the first combatant
     setIsAddPlayerDialogOpen(false);
     setSelectedPlayerToAdd(null);
     setPlayerInitiative("");
-    // toast({ title: "Player Added", description: `${selectedPlayerToAdd.name} added to initiative.` }); // Toast removed
   };
   
   const handleAddEnemy = () => {
     if (!enemyName.trim()) {
-      // toast({ title: "Missing Information", description: "Please enter enemy name.", variant: "destructive" }); // Toast removed
       console.error("Missing Information: Please enter enemy name.");
       return;
     }
@@ -111,15 +118,13 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         initiativeValue = rollDie(20) + modifier;
       } else {
         if (enemyInitiativeInput === "") {
-          // toast({ title: "Missing Information", description: "Please enter initiative value or roll for enemy.", variant: "destructive" }); // Toast removed
           console.error("Missing Information: Please enter initiative value or roll for enemy.");
-          return; // Stop if fixed initiative is expected but not provided
+          return; 
         }
         initiativeValue = parseInt(enemyInitiativeInput);
         if (isNaN(initiativeValue)) {
-          // toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive" }); // Toast removed
           console.error("Invalid Initiative: Initiative must be a number.");
-          return; // Stop if initiative is not a number
+          return; 
         }
       }
       
@@ -132,35 +137,35 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     }
     
     setCombatants(prev => [...prev, ...newEnemies]);
-    if (currentTurnIndex === null && combatants.length === 0 && newEnemies.length > 0) setCurrentTurnIndex(0);
+    if (currentTurnIndex === null && combatants.length === 0 && newEnemies.length > 0) setCurrentTurnIndex(0); // Set turn if these are the first combatants
     
     setIsAddEnemyDialogOpen(false);
     setEnemyName("");
     setEnemyInitiativeInput("");
     setEnemyQuantityInput("1");
     setRollEnemyInitiativeFlag(false);
-    // toast({ title: "Enemy Added", description: `${newEnemies.length > 1 ? `${newEnemies.length} enemies` : newEnemies[0].name} added to initiative.`}); // Toast removed
   };
 
   const removeCombatant = (id: string) => {
     const combatantToRemoveIndex = combatants.findIndex(c => c.id === id);
     setCombatants(prev => {
         const newCombatants = prev.filter(c => c.id !== id);
+        combatantRefs.current.delete(id); // Clean up ref
+
         if (newCombatants.length === 0) {
             setCurrentTurnIndex(null);
         } else if (currentTurnIndex !== null) {
-            if (currentTurnIndex === combatantToRemoveIndex) {
-                // If current turn was removed, stay on the same "effective" turn index if possible, wrapping around
-                setCurrentTurnIndex(currentTurnIndex % newCombatants.length);
-            } else if (currentTurnIndex > combatantToRemoveIndex) {
-                // If removed combatant was before current turn, decrement index
+            if (combatantToRemoveIndex === currentTurnIndex) {
+                if (currentTurnIndex >= newCombatants.length) {
+                    setCurrentTurnIndex(newCombatants.length > 0 ? newCombatants.length - 1 : null);
+                }
+                // else, currentTurnIndex remains valid for the new item at that position or will be handled by next/prev
+            } else if (combatantToRemoveIndex < currentTurnIndex) {
                 setCurrentTurnIndex(currentTurnIndex - 1);
             }
-            // If removed combatant was after current turn, index remains valid or will be handled by next/prev logic
         }
         return newCombatants;
     });
-    // toast({ title: "Combatant Removed" }); // Toast removed
   };
 
   const nextTurn = () => {
@@ -176,7 +181,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   const endCombat = () => {
     setCombatants([]);
     setCurrentTurnIndex(null);
-    // toast({ title: "Combat Ended", description: "Initiative order has been cleared." }); // Toast removed
+    combatantRefs.current.clear();
   };
 
   const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
@@ -187,7 +192,6 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col">
           <SheetHeader>
             <SheetTitle className="flex items-center"><ListOrdered className="mr-2 h-6 w-6 text-primary"/>Initiative Tracker</SheetTitle>
-            {/* SheetDescription removed */}
           </SheetHeader>
           
           <div className="py-2 flex gap-2">
@@ -206,7 +210,8 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
               <ul className="space-y-1.5">
                 {combatants.map((c, index) => (
                   <li 
-                    key={c.id} 
+                    key={c.id}
+                    ref={(el) => combatantRefs.current.set(c.id, el)}
                     className={`p-2.5 rounded-md flex items-center justify-between transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
                     style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
                   >
@@ -309,7 +314,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                 value={enemyInitiativeInput} 
                 onChange={(e) => setEnemyInitiativeInput(e.target.value)} 
                 placeholder={rollEnemyInitiativeFlag ? "e.g., 2 or -1" : "e.g., 12"} 
-                type={rollEnemyInitiativeFlag ? "text" : "number"} // Allow "+" for modifier
+                type={rollEnemyInitiativeFlag ? "text" : "number"} 
               />
             </div>
           </div>
@@ -328,5 +333,3 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     </>
   );
 }
-
-    
