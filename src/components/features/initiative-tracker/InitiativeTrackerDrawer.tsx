@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5, Heart, Shield, ChevronsRightIcon } from "lucide-react";
+import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5, Heart, Shield, ChevronsRightIcon, Skull } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { rollDie } from "@/lib/dice-utils";
 
@@ -369,33 +369,46 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                     )}
 
                     {c.type === 'enemy' && c.hp !== undefined && (
-                      <div className="flex items-center gap-1.5 pt-1">
-                        <Input
-                          type="number"
-                          placeholder="Amt"
-                          className="h-8 text-sm w-20 px-2 py-1"
-                          value={damageInputs[c.id] || ""}
-                          onChange={(e) => handleDamageInputChange(c.id, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="px-2 py-1 h-8 text-xs"
-                          onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}
-                        >
-                          Hit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700"
-                          onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}
-                        >
-                          Heal
-                        </Button>
-                      </div>
-                    )}
+                        <>
+                          {c.currentHp !== undefined && c.currentHp === 0 ? (
+                            <Button
+                              variant="destructive"
+                              className="w-full mt-1.5 py-1 h-auto text-sm"
+                              onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}
+                            >
+                              <Skull className="mr-2 h-4 w-4" /> Dead (Remove)
+                            </Button>
+                          ) : (
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <Input
+                                type="number"
+                                placeholder="Amt"
+                                className="h-8 text-sm w-20 px-2 py-1"
+                                value={damageInputs[c.id] || ""}
+                                onChange={(e) => handleDamageInputChange(c.id, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                min="1"
+                              />
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="px-2 py-1 h-8 text-xs"
+                                onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}
+                              >
+                                Hit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700"
+                                onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}
+                              >
+                                Heal
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      )}
                   </li>
                 ))}
               </ul>
