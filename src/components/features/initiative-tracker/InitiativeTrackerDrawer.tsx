@@ -36,6 +36,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>(""); 
   const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
   const [rollEnemyInitiativeFlag, setRollEnemyInitiativeFlag] = useState<boolean>(false);
+  const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false); // New state for group initiative
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
   
@@ -104,6 +105,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
         // Optionally clear selection and close dialog
         setIsAddFriendlyDialogOpen(false);
         setSelectedPlayerToAdd(null);
+        setAllyNameInput("");
         setFriendlyInitiativeInput("");
         return;
       }
@@ -168,23 +170,46 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     }
 
     const newEnemies: Combatant[] = [];
+    let groupInitiativeValue: number | undefined = undefined;
+
+    if (rollGroupInitiativeFlag) {
+      if (rollEnemyInitiativeFlag) { // Roll for the group
+        const modifier = parseModifierString(enemyInitiativeInput);
+        groupInitiativeValue = rollDie(20) + modifier;
+      } else { // Fixed value for the group
+        if (enemyInitiativeInput.trim() === "") {
+          console.error("Missing Information: Please enter initiative value for the group.");
+          return;
+        }
+        const parsedGroupInit = parseInt(enemyInitiativeInput);
+        if (isNaN(parsedGroupInit)) {
+          console.error("Invalid Initiative: Group initiative must be a number.");
+          return;
+        }
+        groupInitiativeValue = parsedGroupInit;
+      }
+    }
 
     for (let i = 0; i < quantity; i++) {
       let initiativeValue: number;
       const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
 
-      if (rollEnemyInitiativeFlag) {
-        const modifier = parseModifierString(enemyInitiativeInput);
-        initiativeValue = rollDie(20) + modifier;
-      } else {
-        if (enemyInitiativeInput === "") {
-          console.error("Missing Information: Please enter initiative value or roll for enemy.");
-          return; 
-        }
-        initiativeValue = parseInt(enemyInitiativeInput);
-        if (isNaN(initiativeValue)) {
-          console.error("Invalid Initiative: Initiative must be a number.");
-          return; 
+      if (rollGroupInitiativeFlag && groupInitiativeValue !== undefined) {
+        initiativeValue = groupInitiativeValue;
+      } else { // Individual initiative (or if group initiative failed to set, fallback to individual logic)
+        if (rollEnemyInitiativeFlag) {
+          const modifier = parseModifierString(enemyInitiativeInput);
+          initiativeValue = rollDie(20) + modifier;
+        } else {
+          if (enemyInitiativeInput.trim() === "") {
+            console.error("Missing Information: Please enter initiative value or roll for enemy.");
+            return; 
+          }
+          initiativeValue = parseInt(enemyInitiativeInput);
+          if (isNaN(initiativeValue)) {
+            console.error("Invalid Initiative: Initiative must be a number.");
+            return; 
+          }
         }
       }
       
@@ -209,6 +234,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     setEnemyInitiativeInput("");
     setEnemyQuantityInput("1");
     setRollEnemyInitiativeFlag(false);
+    setRollGroupInitiativeFlag(false); // Reset new flag
     setEnemyAC("");
     setEnemyHP("");
   };
@@ -498,7 +524,13 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
       </Dialog>
 
       {/* Add Enemy Dialog */}
-      <Dialog open={isAddEnemyDialogOpen} onOpenChange={setIsAddEnemyDialogOpen}>
+      <Dialog open={isAddEnemyDialogOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) { // Reset flags if dialog is closed
+            setRollEnemyInitiativeFlag(false);
+            setRollGroupInitiativeFlag(false);
+          }
+          setIsAddEnemyDialogOpen(isOpen);
+        }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Enemy to Initiative</DialogTitle>
@@ -524,12 +556,19 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
               <Input id="enemy-quantity" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} placeholder="1" min="1" />
             </div>
             <div className="flex items-center space-x-2 pt-2">
+              <Switch id="roll-group-initiative" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} />
+              <Label htmlFor="roll-group-initiative" className="cursor-pointer">Roll initiative as a group?</Label>
+            </div>
+            <div className="flex items-center space-x-2 pt-1">
               <Switch id="roll-enemy-initiative" checked={rollEnemyInitiativeFlag} onCheckedChange={setRollEnemyInitiativeFlag} />
-              <Label htmlFor="roll-enemy-initiative" className="cursor-pointer">Roll Initiative for Enemy?</Label>
+              <Label htmlFor="roll-enemy-initiative" className="cursor-pointer">
+                {rollGroupInitiativeFlag ? "Roll for Group?" : "Roll for each Enemy?"}
+              </Label>
             </div>
             <div>
               <Label htmlFor="enemy-initiative-input">
                 {rollEnemyInitiativeFlag ? "Initiative Modifier (e.g., +2 or -1)" : "Fixed Initiative Value"}
+                {rollGroupInitiativeFlag ? " (for group)" : ""}
               </Label>
               <Input 
                 id="enemy-initiative-input" 
@@ -547,6 +586,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
               setEnemyInitiativeInput("");
               setEnemyQuantityInput("1");
               setRollEnemyInitiativeFlag(false);
+              setRollGroupInitiativeFlag(false);
               setEnemyAC("");
               setEnemyHP("");
             }}>Cancel</Button>
