@@ -27,16 +27,21 @@ const SESSION_VIEW_MODES_STORAGE_KEY = "dungeonScribblerSessionViewModes";
 
 export default function StorySoFarPage() {
   const [plotPoints, setPlotPoints] = useState<PlotPoint[]>([]);
-  const [newPlotPoint, setNewPlotPoint] = useState("");
+  const [newPlotPointText, setNewPlotPointText] = useState(""); // Renamed for clarity
   const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
   
   const [fullCampaignSummary, setFullCampaignSummary] = useState<string | null>(null);
   const [sessionSummaries, setSessionSummaries] = useState<Record<number, string>>({});
   const [sessionViewModes, setSessionViewModes] = useState<Record<number, 'summary' | 'details'>>({});
 
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isGeneratingGlobalSummary, setIsGeneratingGlobalSummary] = useState(false); // For full campaign summary
+  const [isGeneratingSpecificSessionSummary, setIsGeneratingSpecificSessionSummary] = useState<Record<number, boolean>>({}); // For specific session regen
+
   const [summaryDetailLevel, setSummaryDetailLevel] = useState<SummaryDetailLevel>("normal");
   const [isConfirmSessionAdvanceOpen, setIsConfirmSessionAdvanceOpen] = useState(false);
+  
+  const [pastPlotPointInput, setPastPlotPointInput] = useState<Record<number, string>>({});
+
 
   useEffect(() => {
     const storedPlotPoints = localStorage.getItem(PLOT_POINTS_STORAGE_KEY);
@@ -68,18 +73,38 @@ export default function StorySoFarPage() {
     localStorage.setItem(SESSION_VIEW_MODES_STORAGE_KEY, JSON.stringify(sessionViewModes));
   }, [sessionViewModes]);
 
-  const handleAddPlotPoint = () => {
-    if (newPlotPoint.trim()) {
+  const handleAddPlotPointToCurrentSession = () => {
+    if (newPlotPointText.trim()) {
       setPlotPoints(prev => [
         ...prev, 
         { 
           id: Date.now().toString(), 
           sessionNumber: currentSessionNumber, 
           timestamp: new Date().toISOString(), 
-          text: newPlotPoint.trim() 
+          text: newPlotPointText.trim() 
         }
       ]);
-      setNewPlotPoint("");
+      setNewPlotPointText("");
+    }
+  };
+  
+  const handleAddPlotPointToPastSession = async (sessionNum: number) => {
+    const textToAdd = pastPlotPointInput[sessionNum];
+    if (textToAdd && textToAdd.trim()) {
+      setPlotPoints(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sessionNumber: sessionNum,
+          timestamp: new Date().toISOString(),
+          text: textToAdd.trim(),
+        }
+      ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())); // Keep chronological within session
+      
+      setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: "" })); // Clear input
+      
+      // Re-generate summary for this past session
+      await handleRegenerateSessionSummary(sessionNum);
     }
   };
 
@@ -90,38 +115,45 @@ export default function StorySoFarPage() {
     }
     // Placeholder for AI call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
-    return `AI Generated Summary for Session ${sessionNumberToSummarize} (Detail: ${detailLevel}): Key events from ${relevantPlotPoints.length} plot point(s) include... [Placeholder Content]`;
+    return `AI Generated Summary for Session ${sessionNumberToSummarize} (Detail: ${detailLevel}): Key events from ${relevantPlotPoints.length} plot point(s) include... The adventurers ${relevantPlotPoints[0]?.text.substring(0,30)}... and then they ${relevantPlotPoints[relevantPlotPoints.length-1]?.text.substring(0,30)}... [Placeholder for session ${sessionNumberToSummarize}]`;
   };
 
   const handleStartNextSession = async () => {
     const currentSessionPlotPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
     if (currentSessionPlotPoints.length > 0) {
-      setIsGeneratingSummary(true);
+      setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [currentSessionNumber]: true }));
       const summaryText = await generateSessionSummaryText(currentSessionNumber, summaryDetailLevel);
       setSessionSummaries(prev => ({ ...prev, [currentSessionNumber]: summaryText }));
       setSessionViewModes(prev => ({ ...prev, [currentSessionNumber]: 'summary' }));
+      setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [currentSessionNumber]: false }));
       setCurrentSessionNumber(prev => prev + 1);
-      setFullCampaignSummary(null); // Clear any full campaign summary
-      setIsGeneratingSummary(false);
+      setFullCampaignSummary(null); 
     } else {
       setIsConfirmSessionAdvanceOpen(true);
     }
   };
   
   const handleGenerateFullCampaignSummary = async () => {
-    setIsGeneratingSummary(true);
+    setIsGeneratingGlobalSummary(true);
     setFullCampaignSummary(null);
-    // Placeholder for AI call
     const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\n');
     await new Promise(resolve => setTimeout(resolve, 1500)); 
     setFullCampaignSummary(`AI Generated Full Story Summary (Detail: ${summaryDetailLevel}): Based on ${plotPoints.length} total plot points across all sessions... The grand saga unfolds! [Placeholder Content referring to: ${allPlotPointsText.substring(0,100)}...]`);
-    setIsGeneratingSummary(false);
+    setIsGeneratingGlobalSummary(false);
   };
+
+  const handleRegenerateSessionSummary = async (sessionNum: number) => {
+    setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: true }));
+    const summaryText = await generateSessionSummaryText(sessionNum, summaryDetailLevel);
+    setSessionSummaries(prev => ({ ...prev, [sessionNum]: summaryText }));
+    setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: false }));
+  };
+
 
   const handleConfirmAndAdvanceEmptySession = () => {
     setCurrentSessionNumber(prev => prev + 1);
     setIsConfirmSessionAdvanceOpen(false);
-    setFullCampaignSummary(null); // Clear any full campaign summary
+    setFullCampaignSummary(null); 
   };
 
   const toggleSessionView = (sessionNum: number) => {
@@ -133,12 +165,14 @@ export default function StorySoFarPage() {
 
   const groupedPlotPoints = plotPoints.reduce((acc, point) => {
     (acc[point.sessionNumber] = acc[point.sessionNumber] || []).push(point);
+    // Sort points within each session by timestamp when grouping
+    acc[point.sessionNumber].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     return acc;
   }, {} as Record<number, PlotPoint[]>);
 
   const sortedSessionNumbers = Object.keys(groupedPlotPoints)
     .map(Number)
-    .sort((a, b) => b - a) // Changed to b - a for reverse chronological order
+    .sort((a, b) => b - a)
     .filter(sessionNum => sessionNum <= currentSessionNumber); 
 
 
@@ -146,8 +180,8 @@ export default function StorySoFarPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>The Story So Far</h1>
-        <Button onClick={handleStartNextSession} variant="outline" disabled={isGeneratingSummary}>
-          {isGeneratingSummary && sessionSummaries[currentSessionNumber] ? 'Generating Summary...' : <><ChevronRightSquare className="mr-2 h-5 w-5"/> Start Next Session ({currentSessionNumber + 1})</>}
+        <Button onClick={handleStartNextSession} variant="outline" disabled={isGeneratingSpecificSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary}>
+          {isGeneratingSpecificSessionSummary[currentSessionNumber] ? 'Generating Summary...' : <><ChevronRightSquare className="mr-2 h-5 w-5"/> Start Session {currentSessionNumber + 1}</>}
         </Button>
       </div>
       <p className="text-muted-foreground">Currently logging events for: <span className="font-semibold text-primary">Session {currentSessionNumber}</span></p>
@@ -164,86 +198,126 @@ export default function StorySoFarPage() {
                 <Label htmlFor="new-plot-point">Event Description</Label>
                 <Textarea 
                   id="new-plot-point" 
-                  value={newPlotPoint} 
-                  onChange={(e) => setNewPlotPoint(e.target.value)}
+                  value={newPlotPointText} 
+                  onChange={(e) => setNewPlotPointText(e.target.value)}
                   placeholder="e.g., The party discovered the hidden cultist hideout."
                   rows={3}
                 />
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleAddPlotPoint}><PlusCircle className="mr-2 h-5 w-5"/>Add to Log (Session {currentSessionNumber})</Button>
+              <Button onClick={handleAddPlotPointToCurrentSession}><PlusCircle className="mr-2 h-5 w-5"/>Add to Log (Session {currentSessionNumber})</Button>
             </CardFooter>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Campaign Log</CardTitle>
-              <CardDescription>A chronological log of key events, summarized for past sessions. Most recent sessions appear first.</CardDescription>
+              <CardDescription>A chronological log of key events. Most recent sessions appear first. Past sessions default to summary view.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {plotPoints.length === 0 && (
                 <p className="text-muted-foreground">No plot points recorded yet. Add the first one above!</p>
               )}
               <div className="max-h-[70vh] overflow-y-auto space-y-6 pr-2">
-                 {/* Display Current Session (Always Detailed) first if it is part of sorted numbers */}
-                 {/* Or handle if currentSessionNumber is not in sortedSessionNumbers yet (first session) */}
-                 { (groupedPlotPoints[currentSessionNumber] || []).length > 0 || !sortedSessionNumbers.includes(currentSessionNumber) ? (
-                    <div key={`session-${currentSessionNumber}-current`}>
+                 { currentSessionNumber > 0 && (groupedPlotPoints[currentSessionNumber] || []).length === 0 && !sortedSessionNumbers.includes(currentSessionNumber) && (
+                     // Handle case where current session is new and has no points yet
+                      <div key={`session-${currentSessionNumber}-current-empty`}>
                         <div className="flex justify-between items-center mb-2 sticky top-0 bg-card py-1 z-10 border-b">
                             <h3 className="text-lg font-semibold text-primary">Session {currentSessionNumber} (Current)</h3>
                         </div>
-                        <div className="space-y-3">
-                            {(groupedPlotPoints[currentSessionNumber] || []).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(point => (
-                            <div key={point.id} className="p-3 border rounded-md bg-muted/30 shadow-sm">
-                                <p className="text-sm">{point.text}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{new Date(point.timestamp).toLocaleString()}</p>
-                            </div>
-                            ))}
-                            {(groupedPlotPoints[currentSessionNumber] || []).length === 0 && (
-                                 <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session yet.</p>
-                            )}
-                        </div>
-                    </div>
-                 ) : null }
-
-
-                {/* Display Past Sessions (Summarized or Detailed) */}
-                {sortedSessionNumbers.filter(sessionNum => sessionNum < currentSessionNumber).map(sessionNum => {
-                  const viewMode = sessionViewModes[sessionNum] || 'summary'; // Default to summary for past
-                  const summaryText = sessionSummaries[sessionNum];
-                  return (
-                    <div key={`session-${sessionNum}`}>
-                      <div className="flex justify-between items-center mb-2 sticky top-0 bg-card py-1 z-10 border-b">
-                        <h3 className="text-lg font-semibold">Session {sessionNum}</h3>
-                        {summaryText ? ( 
-                          <Button variant="outline" size="sm" onClick={() => toggleSessionView(sessionNum)}>
-                            {viewMode === 'summary' ? <List className="mr-2 h-4 w-4"/> : <AlignLeft className="mr-2 h-4 w-4"/>}
-                            {viewMode === 'summary' ? 'View Details' : 'View Summary'}
-                          </Button>
-                        ) : (plotPoints.filter(p=>p.sessionNumber === sessionNum).length > 0 && 
-                            <span className="text-xs text-muted-foreground">Details logged</span>
-                        )}
+                         <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session yet.</p>
                       </div>
-                      {viewMode === 'summary' && summaryText ? (
-                        <div className="p-3 border rounded-md bg-primary/5 shadow-sm">
-                          <p className="text-sm whitespace-pre-wrap">{summaryText}</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {(groupedPlotPoints[sessionNum] || []).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(point => (
-                            <div key={point.id} className="p-3 border rounded-md bg-muted/30 shadow-sm">
-                              <p className="text-sm">{point.text}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{new Date(point.timestamp).toLocaleString()}</p>
-                            </div>
-                          ))}
-                          {(groupedPlotPoints[sessionNum] || []).length === 0 && (
-                            <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session.</p>
+                 )}
+
+                 {sortedSessionNumbers.map(sessionNum => {
+                    const isCurrentSession = sessionNum === currentSessionNumber;
+                    const viewMode = isCurrentSession ? 'details' : (sessionViewModes[sessionNum] || 'summary');
+                    const summaryText = sessionSummaries[sessionNum];
+                    const isLoadingThisSessionSummary = isGeneratingSpecificSessionSummary[sessionNum];
+
+                    return (
+                      <div key={`session-${sessionNum}`}>
+                        <div className="flex justify-between items-center mb-2 sticky top-0 bg-card py-1 z-10 border-b">
+                          <h3 className={`text-lg font-semibold ${isCurrentSession ? 'text-primary' : ''}`}>
+                            Session {sessionNum} {isCurrentSession ? '(Current)' : ''}
+                          </h3>
+                          {!isCurrentSession && (summaryText || (groupedPlotPoints[sessionNum] || []).length > 0) && (
+                            <Button variant="outline" size="sm" onClick={() => toggleSessionView(sessionNum)} disabled={isLoadingThisSessionSummary}>
+                              {viewMode === 'summary' ? <List className="mr-2 h-4 w-4"/> : <AlignLeft className="mr-2 h-4 w-4"/>}
+                              {viewMode === 'summary' ? 'View Details' : 'View Summary'}
+                            </Button>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
+
+                        {isLoadingThisSessionSummary && (
+                            <div className="p-3 border rounded-md bg-muted/30 shadow-sm">
+                                <p className="text-sm text-muted-foreground animate-pulse">Generating summary for Session {sessionNum}...</p>
+                            </div>
+                        )}
+
+                        {!isLoadingThisSessionSummary && viewMode === 'summary' && summaryText && !isCurrentSession && (
+                          <div className="p-3 border rounded-md bg-primary/5 shadow-sm">
+                            <p className="text-sm whitespace-pre-wrap">{summaryText}</p>
+                          </div>
+                        )}
+
+                        {(!isLoadingThisSessionSummary && (viewMode === 'details' || (isCurrentSession && (groupedPlotPoints[sessionNum] || []).length > 0))) && (
+                          <div className="space-y-3">
+                            {(groupedPlotPoints[sessionNum] || []).map(point => (
+                              <div key={point.id} className="p-3 border rounded-md bg-muted/30 shadow-sm">
+                                <p className="text-sm">{point.text}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{new Date(point.timestamp).toLocaleString()}</p>
+                              </div>
+                            ))}
+                            {(groupedPlotPoints[sessionNum] || []).length === 0 && isCurrentSession && (
+                                <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session yet.</p>
+                            )}
+                            {(groupedPlotPoints[sessionNum] || []).length === 0 && !isCurrentSession && !summaryText && (
+                                <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session, and no summary generated yet.</p>
+                            )}
+
+                            {/* Inject/Regenerate for PAST sessions when in details view */}
+                            {!isCurrentSession && viewMode === 'details' && (
+                              <Card className="mt-4 p-4 space-y-3 bg-card border-dashed">
+                                <div>
+                                  <Label htmlFor={`past-plot-point-${sessionNum}`}>Add Event to Session {sessionNum}</Label>
+                                  <Textarea 
+                                    id={`past-plot-point-${sessionNum}`}
+                                    value={pastPlotPointInput[sessionNum] || ""}
+                                    onChange={(e) => setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: e.target.value }))}
+                                    placeholder="e.g., Discovered a forgotten clue..."
+                                    rows={2}
+                                  />
+                                  <Button 
+                                    size="sm" 
+                                    className="mt-2" 
+                                    onClick={() => handleAddPlotPointToPastSession(sessionNum)}
+                                    disabled={!pastPlotPointInput[sessionNum]?.trim()}
+                                  >
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Add Event
+                                  </Button>
+                                </div>
+                                {summaryText && (
+                                  <div>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => handleRegenerateSessionSummary(sessionNum)}
+                                      disabled={isLoadingThisSessionSummary || isGeneratingGlobalSummary}
+                                    >
+                                      <Zap className="mr-2 h-4 w-4"/> 
+                                      { isLoadingThisSessionSummary ? 'Regenerating...' : 'Re-generate Summary for Session ' + sessionNum }
+                                    </Button>
+                                    <p className="text-xs text-muted-foreground mt-1">Uses the global detail level from the right panel.</p>
+                                  </div>
+                                )}
+                              </Card>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
                 })}
               </div>
             </CardContent>
@@ -254,13 +328,17 @@ export default function StorySoFarPage() {
         <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary"/>AI Story Summarizer</CardTitle>
-              <CardDescription>Generate a summary of the entire campaign's progress so far.</CardDescription>
+              <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary"/>AI Story Tools</CardTitle>
+              <CardDescription>Generate a summary of the entire campaign or adjust detail level for new summaries.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="summary-detail-level">Summary Detail Level</Label>
-                <Select value={summaryDetailLevel} onValueChange={(value) => setSummaryDetailLevel(value as SummaryDetailLevel)} disabled={isGeneratingSummary}>
+                <Label htmlFor="summary-detail-level">Summary Detail Level (for new summaries)</Label>
+                <Select 
+                    value={summaryDetailLevel} 
+                    onValueChange={(value) => setSummaryDetailLevel(value as SummaryDetailLevel)} 
+                    disabled={isGeneratingGlobalSummary || Object.values(isGeneratingSpecificSessionSummary).some(loading => loading)}
+                >
                   <SelectTrigger id="summary-detail-level">
                     <SelectValue placeholder="Select detail level" />
                   </SelectTrigger>
@@ -271,21 +349,26 @@ export default function StorySoFarPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleGenerateFullCampaignSummary} className="w-full" disabled={isGeneratingSummary || plotPoints.length === 0}>
-                <Zap className="mr-2 h-4 w-4" />{isGeneratingSummary ? "Generating..." : "Generate Full Campaign Summary"}
+              <Button 
+                onClick={handleGenerateFullCampaignSummary} 
+                className="w-full" 
+                disabled={isGeneratingGlobalSummary || plotPoints.length === 0 || Object.values(isGeneratingSpecificSessionSummary).some(loading => loading)}
+              >
+                <Zap className="mr-2 h-4 w-4" />
+                {isGeneratingGlobalSummary ? "Generating Full Summary..." : "Generate Full Campaign Summary"}
               </Button>
             </CardContent>
           </Card>
 
-          {isGeneratingSummary && (
+          {isGeneratingGlobalSummary && (
             <Card>
                 <CardContent className="p-4">
-                    <p className="text-muted-foreground animate-pulse">AI is weaving the tale with {summaryDetailLevel} detail...</p>
+                    <p className="text-muted-foreground animate-pulse">AI is weaving the grand tale with {summaryDetailLevel} detail...</p>
                 </CardContent>
             </Card>
           )}
 
-          {fullCampaignSummary && !isGeneratingSummary && (
+          {fullCampaignSummary && !isGeneratingGlobalSummary && (
             <Card className="bg-primary/10 border-primary">
               <CardHeader>
                 <CardTitle className="text-primary">Generated Full Campaign Summary</CardTitle>
@@ -301,10 +384,10 @@ export default function StorySoFarPage() {
                 <CardTitle className="text-lg">How to Use</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
-                <p>1. Log major events for the <span className="font-semibold">current session ({currentSessionNumber})</span> using the input above the log.</p>
-                <p>2. Use "Start Next Session" to advance. This automatically summarizes the completed session if it has plot points.</p>
-                <p>3. Past sessions will show their summary by default. Click "View Details" to see the original plot points.</p>
-                <p>4. Use the "Generate Full Campaign Summary" for a recap of everything.</p>
+                <p>1. Log major events for the <span className="font-semibold">current session ({currentSessionNumber})</span>.</p>
+                <p>2. Use "Start Session {currentSessionNumber + 1}" to advance. This auto-summarizes the completed session.</p>
+                <p>3. Past sessions show summaries. Click "View Details" to see original plot points, add forgotten events, or re-generate their summary.</p>
+                <p>4. Use "Generate Full Campaign Summary" for a recap of everything using the selected detail level.</p>
             </CardContent>
           </Card>
         </div>
