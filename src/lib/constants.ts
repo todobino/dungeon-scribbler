@@ -26,7 +26,8 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const STORY_NAV_ITEMS: NavItem[] = [
-  { label: 'The Story So Far', href: '/story-so-far', icon: History, isGenAI: true, disabled: false },
+  { label: 'Story So Far', href: '/story-so-far', icon: History, isGenAI: true, disabled: false },
+  { label: 'Story So Far (Refactored)', href: '/story-so-far-refactored', icon: History, isGenAI: true, disabled: false },
   { label: 'Next Session Goals', href: '/next-session-goals', icon: ClipboardList, isGenAI: true, disabled: false },
 ];
 
@@ -118,3 +119,11 @@ export const SESSION_VIEW_MODES_KEY_PREFIX = "dungeonScribblerSessionViewModes_"
 export const FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = "dungeonScribblerFullCampaignSummary_";
 export const SUMMARY_DETAIL_LEVEL_KEY_PREFIX = "dungeonScribblerSummaryDetailLevel_";
 export const GOALS_KEY_PREFIX = "dungeonScribblerGoals_";
+
+// Refactored Story So Far Page Keys
+export const REFACTORED_PLOT_POINTS_KEY_PREFIX = "dsRefactoredPlotPoints_";
+export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = "dsRefactoredCurrentSession_";
+export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = "dsRefactoredSessionSummaries_";
+export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = "dsRefactoredSessionViewModes_";
+export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = "dsRefactoredFullCampaignSummary_";
+export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = "dsRefactoredSummaryDetailLevel_";

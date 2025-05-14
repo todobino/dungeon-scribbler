@@ -165,16 +165,16 @@ export function SidebarNav() {
             )}
           </div>
           
-          <SidebarSeparator className="my-2 group-data-[collapsible=icon]:hidden" />
+          <SidebarSeparator className="my-1 group-data-[collapsible=icon]:hidden" />
           
           {renderNavItems(STORY_NAV_ITEMS, "Story Tools")}
-          <SidebarSeparator className="my-4" />
+          <SidebarSeparator className="my-2" />
 
           {renderNavItems(WORLD_NAV_ITEMS, "World Management")}
-          <SidebarSeparator className="my-4" />
+          <SidebarSeparator className="my-2" />
           
           {renderNavItems(NAV_ITEMS.filter(item => item.href !== '/campaign-management'), "Core Features")}
-          <SidebarSeparator className="my-4" />
+          <SidebarSeparator className="my-2" />
           {renderNavItems(ADVANCED_NAV_ITEMS, "Advanced Tools")}
         </SidebarContent>
       </ScrollArea>
