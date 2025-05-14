@@ -35,7 +35,7 @@ interface GeneratedIdea {
   idea: string;
 }
 
-interface LogGoalDialogData { // Renamed for clarity
+interface LogGoalDialogData { 
   goal: Goal;
   logText: string;
 }
@@ -83,7 +83,7 @@ export default function NextSessionGoalsRefactoredPage() {
           setGoals([]);
         }
       } catch (error) {
-        console.error("Error loading goals from localStorage:", error);
+        console.error("Error loading goals from localStorage for "+activeCampaign.name, error);
         setGoals([]); 
       }
     } else {
@@ -99,7 +99,7 @@ export default function NextSessionGoalsRefactoredPage() {
         try {
           localStorage.setItem(goalsKey, JSON.stringify(goals));
         } catch (error) {
-          console.error("Error saving goals to localStorage:", error);
+          console.error("Error saving goals to localStorage for "+activeCampaign.name, error);
         }
       }
     }
@@ -138,7 +138,7 @@ export default function NextSessionGoalsRefactoredPage() {
       setEditingGoalId(null); 
     } else {
       setEditingGoalId(goalId);
-      if (openAccordionItem !== goalId) { // Also open accordion if not already
+      if (openAccordionItem !== goalId) { 
         setOpenAccordionItem(goalId);
       }
     }
@@ -167,7 +167,6 @@ export default function NextSessionGoalsRefactoredPage() {
       prevGoals.map(g => {
         if (g.id === goalId) {
           const currentDetails = g.details || "";
-          // Ensure a newline if currentDetails is not empty, and always start idea as a bullet point
           const newDetails = `${currentDetails}${currentDetails.trim() ? '\n' : ''}- ${ideaText}`;
           return { ...g, details: newDetails };
         }
@@ -208,7 +207,6 @@ export default function NextSessionGoalsRefactoredPage() {
     if (!details || details.trim() === "") {
       return <p className="text-sm text-muted-foreground italic">No details added yet. Click <Edit3 className="inline h-3 w-3 align-text-bottom"/> to add some.</p>;
     }
-    // Split by newline, then process each line for bullets
     const lines = details.split('\n').map(line => line.trim());
     const elements: JSX.Element[] = [];
     let currentListItems: string[] = [];
@@ -225,12 +223,11 @@ export default function NextSessionGoalsRefactoredPage() {
                 );
                 currentListItems = [];
             }
-            if (line) { // Add non-bullet lines as paragraphs
+            if (line) { 
                 elements.push(<p key={`p-${elements.length}-${Math.random()}`} className="text-sm my-1">{line}</p>);
             }
         }
     }
-    // Add any remaining list items
     if (currentListItems.length > 0) {
         elements.push(
             <ul key={`ul-final-${Math.random()}`} className="list-disc list-outside pl-5 space-y-1 my-1">
@@ -242,7 +239,10 @@ export default function NextSessionGoalsRefactoredPage() {
   };
 
   const handleOpenLogGoalDialog = (goal: Goal) => {
-    const formattedDetails = goal.details ? `\n\nDetails:\n${goal.details.replace(/\\n/g, '\n')}` : '';
+    let formattedDetails = "";
+    if (goal.details && goal.details.trim()) {
+      formattedDetails = `\n\nDetails:\n${goal.details.replace(/\\n/g, '\n').trim()}`;
+    }
     setLogGoalDialogData({
       goal,
       logText: `Completed Goal: ${goal.text}${formattedDetails}`,
@@ -276,7 +276,7 @@ export default function NextSessionGoalsRefactoredPage() {
         id: Date.now().toString(),
         sessionNumber: currentSessionNumber,
         timestamp: new Date().toISOString(),
-        text: logGoalDialogData.logText, 
+        text: logGoalDialogData.logText.trim(), 
       };
 
       plotPoints.push(newPlotPoint);
@@ -290,7 +290,6 @@ export default function NextSessionGoalsRefactoredPage() {
         description: `"${logGoalDialogData.goal.text.substring(0,30)}..." marked as completed in session ${currentSessionNumber} log (Adventure Recap).`,
       });
 
-      // Remove the goal from the list
       setGoals(prevGoals => prevGoals.filter(g => g.id !== logGoalDialogData.goal.id));
       if (openAccordionItem === logGoalDialogData.goal.id) {
         setOpenAccordionItem(null);
@@ -317,7 +316,7 @@ export default function NextSessionGoalsRefactoredPage() {
 
   if (!activeCampaign) {
     return (
-      <Card className="text-center py-12">
+      <Card className="w-full text-center py-12">
         <CardHeader>
           <Library className="mx-auto h-16 w-16 text-muted-foreground" />
           <CardTitle className="mt-4">No Active Campaign</CardTitle>
@@ -343,12 +342,12 @@ export default function NextSessionGoalsRefactoredPage() {
         </Button>
       </div>
       
-      <Card>
+      <Card className="w-full">
         <CardHeader className="flex flex-row justify-between items-center">
           <div>
             <CardTitle>Planned Plot Beats / Goals</CardTitle>
             <CardDescription>
-              Plan your session. Click a goal to expand details, or click the edit icon (<Edit3 className="inline h-3 w-3 align-text-bottom mr-0.5"/>) to modify.
+              Plan your session. Expand goals to view, or click edit (<Edit3 className="inline h-3 w-3 align-text-bottom mr-0.5"/>) to modify.
             </CardDescription>
           </div>
         </CardHeader>
@@ -381,7 +380,7 @@ export default function NextSessionGoalsRefactoredPage() {
                                 e.stopPropagation(); 
                                 handleToggleEditMode(goal.id); 
                             }} 
-                            className="ml-2 h-8 w-8 shrink-0 z-10 relative"
+                            className="ml-auto h-8 w-8 shrink-0 z-10 relative"
                             aria-label={editingGoalId === goal.id ? "View details" : "Edit details"}
                         >
                             {editingGoalId === goal.id ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
@@ -528,11 +527,11 @@ export default function NextSessionGoalsRefactoredPage() {
       </Dialog>
 
       <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-        <DialogContent className="max-w-lg">
-            <DialogHeader>
+        <UIDialogContent className="max-w-lg">
+            <UIDialogHeader>
                 <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: Next Session Goals</DialogTitle>
                 <DialogDescription>Outline and develop plot beats for upcoming sessions.</DialogDescription>
-            </DialogHeader>
+            </UIDialogHeader>
             <ScrollArea className="max-h-[60vh] pr-3">
             <div className="text-sm text-muted-foreground space-y-3 py-4">
                 <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" (in the card footer or when the list is empty) to open a dialog and input a new plot beat or objective.</p>
@@ -558,7 +557,7 @@ export default function NextSessionGoalsRefactoredPage() {
                     <Button>Close</Button>
                 </DialogClose>
             </UIDialogFooter>
-        </DialogContent>
+        </UIDialogContent>
       </Dialog>
     </div>
   );

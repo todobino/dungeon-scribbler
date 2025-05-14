@@ -89,32 +89,32 @@ export default function StorySoFarRefactoredPage() {
     try {
       const storedPlotPoints = localStorage.getItem(keys.plotPoints!);
       setPlotPoints(storedPlotPoints ? JSON.parse(storedPlotPoints) : []);
-    } catch (e) { console.error("Error loading plot points", e); setPlotPoints([]); }
+    } catch (e) { console.error("Error loading plot points for "+activeCampaign.name, e); setPlotPoints([]); }
 
     try {
       const storedSession = localStorage.getItem(keys.currentSession!);
       setCurrentSessionNumber(storedSession ? parseInt(storedSession, 10) : 1);
-    } catch (e) { console.error("Error loading current session", e); setCurrentSessionNumber(1); }
+    } catch (e) { console.error("Error loading current session for "+activeCampaign.name, e); setCurrentSessionNumber(1); }
     
     try {
       const storedSummaries = localStorage.getItem(keys.sessionSummaries!);
       setSessionSummaries(storedSummaries ? JSON.parse(storedSummaries) : {});
-    } catch (e) { console.error("Error loading session summaries", e); setSessionSummaries({}); }
+    } catch (e) { console.error("Error loading session summaries for "+activeCampaign.name, e); setSessionSummaries({}); }
 
     try {
       const storedViewModes = localStorage.getItem(keys.sessionViewModes!);
       setSessionViewModes(storedViewModes ? JSON.parse(storedViewModes) : {});
-    } catch (e) { console.error("Error loading session view modes", e); setSessionViewModes({}); }
+    } catch (e) { console.error("Error loading session view modes for "+activeCampaign.name, e); setSessionViewModes({}); }
 
     try {
       const storedFullSummary = localStorage.getItem(keys.fullCampaignSummary!);
       setFullCampaignSummary(storedFullSummary ? JSON.parse(storedFullSummary) : null);
-    } catch (e) { console.error("Error loading full campaign summary", e); setFullCampaignSummary(null); }
+    } catch (e) { console.error("Error loading full campaign summary for "+activeCampaign.name, e); setFullCampaignSummary(null); }
 
     try {
       const storedDetailLevel = localStorage.getItem(keys.summaryDetailLevel!);
       setSummaryDetailLevel((storedDetailLevel as SummaryDetailLevel) || "normal");
-    } catch (e) { console.error("Error loading summary detail level", e); setSummaryDetailLevel("normal"); }
+    } catch (e) { console.error("Error loading summary detail level for "+activeCampaign.name, e); setSummaryDetailLevel("normal"); }
     
     setIsLoadingData(false);
   }, [activeCampaign, isLoadingCampaigns, getCampaignSpecificKey]);
@@ -123,25 +123,25 @@ export default function StorySoFarRefactoredPage() {
   useEffect(() => {
     if (!activeCampaign || isLoadingData) return;
     const key = getCampaignSpecificKey(REFACTORED_PLOT_POINTS_KEY_PREFIX);
-    if (key) try { localStorage.setItem(key, JSON.stringify(plotPoints)); } catch (e) { console.error("Error saving plot points", e); }
+    if (key) try { localStorage.setItem(key, JSON.stringify(plotPoints)); } catch (e) { console.error("Error saving plot points for "+activeCampaign.name, e); }
   }, [plotPoints, activeCampaign, isLoadingData, getCampaignSpecificKey]);
 
   useEffect(() => {
     if (!activeCampaign || isLoadingData) return;
     const key = getCampaignSpecificKey(REFACTORED_CURRENT_SESSION_KEY_PREFIX);
-    if (key) try { localStorage.setItem(key, currentSessionNumber.toString()); } catch (e) { console.error("Error saving current session", e); }
+    if (key) try { localStorage.setItem(key, currentSessionNumber.toString()); } catch (e) { console.error("Error saving current session for "+activeCampaign.name, e); }
   }, [currentSessionNumber, activeCampaign, isLoadingData, getCampaignSpecificKey]);
   
   useEffect(() => {
     if (!activeCampaign || isLoadingData) return;
     const key = getCampaignSpecificKey(REFACTORED_SESSION_SUMMARIES_KEY_PREFIX);
-    if (key) try { localStorage.setItem(key, JSON.stringify(sessionSummaries)); } catch (e) { console.error("Error saving session summaries", e); }
+    if (key) try { localStorage.setItem(key, JSON.stringify(sessionSummaries)); } catch (e) { console.error("Error saving session summaries for "+activeCampaign.name, e); }
   }, [sessionSummaries, activeCampaign, isLoadingData, getCampaignSpecificKey]);
 
   useEffect(() => {
     if (!activeCampaign || isLoadingData) return;
     const key = getCampaignSpecificKey(REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX);
-    if (key) try { localStorage.setItem(key, JSON.stringify(sessionViewModes)); } catch (e) { console.error("Error saving session view modes", e); }
+    if (key) try { localStorage.setItem(key, JSON.stringify(sessionViewModes)); } catch (e) { console.error("Error saving session view modes for "+activeCampaign.name, e); }
   }, [sessionViewModes, activeCampaign, isLoadingData, getCampaignSpecificKey]);
 
   useEffect(() => {
@@ -151,14 +151,14 @@ export default function StorySoFarRefactoredPage() {
       try {
         if (fullCampaignSummary) localStorage.setItem(key, JSON.stringify(fullCampaignSummary));
         else localStorage.removeItem(key);
-      } catch (e) { console.error("Error saving full campaign summary", e); }
+      } catch (e) { console.error("Error saving full campaign summary for "+activeCampaign.name, e); }
     }
   }, [fullCampaignSummary, activeCampaign, isLoadingData, getCampaignSpecificKey]);
 
   useEffect(() => {
     if (!activeCampaign || isLoadingData) return;
     const key = getCampaignSpecificKey(REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX);
-    if (key) try { localStorage.setItem(key, summaryDetailLevel); } catch (e) { console.error("Error saving summary detail level", e); }
+    if (key) try { localStorage.setItem(key, summaryDetailLevel); } catch (e) { console.error("Error saving summary detail level for "+activeCampaign.name, e); }
   }, [summaryDetailLevel, activeCampaign, isLoadingData, getCampaignSpecificKey]);
 
 
@@ -288,19 +288,19 @@ export default function StorySoFarRefactoredPage() {
 
     try {
       if (plotPointsKey) localStorage.removeItem(plotPointsKey);
-      if (currentSessionKey) localStorage.removeItem(currentSessionKey); // Session number will be reset below
+      if (currentSessionKey) localStorage.removeItem(currentSessionKey); 
       if (sessionSummariesKey) localStorage.removeItem(sessionSummariesKey);
       if (sessionViewModesKey) localStorage.removeItem(sessionViewModesKey);
       if (fullCampaignSummaryKey) localStorage.removeItem(fullCampaignSummaryKey);
 
       setPlotPoints([]);
-      setCurrentSessionNumber(1); // Resets and also saves via its own useEffect
+      setCurrentSessionNumber(1); 
       setSessionSummaries({});
       setSessionViewModes({});
       setFullCampaignSummary(null);
       setPastPlotPointInput({});
       
-      toast({ title: "Campaign Log Cleared!", description: "All plot points and summaries for this campaign have been deleted."});
+      toast({ title: "Campaign Log Cleared!", description: `All plot points and summaries for "${activeCampaign.name}" have been deleted.`});
     } catch (error) {
         console.error("Error clearing campaign log from localStorage:", error);
         toast({ title: "Error Clearing Log", description: "Could not clear all data. Check console.", variant: "destructive"});
@@ -400,13 +400,12 @@ export default function StorySoFarRefactoredPage() {
           <Card>
             <CardHeader>
               <CardTitle>Campaign Log</CardTitle>
-              {/* Campaign Log Description Removed */}
             </CardHeader>
             <CardContent>
               {allSessionNumbers.length === 0 || (allSessionNumbers.length === 1 && allSessionNumbers[0] === currentSessionNumber && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) ? (
                 <p className="text-muted-foreground text-center py-4">No plot points recorded yet for this campaign. Add the first one above!</p>
               ) : (
-                <ScrollArea className="max-h-[70vh] pr-2"> {/* ScrollArea for long logs */}
+                <ScrollArea className="max-h-[70vh] pr-2">
                   <div className="space-y-6">
                     {allSessionNumbers.map(sessionNum => {
                       const isCurrentSession = sessionNum === currentSessionNumber;
@@ -524,7 +523,7 @@ export default function StorySoFarRefactoredPage() {
                 disabled={isGeneratingGlobalSummary || plotPoints.length === 0 || Object.values(isGeneratingSessionSummary).some(loading => loading)}
               >
                 {isGeneratingGlobalSummary ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                {isGeneratingGlobalSummary ? "Generating Full Summary..." : "Generate Full Campaign Summary"}
+                {isGeneratingGlobalSummary ? "Generating..." : "Generate Full Summary"}
               </Button>
             </CardContent>
              <CardFooter>
@@ -578,7 +577,6 @@ export default function StorySoFarRefactoredPage() {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* First Deletion Confirmation Dialog */}
       <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -599,10 +597,9 @@ export default function StorySoFarRefactoredPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Second Deletion Confirmation Dialog (with text input) */}
       <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
         if (!isOpen) {
-            setDeleteConfirmInput(""); // Reset input if dialog is closed
+            setDeleteConfirmInput(""); 
         }
         setIsClearLogConfirm2Open(isOpen);
       }}>
@@ -657,7 +654,7 @@ export default function StorySoFarRefactoredPage() {
                 <p>4. Use the <strong className="text-foreground">AI Story Tools</strong> on the right to:</p>
                  <ul className="list-disc pl-5 space-y-1">
                     <li>Select the "Summary Detail Level" (Brief, Normal, Detailed) for all *newly generated* summaries (both session and full campaign).</li>
-                    <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Generate Full Campaign Summary" for a recap of everything. This summary will be cached until new plot points are added or a session advances.</li>
+                    <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Generate Full Summary" for a recap of everything. This summary will be cached until new plot points are added or a session advances.</li>
                     <li>Click "<Trash2 className="inline h-4 w-4 align-text-bottom mr-0.5"/> Clear Entire Campaign Log" to permanently delete all plot points and summaries for the current campaign (requires double confirmation).</li>
                 </ul>
                 <p>5. All data is saved per campaign to your browser's local storage.</p>
