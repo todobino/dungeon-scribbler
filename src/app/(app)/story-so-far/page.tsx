@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, History, Zap, Brain, ChevronRightSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 interface PlotPoint {
   id: string;
@@ -26,6 +28,8 @@ export default function StorySoFarPage() {
   const [summary, setSummary] = useState<string | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [summaryDetailLevel, setSummaryDetailLevel] = useState<SummaryDetailLevel>("normal");
+  const [isConfirmSessionAdvanceOpen, setIsConfirmSessionAdvanceOpen] = useState(false);
+
 
   useEffect(() => {
     // Load plot points from localStorage if needed
@@ -63,10 +67,6 @@ export default function StorySoFarPage() {
     }
   };
 
-  const handleStartNextSession = () => {
-    setCurrentSessionNumber(prev => prev + 1);
-  };
-
   const handleGenerateFullSummary = async () => {
     setIsGeneratingSummary(true);
     setSummary(null);
@@ -76,15 +76,42 @@ export default function StorySoFarPage() {
     setIsGeneratingSummary(false);
   };
   
-  const handleGenerateUpdateSummary = async () => {
+  const handleGenerateUpdateSummary = async (sessionNumberParam?: number) => {
     setIsGeneratingSummary(true);
     setSummary(null);
+    const sessionToSummarize = sessionNumberParam !== undefined ? sessionNumberParam : currentSessionNumber;
+    
+    const relevantPlotPoints = plotPoints.filter(p => p.sessionNumber === sessionToSummarize);
+    if (relevantPlotPoints.length === 0 && sessionNumberParam !== undefined) { // Only show this if specifically summarizing a session (not generic current)
+        setSummary(`No plot points recorded for Session ${sessionToSummarize} to generate an update.`);
+        setIsGeneratingSummary(false);
+        return;
+    }
+    
     // Placeholder for AI call
-    const lastSessionPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
     await new Promise(resolve => setTimeout(resolve, 1500)); 
-    setSummary(`AI Generated Update Summary for Session ${currentSessionNumber} (Detail: ${summaryDetailLevel}): The party recently cleared the bandit camp at the Whispering Pass and found a mysterious map fragment. They also made an uneasy alliance with the Shadowclaw Guild. This is based on the latest events.`);
+    setSummary(`AI Generated Update Summary for Session ${sessionToSummarize} (Detail: ${summaryDetailLevel}): The party recently cleared the bandit camp at the Whispering Pass and found a mysterious map fragment. They also made an uneasy alliance with the Shadowclaw Guild. This is based on the latest events for Session ${sessionToSummarize}.`);
     setIsGeneratingSummary(false);
   };
+
+  const handleStartNextSession = async () => {
+    const currentSessionPlotPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
+    if (currentSessionPlotPoints.length === 0) {
+      setIsConfirmSessionAdvanceOpen(true);
+    } else {
+      // Generate summary for the current session first
+      await handleGenerateUpdateSummary(currentSessionNumber);
+      // Then advance
+      setCurrentSessionNumber(prev => prev + 1);
+    }
+  };
+
+  const handleConfirmAndAdvanceEmptySession = () => {
+    // No summary is generated for an empty session that's being advanced via confirmation.
+    setCurrentSessionNumber(prev => prev + 1);
+    setIsConfirmSessionAdvanceOpen(false);
+  };
+
 
   const groupedPlotPoints = plotPoints.reduce((acc, point) => {
     (acc[point.sessionNumber] = acc[point.sessionNumber] || []).push(point);
@@ -129,9 +156,15 @@ export default function StorySoFarPage() {
                           <p className="text-xs text-muted-foreground mt-1">{new Date(point.timestamp).toLocaleString()}</p>
                         </div>
                       ))}
+                       {groupedPlotPoints[sessionNum].length === 0 && (
+                            <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session.</p>
+                        )}
                     </div>
                   </div>
                 ))}
+                {plotPoints.length > 0 && sortedSessionNumbers.length === 0 && ( // Should not happen if plotPoints has items, but as a fallback
+                     <p className="text-muted-foreground">No plot points recorded yet.</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -182,7 +215,7 @@ export default function StorySoFarPage() {
               <Button onClick={handleGenerateFullSummary} className="w-full" disabled={isGeneratingSummary || plotPoints.length === 0}>
                 <Zap className="mr-2 h-4 w-4" />{isGeneratingSummary ? "Generating..." : "Generate Full Summary"}
               </Button>
-              <Button onClick={handleGenerateUpdateSummary} className="w-full" variant="outline" disabled={isGeneratingSummary || plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0}>
+              <Button onClick={() => handleGenerateUpdateSummary()} className="w-full" variant="outline" disabled={isGeneratingSummary || plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0}>
                 <Zap className="mr-2 h-4 w-4" />{isGeneratingSummary ? "Generating..." : `Session ${currentSessionNumber} Update`}
               </Button>
             </CardContent>
@@ -213,12 +246,30 @@ export default function StorySoFarPage() {
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
                 <p>1. Log major events as they happen. Use "Start Next Session" to organize by play session.</p>
-                <p>2. Select your desired "Summary Detail Level".</p>
-                <p>3. Use the AI summarizer to get a recap of the entire story or just the current session's update.</p>
+                <p>2. Advancing to the next session automatically summarizes the completed one if it has plot points.</p>
+                <p>3. Select your desired "Summary Detail Level" for manual summaries.</p>
+                <p>4. Use the AI summarizer to get a recap of the entire story or just the current session's update.</p>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <AlertDialog open={isConfirmSessionAdvanceOpen} onOpenChange={setIsConfirmSessionAdvanceOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Session Advance</AlertDialogTitle>
+            <AlertDialogDescription>
+              You haven't added any plot points for Session {currentSessionNumber}. 
+              Are you sure you want to start Session {currentSessionNumber + 1}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsConfirmSessionAdvanceOpen(false)}>Stay on Session {currentSessionNumber}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAndAdvanceEmptySession}>Yes, Start Session {currentSessionNumber + 1}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
