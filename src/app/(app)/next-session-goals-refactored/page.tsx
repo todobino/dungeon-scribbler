@@ -527,11 +527,11 @@ export default function NextSessionGoalsRefactoredPage() {
       </Dialog>
 
       <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-        <UIDialogContent className="max-w-lg">
-            <UIDialogHeader>
+        <DialogContent className="max-w-lg">
+            <DialogHeader>
                 <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: Next Session Goals</DialogTitle>
                 <DialogDescription>Outline and develop plot beats for upcoming sessions.</DialogDescription>
-            </UIDialogHeader>
+            </DialogHeader>
             <ScrollArea className="max-h-[60vh] pr-3">
             <div className="text-sm text-muted-foreground space-y-3 py-4">
                 <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" (in the card footer or when the list is empty) to open a dialog and input a new plot beat or objective.</p>
@@ -557,7 +557,7 @@ export default function NextSessionGoalsRefactoredPage() {
                     <Button>Close</Button>
                 </DialogClose>
             </UIDialogFooter>
-        </UIDialogContent>
+        </DialogContent>
       </Dialog>
     </div>
   );
