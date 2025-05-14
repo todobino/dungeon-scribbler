@@ -6,25 +6,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, HelpCircle } from "lucide-react";
+import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, HelpCircle, Library } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogClose, DialogContent as UIDialogContent, DialogDescription as UIDialogDescription, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogFooter as UIDialogFooter } from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
+import { useCampaign } from "@/contexts/campaign-context";
 import { 
-  PLOT_POINTS_STORAGE_KEY, 
-  CURRENT_SESSION_STORAGE_KEY, 
-  SESSION_SUMMARIES_STORAGE_KEY, 
-  SESSION_VIEW_MODES_STORAGE_KEY,
-  FULL_CAMPAIGN_SUMMARY_STORAGE_KEY,
-  SUMMARY_DETAIL_LEVEL_STORAGE_KEY
+  PLOT_POINTS_KEY_PREFIX,
+  CURRENT_SESSION_KEY_PREFIX,
+  SESSION_SUMMARIES_KEY_PREFIX,
+  SESSION_VIEW_MODES_KEY_PREFIX,
+  FULL_CAMPAIGN_SUMMARY_KEY_PREFIX,
+  SUMMARY_DETAIL_LEVEL_KEY_PREFIX
 } from "@/lib/constants";
 
 
 type SummaryDetailLevel = "brief" | "normal" | "detailed";
 
 export default function StorySoFarPage() {
+  const { activeCampaign, isLoadingCampaigns } = useCampaign();
+
   const [plotPoints, setPlotPoints] = useState<PlotPoint[]>([]);
   const [newPlotPointText, setNewPlotPointText] = useState("");
   const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
@@ -42,10 +45,34 @@ export default function StorySoFarPage() {
   const [pastPlotPointInput, setPastPlotPointInput] = useState<Record<number, string>>({});
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
 
+  const getCampaignSpecificKey = (prefix: string) => {
+    if (!activeCampaign) return null;
+    return `${prefix}${activeCampaign.id}`;
+  };
 
+  // Load data when activeCampaign changes
   useEffect(() => {
+    if (!activeCampaign) {
+      setPlotPoints([]);
+      setCurrentSessionNumber(1);
+      setSessionSummaries({});
+      setSessionViewModes({});
+      setFullCampaignSummary(null);
+      setSummaryDetailLevel("normal");
+      return;
+    }
+
+    const plotPointsKey = getCampaignSpecificKey(PLOT_POINTS_KEY_PREFIX);
+    const currentSessionKey = getCampaignSpecificKey(CURRENT_SESSION_KEY_PREFIX);
+    const sessionSummariesKey = getCampaignSpecificKey(SESSION_SUMMARIES_KEY_PREFIX);
+    const sessionViewModesKey = getCampaignSpecificKey(SESSION_VIEW_MODES_KEY_PREFIX);
+    const fullCampaignSummaryKey = getCampaignSpecificKey(FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
+    const summaryDetailLevelKey = getCampaignSpecificKey(SUMMARY_DETAIL_LEVEL_KEY_PREFIX);
+
+    if (!plotPointsKey) return; // Should not happen if activeCampaign is present
+
     try {
-      const storedPlotPoints = localStorage.getItem(PLOT_POINTS_STORAGE_KEY);
+      const storedPlotPoints = localStorage.getItem(plotPointsKey);
       if (storedPlotPoints) setPlotPoints(JSON.parse(storedPlotPoints));
       else setPlotPoints([]);
     } catch (error) {
@@ -54,7 +81,7 @@ export default function StorySoFarPage() {
     }
     
     try {
-      const storedSessionNumber = localStorage.getItem(CURRENT_SESSION_STORAGE_KEY);
+      const storedSessionNumber = localStorage.getItem(currentSessionKey!);
       if (storedSessionNumber) setCurrentSessionNumber(parseInt(storedSessionNumber, 10) || 1);
       else setCurrentSessionNumber(1);
     } catch (error) {
@@ -63,7 +90,7 @@ export default function StorySoFarPage() {
     }
     
     try {
-      const storedSessionSummaries = localStorage.getItem(SESSION_SUMMARIES_STORAGE_KEY);
+      const storedSessionSummaries = localStorage.getItem(sessionSummariesKey!);
       if (storedSessionSummaries) setSessionSummaries(JSON.parse(storedSessionSummaries));
       else setSessionSummaries({});
     } catch (error) {
@@ -72,7 +99,7 @@ export default function StorySoFarPage() {
     }
 
     try {
-      const storedSessionViewModes = localStorage.getItem(SESSION_VIEW_MODES_STORAGE_KEY);
+      const storedSessionViewModes = localStorage.getItem(sessionViewModesKey!);
       if (storedSessionViewModes) setSessionViewModes(JSON.parse(storedSessionViewModes));
       else setSessionViewModes({});
     } catch (error) {
@@ -81,7 +108,7 @@ export default function StorySoFarPage() {
     }
 
     try {
-      const storedFullSummary = localStorage.getItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+      const storedFullSummary = localStorage.getItem(fullCampaignSummaryKey!);
       if (storedFullSummary) setFullCampaignSummary(JSON.parse(storedFullSummary));
       else setFullCampaignSummary(null);
     } catch (error) {
@@ -90,7 +117,7 @@ export default function StorySoFarPage() {
     }
     
     try {
-      const storedDetailLevel = localStorage.getItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY);
+      const storedDetailLevel = localStorage.getItem(summaryDetailLevelKey!);
       if (storedDetailLevel) setSummaryDetailLevel(storedDetailLevel as SummaryDetailLevel);
       else setSummaryDetailLevel("normal");
     } catch (error) {
@@ -98,67 +125,107 @@ export default function StorySoFarPage() {
       setSummaryDetailLevel("normal");
     }
 
-  }, []);
+  }, [activeCampaign]);
 
+  // Save plotPoints
   useEffect(() => {
-    try {
-      localStorage.setItem(PLOT_POINTS_STORAGE_KEY, JSON.stringify(plotPoints));
-    } catch (error) {
-      console.error("Error saving plot points to localStorage:", error);
-    }
-  }, [plotPoints]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(CURRENT_SESSION_STORAGE_KEY, currentSessionNumber.toString());
-    } catch (error) {
-      console.error("Error saving current session number to localStorage:", error);
-    }
-  }, [currentSessionNumber]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SESSION_SUMMARIES_STORAGE_KEY, JSON.stringify(sessionSummaries));
-    } catch (error) {
-      console.error("Error saving session summaries to localStorage:", error);
-    }
-  }, [sessionSummaries]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SESSION_VIEW_MODES_STORAGE_KEY, JSON.stringify(sessionViewModes));
-    } catch (error) {
-      console.error("Error saving session view modes to localStorage:", error);
-    }
-  }, [sessionViewModes]);
-
-  useEffect(() => {
-    try {
-      if (fullCampaignSummary) {
-        localStorage.setItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY, JSON.stringify(fullCampaignSummary));
-      } else {
-        localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+    if (activeCampaign) {
+      const plotPointsKey = getCampaignSpecificKey(PLOT_POINTS_KEY_PREFIX);
+      if (plotPointsKey) {
+        try {
+          localStorage.setItem(plotPointsKey, JSON.stringify(plotPoints));
+        } catch (error) {
+          console.error("Error saving plot points to localStorage:", error);
+        }
       }
-    } catch (error) {
-      console.error("Error saving full campaign summary to localStorage:", error);
     }
-  }, [fullCampaignSummary]);
+  }, [plotPoints, activeCampaign]);
 
+  // Save currentSessionNumber
   useEffect(() => {
-    try {
-      localStorage.setItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY, summaryDetailLevel);
-    } catch (error) {
-      console.error("Error saving summary detail level to localStorage:", error);
+    if (activeCampaign) {
+      const currentSessionKey = getCampaignSpecificKey(CURRENT_SESSION_KEY_PREFIX);
+      if (currentSessionKey) {
+        try {
+          localStorage.setItem(currentSessionKey, currentSessionNumber.toString());
+        } catch (error) {
+          console.error("Error saving current session number to localStorage:", error);
+        }
+      }
     }
-  }, [summaryDetailLevel]);
+  }, [currentSessionNumber, activeCampaign]);
+
+  // Save sessionSummaries
+  useEffect(() => {
+    if (activeCampaign) {
+      const sessionSummariesKey = getCampaignSpecificKey(SESSION_SUMMARIES_KEY_PREFIX);
+      if (sessionSummariesKey) {
+        try {
+          localStorage.setItem(sessionSummariesKey, JSON.stringify(sessionSummaries));
+        } catch (error) {
+          console.error("Error saving session summaries to localStorage:", error);
+        }
+      }
+    }
+  }, [sessionSummaries, activeCampaign]);
+
+  // Save sessionViewModes
+  useEffect(() => {
+    if (activeCampaign) {
+      const sessionViewModesKey = getCampaignSpecificKey(SESSION_VIEW_MODES_KEY_PREFIX);
+      if (sessionViewModesKey) {
+        try {
+          localStorage.setItem(sessionViewModesKey, JSON.stringify(sessionViewModes));
+        } catch (error) {
+          console.error("Error saving session view modes to localStorage:", error);
+        }
+      }
+    }
+  }, [sessionViewModes, activeCampaign]);
+
+  // Save fullCampaignSummary
+  useEffect(() => {
+    if (activeCampaign) {
+      const fullCampaignSummaryKey = getCampaignSpecificKey(FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
+      if (fullCampaignSummaryKey) {
+        try {
+          if (fullCampaignSummary) {
+            localStorage.setItem(fullCampaignSummaryKey, JSON.stringify(fullCampaignSummary));
+          } else {
+            localStorage.removeItem(fullCampaignSummaryKey);
+          }
+        } catch (error) {
+          console.error("Error saving full campaign summary to localStorage:", error);
+        }
+      }
+    }
+  }, [fullCampaignSummary, activeCampaign]);
+
+  // Save summaryDetailLevel
+  useEffect(() => {
+    if (activeCampaign) {
+      const summaryDetailLevelKey = getCampaignSpecificKey(SUMMARY_DETAIL_LEVEL_KEY_PREFIX);
+      if (summaryDetailLevelKey) {
+        try {
+          localStorage.setItem(summaryDetailLevelKey, summaryDetailLevel);
+        } catch (error) {
+          console.error("Error saving summary detail level to localStorage:", error);
+        }
+      }
+    }
+  }, [summaryDetailLevel, activeCampaign]);
 
 
-  const clearFullCampaignSummary = () => {
+  const clearFullCampaignSummaryCache = () => {
+    if (activeCampaign) {
+      const key = getCampaignSpecificKey(FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
+      if (key) localStorage.removeItem(key);
+    }
     setFullCampaignSummary(null);
   };
 
   const handleAddPlotPointToCurrentSession = () => {
-    if (newPlotPointText.trim()) {
+    if (newPlotPointText.trim() && activeCampaign) {
       setPlotPoints(prev => [
         ...prev, 
         { 
@@ -169,13 +236,13 @@ export default function StorySoFarPage() {
         }
       ].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
       setNewPlotPointText("");
-      clearFullCampaignSummary();
+      clearFullCampaignSummaryCache();
     }
   };
   
   const handleAddPlotPointToPastSession = async (sessionNum: number) => {
     const textToAdd = pastPlotPointInput[sessionNum];
-    if (textToAdd && textToAdd.trim()) {
+    if (textToAdd && textToAdd.trim() && activeCampaign) {
       setPlotPoints(prev => [
         ...prev,
         {
@@ -187,7 +254,7 @@ export default function StorySoFarPage() {
       ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
       
       setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: "" }));
-      clearFullCampaignSummary();
+      clearFullCampaignSummaryCache();
       await handleRegenerateSessionSummary(sessionNum);
     }
   };
@@ -198,10 +265,11 @@ export default function StorySoFarPage() {
       return `No plot points recorded for Session ${sessionNumberToSummarize}.`;
     }
     await new Promise(resolve => setTimeout(resolve, 1000)); 
-    return `AI Generated Summary for Session ${sessionNumberToSummarize} (Detail: ${detailLevel}): Key events from ${relevantPlotPoints.length} plot point(s) include... The adventurers ${relevantPlotPoints[0]?.text.substring(0,30)}... and then they ${relevantPlotPoints[relevantPlotPoints.length-1]?.text.substring(0,30)}... [Placeholder for session ${sessionNumberToSummarize}]`;
+    return `AI Generated Summary for Session ${sessionNumberToSummarize} (Campaign: ${activeCampaign?.name || 'N/A'}, Detail: ${detailLevel}): Key events from ${relevantPlotPoints.length} plot point(s) include... The adventurers ${relevantPlotPoints[0]?.text.substring(0,30)}... and then they ${relevantPlotPoints[relevantPlotPoints.length-1]?.text.substring(0,30)}... [Placeholder for session ${sessionNumberToSummarize}]`;
   };
 
   const handleStartNextSession = async () => {
+    if (!activeCampaign) return;
     const currentSessionPlotPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
     if (currentSessionPlotPoints.length > 0) {
       setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [currentSessionNumber]: true }));
@@ -210,35 +278,38 @@ export default function StorySoFarPage() {
       setSessionViewModes(prev => ({ ...prev, [currentSessionNumber]: 'summary' }));
       setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [currentSessionNumber]: false }));
       setCurrentSessionNumber(prev => prev + 1);
-      clearFullCampaignSummary();
+      clearFullCampaignSummaryCache();
     } else {
       setIsConfirmSessionAdvanceOpen(true);
     }
   };
   
   const handleGenerateFullCampaignSummary = async () => {
+    if (!activeCampaign) return;
     setIsGeneratingGlobalSummary(true);
     setFullCampaignSummary(null); 
-    const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\n');
+    const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\\n');
     await new Promise(resolve => setTimeout(resolve, 1500)); 
-    const newSummary = `AI Generated Full Story Summary (Detail: ${summaryDetailLevel}): Based on ${plotPoints.length} total plot points across all sessions... The grand saga unfolds! [Placeholder Content referring to: ${allPlotPointsText.substring(0,100)}...]`;
+    const newSummary = `AI Generated Full Story Summary (Campaign: ${activeCampaign.name}, Detail: ${summaryDetailLevel}): Based on ${plotPoints.length} total plot points across all sessions... The grand saga unfolds! [Placeholder Content referring to: ${allPlotPointsText.substring(0,100)}...]`;
     setFullCampaignSummary(newSummary);
     setIsGeneratingGlobalSummary(false);
   };
 
   const handleRegenerateSessionSummary = async (sessionNum: number) => {
+    if (!activeCampaign) return;
     setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: true }));
     const summaryText = await generateSessionSummaryText(sessionNum, summaryDetailLevel);
     setSessionSummaries(prev => ({ ...prev, [sessionNum]: summaryText }));
-    clearFullCampaignSummary(); 
+    clearFullCampaignSummaryCache(); 
     setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: false }));
   };
 
 
   const handleConfirmAndAdvanceEmptySession = () => {
+    if (!activeCampaign) return;
     setCurrentSessionNumber(prev => prev + 1);
     setIsConfirmSessionAdvanceOpen(false);
-    clearFullCampaignSummary();
+    clearFullCampaignSummaryCache();
   };
 
   const toggleSessionView = (sessionNum: number) => {
@@ -260,10 +331,33 @@ export default function StorySoFarPage() {
     .filter(sessionNum => sessionNum <= currentSessionNumber +1); 
 
 
+  if (isLoadingCampaigns) {
+    return <div className="text-center p-10">Loading campaign data...</div>;
+  }
+
+  if (!activeCampaign) {
+    return (
+      <Card className="text-center py-12">
+        <CardHeader>
+          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+          <CardTitle className="mt-4">No Active Campaign</CardTitle>
+          <CardDescription>Please select or create a campaign to manage its story.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/campaign-management">
+              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>The Story So Far</h1>
+        <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>The Story So Far: {activeCampaign.name}</h1>
         <div className="flex items-center gap-2">
           <Button onClick={handleStartNextSession} variant="outline" disabled={isGeneratingSpecificSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary}>
             {isGeneratingSpecificSessionSummary[currentSessionNumber] ? 'Generating Summary...' : <><ChevronRightSquare className="mr-2 h-5 w-5"/> Start Session {currentSessionNumber + 1}</>}
@@ -305,7 +399,7 @@ export default function StorySoFarPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {plotPoints.length === 0 && (
-                <p className="text-muted-foreground">No plot points recorded yet. Add the first one above!</p>
+                <p className="text-muted-foreground">No plot points recorded yet for this campaign. Add the first one above!</p>
               )}
               <div className="max-h-[70vh] overflow-y-auto space-y-6 pr-2">
                  { currentSessionNumber > 0 && (groupedPlotPoints[currentSessionNumber] || []).length === 0 && !Object.keys(groupedPlotPoints).map(Number).includes(currentSessionNumber) && (

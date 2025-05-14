@@ -6,18 +6,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, ClipboardList, Zap, Brain, HelpCircle, Edit3, Trash2, ChevronDown, Eye, PlusSquare, ClipboardCheck } from "lucide-react";
+import { PlusCircle, ClipboardList, Zap, Brain, HelpCircle, Edit3, Trash2, ChevronDown, Eye, PlusSquare, ClipboardCheck, Library, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter as UIDialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { PlotPoint } from "@/lib/types";
+import { useCampaign } from "@/contexts/campaign-context";
+import Link from "next/link";
 import { 
-  GOALS_STORAGE_KEY,
-  PLOT_POINTS_STORAGE_KEY,
-  CURRENT_SESSION_STORAGE_KEY,
-  FULL_CAMPAIGN_SUMMARY_STORAGE_KEY
+  GOALS_KEY_PREFIX,
+  PLOT_POINTS_KEY_PREFIX,
+  CURRENT_SESSION_KEY_PREFIX,
+  FULL_CAMPAIGN_SUMMARY_KEY_PREFIX
 } from "@/lib/constants";
 
 interface Goal {
@@ -33,42 +35,62 @@ interface GeneratedIdea {
 }
 
 export default function NextSessionGoalsPage() {
+  const { activeCampaign, isLoadingCampaigns } = useCampaign();
+  const { toast } = useToast();
+
   const [goals, setGoals] = useState<Goal[]>([]);
   const [newGoalText, setNewGoalText] = useState("");
   const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
 
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
-  
   const [openAccordionItem, setOpenAccordionItem] = useState<string | null>(null);
-
   const [isGeneratingIdeasForGoal, setIsGeneratingIdeasForGoal] = useState<Record<string, boolean>>({});
-  
   const [goalToDeleteId, setGoalToDeleteId] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
-  const { toast } = useToast();
 
+  const getCampaignSpecificKey = (prefix: string) => {
+    if (!activeCampaign) return null;
+    return `${prefix}${activeCampaign.id}`;
+  };
+
+  // Load goals when activeCampaign changes
   useEffect(() => {
-    try {
-      const storedGoals = localStorage.getItem(GOALS_STORAGE_KEY);
-      if (storedGoals) {
-        setGoals(JSON.parse(storedGoals));
-      } else {
-        setGoals([]);
+    if (!activeCampaign) {
+      setGoals([]);
+      return;
+    }
+    const goalsKey = getCampaignSpecificKey(GOALS_KEY_PREFIX);
+    if (goalsKey) {
+      try {
+        const storedGoals = localStorage.getItem(goalsKey);
+        if (storedGoals) {
+          setGoals(JSON.parse(storedGoals));
+        } else {
+          setGoals([]);
+        }
+      } catch (error) {
+        console.error("Error loading goals from localStorage:", error);
+        setGoals([]); 
       }
-    } catch (error) {
-      console.error("Error loading goals from localStorage:", error);
-      setGoals([]); // Initialize to empty array on error
+    } else {
+      setGoals([]);
     }
-  }, []);
+  }, [activeCampaign]);
 
+  // Save goals when they change
   useEffect(() => {
-    try {
-      localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(goals));
-    } catch (error) {
-      console.error("Error saving goals to localStorage:", error);
+    if (activeCampaign) {
+      const goalsKey = getCampaignSpecificKey(GOALS_KEY_PREFIX);
+      if (goalsKey) {
+        try {
+          localStorage.setItem(goalsKey, JSON.stringify(goals));
+        } catch (error) {
+          console.error("Error saving goals to localStorage:", error);
+        }
+      }
     }
-  }, [goals]);
+  }, [goals, activeCampaign]);
 
 
   const handleOpenAddGoalDialog = () => {
@@ -77,7 +99,7 @@ export default function NextSessionGoalsPage() {
   };
 
   const handleAddGoal = () => {
-    if (newGoalText.trim()) {
+    if (newGoalText.trim() && activeCampaign) {
       const newGoal: Goal = { 
         id: Date.now().toString(), 
         text: newGoalText.trim(), 
@@ -111,11 +133,11 @@ export default function NextSessionGoalsPage() {
 
   const handleGenerateIdeas = async (goalId: string) => {
     const goal = goals.find(g => g.id === goalId);
-    if (!goal) return;
+    if (!goal || !activeCampaign) return;
 
     setIsGeneratingIdeasForGoal(prev => ({...prev, [goalId]: true}));
     
-    const promptText = `Goal: ${goal.text}\nDetails: ${goal.details || "No specific details provided."}`;
+    const promptText = `Goal for campaign "${activeCampaign.name}": ${goal.text}\nDetails: ${goal.details || "No specific details provided."}`;
     await new Promise(resolve => setTimeout(resolve, 1500)); 
     const mockIdeas: GeneratedIdea[] = [
         { id: `idea-${goalId}-1`, idea: `A character directly mentions something related to: "${goal.text.substring(0,20)}..." based on details.` },
@@ -132,7 +154,7 @@ export default function NextSessionGoalsPage() {
       prevGoals.map(g => {
         if (g.id === goalId) {
           const currentDetails = g.details || "";
-          const newDetails = `${currentDetails}${currentDetails ? '\n' : ''}- ${ideaText}`;
+          const newDetails = `${currentDetails}${currentDetails ? '\\n' : ''}- ${ideaText}`;
           return { ...g, details: newDetails };
         }
         return g;
@@ -167,8 +189,8 @@ export default function NextSessionGoalsPage() {
     if (!details || details.trim() === "") {
       return <p className="text-sm text-muted-foreground italic">No details added yet. Click <Edit3 className="inline h-3 w-3 align-text-bottom"/> to add some.</p>;
     }
-    const lines = details.split('\n');
-    const elements = [];
+    const lines = details.split('\\n');
+    const elements: JSX.Element[] = [];
     let currentList: JSX.Element[] = [];
 
     for (let i = 0; i < lines.length; i++) {
@@ -177,7 +199,7 @@ export default function NextSessionGoalsPage() {
         currentList.push(<li key={i} className="ml-4">{line.substring(2)}</li>);
       } else {
         if (currentList.length > 0) {
-          elements.push(<ul key={`ul-${elements.length}`} className="list-disc list-outside pl-5 space-y-1">{currentList}</ul>);
+          elements.push(<ul key={`ul-${elements.length}-${Math.random()}`} className="list-disc list-outside pl-5 space-y-1">{currentList}</ul>);
           currentList = [];
         }
         if (line.trim() !== "") {
@@ -186,17 +208,35 @@ export default function NextSessionGoalsPage() {
       }
     }
     if (currentList.length > 0) {
-      elements.push(<ul key={`ul-${elements.length}`} className="list-disc list-outside pl-5 space-y-1">{currentList}</ul>);
+      elements.push(<ul key={`ul-${elements.length}-${Math.random()}`} className="list-disc list-outside pl-5 space-y-1">{currentList}</ul>);
     }
     return <div className="space-y-2">{elements}</div>;
   };
 
   const handleLogGoalAsCompleted = async (goal: Goal) => {
+    if (!activeCampaign) {
+      toast({
+        title: "No Active Campaign",
+        description: "Cannot log goal. Please select an active campaign.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const plotPointsKey = getCampaignSpecificKey(PLOT_POINTS_KEY_PREFIX);
+    const currentSessionKey = getCampaignSpecificKey(CURRENT_SESSION_KEY_PREFIX);
+    const fullCampaignSummaryKey = getCampaignSpecificKey(FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
+
+    if (!plotPointsKey || !currentSessionKey || !fullCampaignSummaryKey) {
+        toast({title: "Error", description: "Campaign keys are missing.", variant: "destructive"});
+        return;
+    }
+    
     try {
-      const storedPlotPoints = localStorage.getItem(PLOT_POINTS_STORAGE_KEY);
+      const storedPlotPoints = localStorage.getItem(plotPointsKey);
       let plotPoints: PlotPoint[] = storedPlotPoints ? JSON.parse(storedPlotPoints) : [];
       
-      const storedSessionNumber = localStorage.getItem(CURRENT_SESSION_STORAGE_KEY);
+      const storedSessionNumber = localStorage.getItem(currentSessionKey);
       let currentSessionNumber = storedSessionNumber ? parseInt(storedSessionNumber, 10) : 1;
       if (isNaN(currentSessionNumber) || currentSessionNumber < 1) currentSessionNumber = 1;
 
@@ -205,14 +245,14 @@ export default function NextSessionGoalsPage() {
         id: Date.now().toString(),
         sessionNumber: currentSessionNumber,
         timestamp: new Date().toISOString(),
-        text: `Completed Goal: ${goal.text}${goal.details ? `\nDetails:\n${goal.details}` : ''}`,
+        text: `Completed Goal: ${goal.text}${goal.details ? `\\nDetails:\\n${goal.details}` : ''}`,
       };
 
       plotPoints.push(newPlotPoint);
       plotPoints.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       
-      localStorage.setItem(PLOT_POINTS_STORAGE_KEY, JSON.stringify(plotPoints));
-      localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+      localStorage.setItem(plotPointsKey, JSON.stringify(plotPoints));
+      localStorage.removeItem(fullCampaignSummaryKey);
 
       toast({
         title: "Goal Logged!",
@@ -229,11 +269,33 @@ export default function NextSessionGoalsPage() {
     }
   };
 
+  if (isLoadingCampaigns) {
+    return <div className="text-center p-10">Loading campaign data...</div>;
+  }
+
+  if (!activeCampaign) {
+    return (
+      <Card className="text-center py-12">
+        <CardHeader>
+          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+          <CardTitle className="mt-4">No Active Campaign</CardTitle>
+          <CardDescription>Please select or create a campaign to manage its next session goals.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/campaign-management">
+              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center"><ClipboardList className="mr-3 h-8 w-8 text-primary"/>Next Session Goals</h1>
+        <h1 className="text-3xl font-bold flex items-center"><ClipboardList className="mr-3 h-8 w-8 text-primary"/>Next Session Goals for {activeCampaign.name}</h1>
         <Button variant="ghost" size="icon" onClick={() => setIsHelpDialogOpen(true)} aria-label="Help with Next Session Goals">
             <HelpCircle className="h-6 w-6" />
         </Button>
@@ -271,11 +333,9 @@ export default function NextSessionGoalsPage() {
               {goals.map(goal => (
                 <AccordionItem value={goal.id} key={goal.id} className="border rounded-md px-3 bg-card shadow-sm">
                   <div className="flex items-center py-1">
-                    <AccordionTrigger className="flex-1 py-2 hover:no-underline">
-                        <div className="flex items-center w-full">
-                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 mr-2 accordion-chevron" />
-                            <span className="text-base font-medium text-left flex-1 truncate pr-2">{goal.text}</span>
-                        </div>
+                     <AccordionTrigger className="flex-1 py-2 hover:no-underline justify-start">
+                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 mr-2 accordion-chevron" />
+                        <span className="text-base font-medium text-left flex-1 truncate pr-2">{goal.text}</span>
                     </AccordionTrigger>
                     <Button variant="ghost" size="icon" onClick={() => handleToggleEditMode(goal.id)} className="ml-2 h-8 w-8">
                       {editingGoalId === goal.id ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}

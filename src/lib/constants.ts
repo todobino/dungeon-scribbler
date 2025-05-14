@@ -110,11 +110,11 @@ export const getFactionReputationColorClass = (reputation: number): string => {
   return "text-green-500"; // Using a Tailwind color directly
 };
 
-// Storage Keys for Story So Far & Next Session Goals
-export const PLOT_POINTS_STORAGE_KEY = "dungeonScribblerPlotPoints";
-export const CURRENT_SESSION_STORAGE_KEY = "dungeonScribblerCurrentSession";
-export const SESSION_SUMMARIES_STORAGE_KEY = "dungeonScribblerSessionSummaries";
-export const SESSION_VIEW_MODES_STORAGE_KEY = "dungeonScribblerSessionViewModes";
-export const FULL_CAMPAIGN_SUMMARY_STORAGE_KEY = "dungeonScribblerFullCampaignSummary";
-export const SUMMARY_DETAIL_LEVEL_STORAGE_KEY = "dungeonScribblerSummaryDetailLevel";
-export const GOALS_STORAGE_KEY = "dungeonScribblerGoals";
+// Storage Key Prefixes for Campaign-Specific Data
+export const PLOT_POINTS_KEY_PREFIX = "dungeonScribblerPlotPoints_";
+export const CURRENT_SESSION_KEY_PREFIX = "dungeonScribblerCurrentSession_";
+export const SESSION_SUMMARIES_KEY_PREFIX = "dungeonScribblerSessionSummaries_";
+export const SESSION_VIEW_MODES_KEY_PREFIX = "dungeonScribblerSessionViewModes_";
+export const FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = "dungeonScribblerFullCampaignSummary_";
+export const SUMMARY_DETAIL_LEVEL_KEY_PREFIX = "dungeonScribblerSummaryDetailLevel_";
+export const GOALS_KEY_PREFIX = "dungeonScribblerGoals_";
