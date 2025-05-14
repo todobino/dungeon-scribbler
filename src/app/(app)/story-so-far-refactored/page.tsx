@@ -359,7 +359,7 @@ export default function StorySoFarRefactoredPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>Adventure Recap: {activeCampaign.name}</h1>
+        <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>Adventure Recap</h1>
         <div className="flex items-center gap-2">
           <Button 
             onClick={handleAdvanceSession} 
