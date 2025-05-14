@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -34,6 +34,7 @@ export const WORLD_NAV_ITEMS: NavItem[] = [
 ];
 
 export const ADVANCED_NAV_ITEMS: NavItem[] = [
+  { label: 'Campaign Wizard', href: '/campaign-wizard', icon: DraftingCompass, isAdvanced: true, isGenAI: true, disabled: false },
   { label: 'Quest Web', href: '/quest-web', icon: Landmark, isAdvanced: true, disabled: true },
   { label: 'Improvisation Asst.', href: '/improvisation-assistant', icon: Wand2, isAdvanced: true, isGenAI: true, disabled: true },
   { label: 'Backstory Integrator', href: '/backstory-integrator', icon: ShieldQuestion, isAdvanced: true, isGenAI: true, disabled: true },
@@ -107,33 +108,47 @@ export const getFactionReputationColorClass = (reputation: number): string => {
   return "text-green-500"; // Using a Tailwind color directly
 };
 
-// Storage Key Prefixes for Campaign-Specific Data & Global Data
+// CAMPAIGN WIZARD OPTIONS
+export const CAMPAIGN_LENGTH_OPTIONS = ["One-Shot", "Short Arc (2-5 Sessions)", "Medium Campaign (6-15 Sessions)", "Long Campaign (16+ Sessions)", "Open-Ended/Sandbox"];
+export const CAMPAIGN_TONE_OPTIONS = ["Heroic Fantasy", "Dark Fantasy/Grimdark", "Lighthearted/Comedic", "Intrigue/Political", "Mystery/Horror", "Exploration/Discovery", "Action/Adventure"];
+export const WORLD_STYLE_OPTIONS = ["High Fantasy", "Low Magic", "Sword & Sorcery", "Steampunk", "Post-Apocalyptic", "Urban Fantasy", "Sci-Fi Fantasy"];
+export const REGION_FOCUS_OPTIONS = ["Frontier Wilderness", "Bustling Imperial City", "Floating Archipelago", "Ancient Desert Kingdom", "Frozen Icy North", "Fae-Touched Woods", "Underground Society", "Planar Crossroads"];
+export const TECHNOLOGY_LEVEL_OPTIONS = ["Stone Age", "Bronze Age", "Iron Age/Classical", "Medieval", "Renaissance", "Industrial Revolution/Steampunk", "Magitech", "Modern", "Futuristic/Spacefaring"];
+export const FACTION_TYPE_EXAMPLES = "e.g., Thieves' guilds, noble houses, religious orders, mages' circles, merchant consortiums, revolutionary groups, ancient cults, foreign powers, monstrous hordes.";
+export const POWER_BALANCE_OPTIONS = ["One Dominant Power", "Cold War (Two Superpowers)", "Multiple Competing Powers", "Chaotic Free-for-All", "Hidden Powers Manipulating Events", "Power Vacuum"];
+
+
+// Storage Key Prefixes & Names
+const SHARED_PREFIX = "adventureArchitect_"; // Changed from "dungeonScribbler"
 
 // Campaign Context Storage Keys
-export const CAMPAIGNS_STORAGE_KEY = 'adventureArchitectCampaigns';
-export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = 'adventureArchitectActiveCampaignId';
-export const PARTY_STORAGE_KEY_PREFIX = 'adventureArchitectCharacters_'; // Used in getPartyStorageKey
+export const CAMPAIGNS_STORAGE_KEY = `${SHARED_PREFIX}Campaigns`;
+export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = `${SHARED_PREFIX}ActiveCampaignId`;
+export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Characters_`;
 
 // Factions Page Keys
-export const FACTIONS_STORAGE_KEY_PREFIX = 'adventureArchitectFactions_';
-export const LOCATIONS_STORAGE_KEY_PREFIX = 'adventureArchitectLocations_';
+export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Factions_`;
+export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Locations_`;
 
 // Global NPC List Key
-export const NPCS_STORAGE_KEY = 'adventureArchitectNpcs'; 
+export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs`; 
 
 // Campaign Journal Page Key
-export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = "adventureArchitectNotes_"; // Make campaign specific
+export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Notes_`;
 
 // Map Integration Page Key
-export const MAPS_STORAGE_KEY_PREFIX = "adventureArchitectMaps_"; // Make campaign specific
+export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 
-// Adventure Recap (formerly Story So Far Refactored) Page Keys
-export const REFACTORED_PLOT_POINTS_KEY_PREFIX = "aaRefactoredPlotPoints_";
-export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = "aaRefactoredCurrentSession_";
-export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = "aaRefactoredSessionSummaries_";
-export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = "aaRefactoredSessionViewModes_";
-export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = "aaRefactoredFullCampaignSummary_";
-export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = "aaRefactoredSummaryDetailLevel_";
+// Adventure Recap (Refactored Story So Far) Page Keys
+export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}RefactoredPlotPoints_`;
+export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}RefactoredCurrentSession_`;
+export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}RefactoredSessionSummaries_`;
+export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = `${SHARED_PREFIX}RefactoredSessionViewModes_`;
+export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = `${SHARED_PREFIX}RefactoredFullCampaignSummary_`;
+export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = `${SHARED_PREFIX}RefactoredSummaryDetailLevel_`;
 
 // Next Session Goals (Refactored) Page Keys
-export const REFACTORED_GOALS_KEY_PREFIX = "aaRefactoredGoals_";
+export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}RefactoredGoals_`;
+
+// Campaign Wizard Page Key (if needed for drafts, though often transient)
+export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
