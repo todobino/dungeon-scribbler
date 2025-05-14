@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, HelpCircle, Library, Users, Loader2 } from "lucide-react";
+import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, HelpCircle, Library, Users, Loader2, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -23,11 +23,13 @@ import {
 } from "@/lib/constants";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 type SummaryDetailLevel = "brief" | "normal" | "detailed";
 
 export default function StorySoFarRefactoredPage() {
   const { activeCampaign, isLoadingCampaigns } = useCampaign();
+  const { toast } = useToast();
 
   const [plotPoints, setPlotPoints] = useState<PlotPoint[]>([]);
   const [newPlotPointText, setNewPlotPointText] = useState("");
@@ -47,6 +49,10 @@ export default function StorySoFarRefactoredPage() {
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
+  const [isClearLogConfirm1Open, setIsClearLogConfirm1Open] = useState(false);
+  const [isClearLogConfirm2Open, setIsClearLogConfirm2Open] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+
 
   const getCampaignSpecificKey = useCallback((prefix: string) => {
     if (!activeCampaign) return null;
@@ -55,7 +61,7 @@ export default function StorySoFarRefactoredPage() {
 
   // Load data when activeCampaign changes
   useEffect(() => {
-    if (isLoadingCampaigns) return; // Wait for campaign context to load
+    if (isLoadingCampaigns) return; 
 
     if (!activeCampaign) {
       setPlotPoints([]);
@@ -157,7 +163,7 @@ export default function StorySoFarRefactoredPage() {
 
 
   const clearFullCampaignSummaryCache = useCallback(() => {
-    setFullCampaignSummary(null); // Also remove from localStorage via useEffect
+    setFullCampaignSummary(null); 
   }, []);
 
   const handleAddPlotPointToCurrentSession = () => {
@@ -186,19 +192,28 @@ export default function StorySoFarRefactoredPage() {
       setPlotPoints(prev => [...prev, newPoint].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
       setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: "" }));
       clearFullCampaignSummaryCache();
-      await handleRegenerateSessionSummary(sessionNum); // Re-summarize this past session
+      await handleRegenerateSessionSummary(sessionNum); 
     }
   };
 
   const generateSessionSummaryText = async (sessionNumberToSummarize: number, detailLevel: SummaryDetailLevel): Promise<string> => {
     const relevantPlotPoints = plotPoints.filter(p => p.sessionNumber === sessionNumberToSummarize);
     if (relevantPlotPoints.length === 0) {
-      return `Session ${sessionNumberToSummarize} had no recorded plot points.`;
+      return `Session ${sessionNumberToSummarize} - No Recorded Events: This session had no recorded plot points.`;
     }
-    // Mock AI call
+    // Mock AI call for title and body
     await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); 
     const pointsText = relevantPlotPoints.map(p => p.text).join(' Then, ');
-    return `AI Summary for Session ${sessionNumberToSummarize} (Campaign: ${activeCampaign?.name || 'N/A'}, Detail: ${detailLevel}): Key events included: ${pointsText.substring(0, 100)}... It was a pivotal session.`;
+    
+    let mockTitle = "Key Developments"; 
+    if (pointsText) {
+        const firstFewWords = pointsText.split(' ').slice(0, 3).join(' ');
+        mockTitle = firstFewWords.length > 25 ? firstFewWords.substring(0, 22) + "..." : firstFewWords;
+        if (relevantPlotPoints.length > 1 && mockTitle.length < 25) mockTitle += " & More";
+    }
+
+    const summaryBody = `Key events for campaign "${activeCampaign?.name || 'N/A'}" (detail: ${detailLevel}) included: ${pointsText.substring(0, 120)}...`;
+    return `Session ${sessionNumberToSummarize} - ${mockTitle}: ${summaryBody}`;
   };
 
   const handleAdvanceSession = async () => {
@@ -210,17 +225,16 @@ export default function StorySoFarRefactoredPage() {
       try {
         const summaryText = await generateSessionSummaryText(currentSessionNumber, summaryDetailLevel);
         setSessionSummaries(prev => ({ ...prev, [currentSessionNumber]: summaryText }));
-        setSessionViewModes(prev => ({ ...prev, [currentSessionNumber]: 'summary' })); // Default past sessions to summary
+        setSessionViewModes(prev => ({ ...prev, [currentSessionNumber]: 'summary' })); 
       } catch (error) {
         console.error("Error generating summary for session:", currentSessionNumber, error);
-        // Potentially set a specific error message for this session's summary
       } finally {
         setIsGeneratingSessionSummary(prev => ({ ...prev, [currentSessionNumber]: false }));
       }
       setCurrentSessionNumber(prev => prev + 1);
       clearFullCampaignSummaryCache();
     } else {
-      setIsConfirmSessionAdvanceOpen(true); // Ask for confirmation if session is empty
+      setIsConfirmSessionAdvanceOpen(true); 
     }
   };
   
@@ -228,7 +242,6 @@ export default function StorySoFarRefactoredPage() {
     if (!activeCampaign || plotPoints.length === 0) return;
     setIsGeneratingGlobalSummary(true);
     setFullCampaignSummary(null); 
-    // Mock AI call
     await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000)); 
     const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\\n');
     const newSummary = `AI Generated Full Story Summary (Campaign: ${activeCampaign.name}, Detail: ${summaryDetailLevel}): The grand saga, woven from ${plotPoints.length} total plot points, unfolds thusly: ${allPlotPointsText.substring(0,150)}... An epic indeed!`;
@@ -263,6 +276,40 @@ export default function StorySoFarRefactoredPage() {
       [sessionNum]: (prev[sessionNum] === 'summary' || !prev[sessionNum]) ? 'details' : 'summary'
     }));
   };
+
+  const handleFinalClearLog = () => {
+    if (!activeCampaign || deleteConfirmInput !== "DELETE") return;
+
+    const plotPointsKey = getCampaignSpecificKey(REFACTORED_PLOT_POINTS_KEY_PREFIX);
+    const currentSessionKey = getCampaignSpecificKey(REFACTORED_CURRENT_SESSION_KEY_PREFIX);
+    const sessionSummariesKey = getCampaignSpecificKey(REFACTORED_SESSION_SUMMARIES_KEY_PREFIX);
+    const sessionViewModesKey = getCampaignSpecificKey(REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX);
+    const fullCampaignSummaryKey = getCampaignSpecificKey(REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
+
+    try {
+      if (plotPointsKey) localStorage.removeItem(plotPointsKey);
+      if (currentSessionKey) localStorage.removeItem(currentSessionKey); // Session number will be reset below
+      if (sessionSummariesKey) localStorage.removeItem(sessionSummariesKey);
+      if (sessionViewModesKey) localStorage.removeItem(sessionViewModesKey);
+      if (fullCampaignSummaryKey) localStorage.removeItem(fullCampaignSummaryKey);
+
+      setPlotPoints([]);
+      setCurrentSessionNumber(1); // Resets and also saves via its own useEffect
+      setSessionSummaries({});
+      setSessionViewModes({});
+      setFullCampaignSummary(null);
+      setPastPlotPointInput({});
+      
+      toast({ title: "Campaign Log Cleared!", description: "All plot points and summaries for this campaign have been deleted."});
+    } catch (error) {
+        console.error("Error clearing campaign log from localStorage:", error);
+        toast({ title: "Error Clearing Log", description: "Could not clear all data. Check console.", variant: "destructive"});
+    }
+
+    setIsClearLogConfirm2Open(false);
+    setDeleteConfirmInput("");
+  };
+
 
   const renderFormattedPlotPoints = (points: PlotPoint[]) => {
     if (points.length === 0) {
@@ -312,7 +359,7 @@ export default function StorySoFarRefactoredPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>Story So Far (Refactored): {activeCampaign.name}</h1>
+        <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>Adventure Recap: {activeCampaign.name}</h1>
         <div className="flex items-center gap-2">
           <Button 
             onClick={handleAdvanceSession} 
@@ -321,7 +368,7 @@ export default function StorySoFarRefactoredPage() {
           >
             {isGeneratingSessionSummary[currentSessionNumber] ? <><Loader2 className="mr-2 h-5 w-5 animate-spin"/>Ending Session...</> : <><ChevronRightSquare className="mr-2 h-5 w-5"/> End Session {currentSessionNumber} & Start Next</>}
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsHelpDialogOpen(true)} aria-label="Help with Story So Far">
+          <Button variant="ghost" size="icon" onClick={() => setIsHelpDialogOpen(true)} aria-label="Help with Adventure Recap">
             <HelpCircle className="h-6 w-6" />
           </Button>
         </div>
@@ -353,13 +400,13 @@ export default function StorySoFarRefactoredPage() {
           <Card>
             <CardHeader>
               <CardTitle>Campaign Log</CardTitle>
-              <CardDescription>Chronological log of key events. Most recent sessions appear first. Past sessions default to summary view.</CardDescription>
+              {/* Campaign Log Description Removed */}
             </CardHeader>
             <CardContent>
               {allSessionNumbers.length === 0 || (allSessionNumbers.length === 1 && allSessionNumbers[0] === currentSessionNumber && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) ? (
                 <p className="text-muted-foreground text-center py-4">No plot points recorded yet for this campaign. Add the first one above!</p>
               ) : (
-                <ScrollArea className="max-h-[70vh] pr-2">
+                <ScrollArea className="max-h-[70vh] pr-2"> {/* ScrollArea for long logs */}
                   <div className="space-y-6">
                     {allSessionNumbers.map(sessionNum => {
                       const isCurrentSession = sessionNum === currentSessionNumber;
@@ -370,7 +417,7 @@ export default function StorySoFarRefactoredPage() {
 
                       return (
                         <div key={`session-${sessionNum}`} className="border-b pb-4 last:border-b-0 last:pb-0">
-                          <div className="flex justify-between items-center mb-2 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10 border-b -mx-6 px-6"> {/* Card content has p-6, so -mx-6 px-6 makes it full width */}
+                          <div className="flex justify-between items-center mb-2 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10 border-b -mx-6 px-6">
                             <h3 className={`text-xl font-semibold ${isCurrentSession ? 'text-primary' : 'text-foreground'}`}>
                               Session {sessionNum} {isCurrentSession ? '(Current)' : ''}
                             </h3>
@@ -480,6 +527,16 @@ export default function StorySoFarRefactoredPage() {
                 {isGeneratingGlobalSummary ? "Generating Full Summary..." : "Generate Full Campaign Summary"}
               </Button>
             </CardContent>
+             <CardFooter>
+                <Button 
+                    variant="destructive" 
+                    className="w-full" 
+                    onClick={() => setIsClearLogConfirm1Open(true)}
+                    disabled={plotPoints.length === 0 && Object.keys(sessionSummaries).length === 0 && !fullCampaignSummary && currentSessionNumber === 1}
+                >
+                    <Trash2 className="mr-2 h-4 w-4" /> Clear Entire Campaign Log
+                </Button>
+            </CardFooter>
           </Card>
 
           {isGeneratingGlobalSummary && (
@@ -520,11 +577,68 @@ export default function StorySoFarRefactoredPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* First Deletion Confirmation Dialog */}
+      <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete ALL plot points and summaries for the campaign "{activeCampaign?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsClearLogConfirm1Open(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => { setIsClearLogConfirm1Open(false); setIsClearLogConfirm2Open(true); }}
+              className={buttonVariants({variant: "destructive"})}
+            >
+              Proceed to Final Confirmation
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Second Deletion Confirmation Dialog (with text input) */}
+      <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+            setDeleteConfirmInput(""); // Reset input if dialog is closed
+        }
+        setIsClearLogConfirm2Open(isOpen);
+      }}>
+        <UIDialogContent>
+          <UIDialogHeader>
+            <UIDialogTitle>Final Confirmation to Delete Log</UIDialogTitle>
+            <UIDialogDescription>
+              To permanently delete the entire Adventure Recap for "{activeCampaign?.name}", please type "DELETE" in the box below.
+            </UIDialogDescription>
+          </UIDialogHeader>
+          <div className="py-4">
+            <Input 
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder="DELETE"
+              className="border-destructive focus-visible:ring-destructive"
+            />
+          </div>
+          <UIDialogFooter>
+            <Button variant="outline" onClick={() => { setIsClearLogConfirm2Open(false); setDeleteConfirmInput(""); }}>Cancel</Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleFinalClearLog}
+              disabled={deleteConfirmInput !== "DELETE"}
+            >
+              Confirm Deletion
+            </Button>
+          </UIDialogFooter>
+        </UIDialogContent>
+      </Dialog>
+
 
       <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
         <UIDialogContent className="max-w-lg">
             <UIDialogHeader>
-                <UIDialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: Story So Far (Refactored)</UIDialogTitle>
+                <UIDialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: Adventure Recap</UIDialogTitle>
                 <UIDialogDescription>Track your campaign's progress and generate summaries.</UIDialogDescription>
             </UIDialogHeader>
             <ScrollArea className="max-h-[60vh] pr-3">
@@ -532,18 +646,19 @@ export default function StorySoFarRefactoredPage() {
                 <p>1. Log key events as "Plot Points" for the <strong className="text-foreground">current session ({currentSessionNumber})</strong> using the input field at the top left.</p>
                 <p>2. When a session ends, click "<ChevronRightSquare className="inline h-4 w-4 align-text-bottom mr-0.5"/> End Session {currentSessionNumber} & Start Next".</p>
                 <ul className="list-disc pl-5 space-y-1">
-                    <li>If the completed session had plot points, an AI summary will be automatically generated for it using the selected detail level.</li>
+                    <li>If the completed session had plot points, an AI summary will be automatically generated for it using the selected detail level and displayed with an "episode title" format.</li>
                     <li>If the session was empty, you'll be asked to confirm before advancing.</li>
                 </ul>
                 <p>3. <strong className="text-foreground">Past sessions</strong> default to showing their summary. Click "<List className="inline h-4 w-4 align-text-bottom mr-0.5"/> View Details" to see the original plot points. From the detail view, you can:</p>
                 <ul className="list-disc pl-5 space-y-1">
                     <li>Add a forgotten event to that past session using the "Add Forgotten Event..." input.</li>
-                    <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Re-generate Summary" to update its summary if you've added new details or want to change the detail level.</li>
+                    <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Re-generate Summary" to update its summary if you've added new details or want to change the detail level. The summary will retain the "episode title" format.</li>
                 </ul>
                 <p>4. Use the <strong className="text-foreground">AI Story Tools</strong> on the right to:</p>
                  <ul className="list-disc pl-5 space-y-1">
                     <li>Select the "Summary Detail Level" (Brief, Normal, Detailed) for all *newly generated* summaries (both session and full campaign).</li>
                     <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Generate Full Campaign Summary" for a recap of everything. This summary will be cached until new plot points are added or a session advances.</li>
+                    <li>Click "<Trash2 className="inline h-4 w-4 align-text-bottom mr-0.5"/> Clear Entire Campaign Log" to permanently delete all plot points and summaries for the current campaign (requires double confirmation).</li>
                 </ul>
                 <p>5. All data is saved per campaign to your browser's local storage.</p>
             </div>
@@ -558,3 +673,4 @@ export default function StorySoFarRefactoredPage() {
     </div>
   );
 }
+
