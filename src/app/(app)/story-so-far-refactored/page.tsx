@@ -380,34 +380,13 @@ export default function StorySoFarRefactoredPage() {
         <div className="lg:col-span-2 space-y-6">
            <Card>
             <CardHeader>
-              <CardTitle>Add Plot Point to Current Session ({currentSessionNumber})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="new-plot-point">Event Description</Label>
-                <Textarea 
-                  id="new-plot-point" 
-                  value={newPlotPointText} 
-                  onChange={(e) => setNewPlotPointText(e.target.value)}
-                  placeholder="e.g., The party discovered the hidden cultist hideout."
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleAddPlotPointToCurrentSession} disabled={!newPlotPointText.trim()}><PlusCircle className="mr-2 h-5 w-5"/>Add to Log</Button>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Campaign Log</CardTitle>
             </CardHeader>
-            <CardContent className="p-0"> {/* Removed CardContent padding */}
+            <CardContent className="p-0">
               {allSessionNumbers.length === 0 || (allSessionNumbers.length === 1 && allSessionNumbers[0] === currentSessionNumber && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) ? (
-                <p className="text-muted-foreground text-center py-4 px-6">No plot points recorded yet for this campaign. Add the first one above!</p>
+                <p className="text-muted-foreground text-center py-4 px-6">No plot points recorded yet for this campaign. Add the first one using the input on the right!</p>
               ) : (
-                <ScrollArea className="max-h-[70vh]"> {/* Removed pr-2 to let ScrollBar handle its own spacing */}
+                <ScrollArea className="max-h-[70vh]">
                   <div className="space-y-6">
                     {allSessionNumbers.map(sessionNum => {
                       const isCurrentSession = sessionNum === currentSessionNumber;
@@ -418,7 +397,7 @@ export default function StorySoFarRefactoredPage() {
 
                       return (
                         <div key={`session-${sessionNum}`} className="border-b pb-4 last:border-b-0">
-                          <div className="sticky top-0 bg-background/80 backdrop-blur-sm py-2 px-6 z-10 flex justify-between items-center border-b"> {/* Added px-6 here */}
+                          <div className="sticky top-0 bg-background/80 backdrop-blur-sm py-2 px-6 z-10 flex justify-between items-center border-b">
                             <h3 className={`text-xl font-semibold ${isCurrentSession ? 'text-primary' : 'text-foreground'}`}>
                               Session {sessionNum} {isCurrentSession ? '(Current)' : ''}
                             </h3>
@@ -430,7 +409,7 @@ export default function StorySoFarRefactoredPage() {
                             )}
                           </div>
                           
-                          <div className="px-6 pt-2"> {/* Content padding wrapper */}
+                          <div className="px-6 pt-2">
                             {isLoadingThisSessionSummary && (
                                 <div className="p-3 border rounded-md bg-muted/30 shadow-sm flex items-center justify-center">
                                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -498,6 +477,26 @@ export default function StorySoFarRefactoredPage() {
         </div>
 
         <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Plot Point to Current Session ({currentSessionNumber})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="new-plot-point">Event Description</Label>
+                <Textarea 
+                  id="new-plot-point" 
+                  value={newPlotPointText} 
+                  onChange={(e) => setNewPlotPointText(e.target.value)}
+                  placeholder="e.g., The party discovered the hidden cultist hideout."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleAddPlotPointToCurrentSession} disabled={!newPlotPointText.trim()}><PlusCircle className="mr-2 h-5 w-5"/>Add to Log</Button>
+            </CardFooter>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary"/>AI Story Tools</CardTitle>
@@ -644,7 +643,7 @@ export default function StorySoFarRefactoredPage() {
             </UIDialogHeader>
             <ScrollArea className="max-h-[60vh] pr-3">
             <div className="text-sm text-muted-foreground space-y-3 py-4">
-                <p>1. Log key events as "Plot Points" for the <strong className="text-foreground">current session ({currentSessionNumber})</strong> using the input field at the top left.</p>
+                <p>1. Log key events as "Plot Points" for the <strong className="text-foreground">current session ({currentSessionNumber})</strong> using the input field on the right.</p>
                 <p>2. When a session ends, click "<ChevronRightSquare className="inline h-4 w-4 align-text-bottom mr-0.5"/> End Session {currentSessionNumber} & Start Next".</p>
                 <ul className="list-disc pl-5 space-y-1">
                     <li>If the completed session had plot points, an AI summary will be automatically generated for it using the selected detail level and displayed with an "episode title" format.</li>
