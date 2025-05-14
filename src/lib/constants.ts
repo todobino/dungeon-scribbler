@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -17,7 +17,7 @@ export const APP_NAME = "Dungeon Scribbler";
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
   // Dashboard is removed, Party Manager access is moved.
-  // { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }, 
+  // { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   // { label: 'Party Manager', href: '/party-manager', icon: Users },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Campaign Journal', href: '/campaign-journal', icon: BookText },
@@ -50,7 +50,7 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
 ];
 
 export const DND_CLASSES = [
-  "Artificer", "Barbarian", "Bard", "Cleric", "Druid", "Fighter", 
+  "Artificer", "Barbarian", "Bard", "Cleric", "Druid", "Fighter",
   "Monk", "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard"
 ] as const;
 
@@ -110,3 +110,11 @@ export const getFactionReputationColorClass = (reputation: number): string => {
   return "text-green-500"; // Using a Tailwind color directly
 };
 
+// Storage Keys for Story So Far & Next Session Goals
+export const PLOT_POINTS_STORAGE_KEY = "dungeonScribblerPlotPoints";
+export const CURRENT_SESSION_STORAGE_KEY = "dungeonScribblerCurrentSession";
+export const SESSION_SUMMARIES_STORAGE_KEY = "dungeonScribblerSessionSummaries";
+export const SESSION_VIEW_MODES_STORAGE_KEY = "dungeonScribblerSessionViewModes";
+export const FULL_CAMPAIGN_SUMMARY_STORAGE_KEY = "dungeonScribblerFullCampaignSummary";
+export const SUMMARY_DETAIL_LEVEL_STORAGE_KEY = "dungeonScribblerSummaryDetailLevel";
+export const GOALS_STORAGE_KEY = "dungeonScribblerGoals";

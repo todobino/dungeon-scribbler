@@ -6,26 +6,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft } from "lucide-react";
+import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, HelpCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogClose, DialogContent as UIDialogContent, DialogDescription as UIDialogDescription, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogFooter as UIDialogFooter } from "@/components/ui/dialog";
+import type { PlotPoint } from "@/lib/types";
+import { 
+  PLOT_POINTS_STORAGE_KEY, 
+  CURRENT_SESSION_STORAGE_KEY, 
+  SESSION_SUMMARIES_STORAGE_KEY, 
+  SESSION_VIEW_MODES_STORAGE_KEY,
+  FULL_CAMPAIGN_SUMMARY_STORAGE_KEY,
+  SUMMARY_DETAIL_LEVEL_STORAGE_KEY
+} from "@/lib/constants";
 
-interface PlotPoint {
-  id: string;
-  sessionNumber: number;
-  timestamp: string;
-  text: string;
-}
 
 type SummaryDetailLevel = "brief" | "normal" | "detailed";
-
-const PLOT_POINTS_STORAGE_KEY = "dungeonScribblerPlotPoints";
-const CURRENT_SESSION_STORAGE_KEY = "dungeonScribblerCurrentSession";
-const SESSION_SUMMARIES_STORAGE_KEY = "dungeonScribblerSessionSummaries";
-const SESSION_VIEW_MODES_STORAGE_KEY = "dungeonScribblerSessionViewModes";
-const FULL_CAMPAIGN_SUMMARY_STORAGE_KEY = "dungeonScribblerFullCampaignSummary";
-const SUMMARY_DETAIL_LEVEL_STORAGE_KEY = "dungeonScribblerSummaryDetailLevel";
 
 export default function StorySoFarPage() {
   const [plotPoints, setPlotPoints] = useState<PlotPoint[]>([]);
@@ -43,61 +40,121 @@ export default function StorySoFarPage() {
   const [isConfirmSessionAdvanceOpen, setIsConfirmSessionAdvanceOpen] = useState(false);
   
   const [pastPlotPointInput, setPastPlotPointInput] = useState<Record<number, string>>({});
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
 
 
   useEffect(() => {
-    const storedPlotPoints = localStorage.getItem(PLOT_POINTS_STORAGE_KEY);
-    if (storedPlotPoints) setPlotPoints(JSON.parse(storedPlotPoints));
+    try {
+      const storedPlotPoints = localStorage.getItem(PLOT_POINTS_STORAGE_KEY);
+      if (storedPlotPoints) setPlotPoints(JSON.parse(storedPlotPoints));
+      else setPlotPoints([]);
+    } catch (error) {
+      console.error("Error loading plot points from localStorage:", error);
+      setPlotPoints([]);
+    }
     
-    const storedSessionNumber = localStorage.getItem(CURRENT_SESSION_STORAGE_KEY);
-    if (storedSessionNumber) setCurrentSessionNumber(parseInt(storedSessionNumber, 10) || 1);
+    try {
+      const storedSessionNumber = localStorage.getItem(CURRENT_SESSION_STORAGE_KEY);
+      if (storedSessionNumber) setCurrentSessionNumber(parseInt(storedSessionNumber, 10) || 1);
+      else setCurrentSessionNumber(1);
+    } catch (error) {
+      console.error("Error loading current session number from localStorage:", error);
+      setCurrentSessionNumber(1);
+    }
     
-    const storedSessionSummaries = localStorage.getItem(SESSION_SUMMARIES_STORAGE_KEY);
-    if (storedSessionSummaries) setSessionSummaries(JSON.parse(storedSessionSummaries));
+    try {
+      const storedSessionSummaries = localStorage.getItem(SESSION_SUMMARIES_STORAGE_KEY);
+      if (storedSessionSummaries) setSessionSummaries(JSON.parse(storedSessionSummaries));
+      else setSessionSummaries({});
+    } catch (error) {
+      console.error("Error loading session summaries from localStorage:", error);
+      setSessionSummaries({});
+    }
 
-    const storedSessionViewModes = localStorage.getItem(SESSION_VIEW_MODES_STORAGE_KEY);
-    if (storedSessionViewModes) setSessionViewModes(JSON.parse(storedSessionViewModes));
+    try {
+      const storedSessionViewModes = localStorage.getItem(SESSION_VIEW_MODES_STORAGE_KEY);
+      if (storedSessionViewModes) setSessionViewModes(JSON.parse(storedSessionViewModes));
+      else setSessionViewModes({});
+    } catch (error) {
+      console.error("Error loading session view modes from localStorage:", error);
+      setSessionViewModes({});
+    }
 
-    const storedFullSummary = localStorage.getItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
-    if (storedFullSummary) setFullCampaignSummary(JSON.parse(storedFullSummary));
-
-    const storedDetailLevel = localStorage.getItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY);
-    if (storedDetailLevel) setSummaryDetailLevel(storedDetailLevel as SummaryDetailLevel);
+    try {
+      const storedFullSummary = localStorage.getItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+      if (storedFullSummary) setFullCampaignSummary(JSON.parse(storedFullSummary));
+      else setFullCampaignSummary(null);
+    } catch (error) {
+      console.error("Error loading full campaign summary from localStorage:", error);
+      setFullCampaignSummary(null);
+    }
+    
+    try {
+      const storedDetailLevel = localStorage.getItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY);
+      if (storedDetailLevel) setSummaryDetailLevel(storedDetailLevel as SummaryDetailLevel);
+      else setSummaryDetailLevel("normal");
+    } catch (error) {
+      console.error("Error loading summary detail level from localStorage:", error);
+      setSummaryDetailLevel("normal");
+    }
 
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(PLOT_POINTS_STORAGE_KEY, JSON.stringify(plotPoints));
+    try {
+      localStorage.setItem(PLOT_POINTS_STORAGE_KEY, JSON.stringify(plotPoints));
+    } catch (error) {
+      console.error("Error saving plot points to localStorage:", error);
+    }
   }, [plotPoints]);
 
   useEffect(() => {
-    localStorage.setItem(CURRENT_SESSION_STORAGE_KEY, currentSessionNumber.toString());
+    try {
+      localStorage.setItem(CURRENT_SESSION_STORAGE_KEY, currentSessionNumber.toString());
+    } catch (error) {
+      console.error("Error saving current session number to localStorage:", error);
+    }
   }, [currentSessionNumber]);
 
   useEffect(() => {
-    localStorage.setItem(SESSION_SUMMARIES_STORAGE_KEY, JSON.stringify(sessionSummaries));
+    try {
+      localStorage.setItem(SESSION_SUMMARIES_STORAGE_KEY, JSON.stringify(sessionSummaries));
+    } catch (error) {
+      console.error("Error saving session summaries to localStorage:", error);
+    }
   }, [sessionSummaries]);
 
   useEffect(() => {
-    localStorage.setItem(SESSION_VIEW_MODES_STORAGE_KEY, JSON.stringify(sessionViewModes));
+    try {
+      localStorage.setItem(SESSION_VIEW_MODES_STORAGE_KEY, JSON.stringify(sessionViewModes));
+    } catch (error) {
+      console.error("Error saving session view modes to localStorage:", error);
+    }
   }, [sessionViewModes]);
 
   useEffect(() => {
-    if (fullCampaignSummary) {
-      localStorage.setItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY, JSON.stringify(fullCampaignSummary));
-    } else {
-      localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+    try {
+      if (fullCampaignSummary) {
+        localStorage.setItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY, JSON.stringify(fullCampaignSummary));
+      } else {
+        localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+      }
+    } catch (error) {
+      console.error("Error saving full campaign summary to localStorage:", error);
     }
   }, [fullCampaignSummary]);
 
   useEffect(() => {
-    localStorage.setItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY, summaryDetailLevel);
+    try {
+      localStorage.setItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY, summaryDetailLevel);
+    } catch (error) {
+      console.error("Error saving summary detail level to localStorage:", error);
+    }
   }, [summaryDetailLevel]);
 
 
   const clearFullCampaignSummary = () => {
     setFullCampaignSummary(null);
-    // localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY); // Handled by useEffect on fullCampaignSummary
   };
 
   const handleAddPlotPointToCurrentSession = () => {
@@ -110,7 +167,7 @@ export default function StorySoFarPage() {
           timestamp: new Date().toISOString(), 
           text: newPlotPointText.trim() 
         }
-      ]);
+      ].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
       setNewPlotPointText("");
       clearFullCampaignSummary();
     }
@@ -161,7 +218,7 @@ export default function StorySoFarPage() {
   
   const handleGenerateFullCampaignSummary = async () => {
     setIsGeneratingGlobalSummary(true);
-    setFullCampaignSummary(null); // Clear previous before generating new
+    setFullCampaignSummary(null); 
     const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\n');
     await new Promise(resolve => setTimeout(resolve, 1500)); 
     const newSummary = `AI Generated Full Story Summary (Detail: ${summaryDetailLevel}): Based on ${plotPoints.length} total plot points across all sessions... The grand saga unfolds! [Placeholder Content referring to: ${allPlotPointsText.substring(0,100)}...]`;
@@ -173,7 +230,7 @@ export default function StorySoFarPage() {
     setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: true }));
     const summaryText = await generateSessionSummaryText(sessionNum, summaryDetailLevel);
     setSessionSummaries(prev => ({ ...prev, [sessionNum]: summaryText }));
-    clearFullCampaignSummary(); // Full summary is now potentially outdated
+    clearFullCampaignSummary(); 
     setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: false }));
   };
 
@@ -200,21 +257,25 @@ export default function StorySoFarPage() {
   const sortedSessionNumbers = Object.keys(groupedPlotPoints)
     .map(Number)
     .sort((a, b) => b - a) 
-    .filter(sessionNum => sessionNum <= currentSessionNumber +1); // Show current and all past
+    .filter(sessionNum => sessionNum <= currentSessionNumber +1); 
 
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>The Story So Far</h1>
-        <Button onClick={handleStartNextSession} variant="outline" disabled={isGeneratingSpecificSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary}>
-          {isGeneratingSpecificSessionSummary[currentSessionNumber] ? 'Generating Summary...' : <><ChevronRightSquare className="mr-2 h-5 w-5"/> Start Session {currentSessionNumber + 1}</>}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleStartNextSession} variant="outline" disabled={isGeneratingSpecificSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary}>
+            {isGeneratingSpecificSessionSummary[currentSessionNumber] ? 'Generating Summary...' : <><ChevronRightSquare className="mr-2 h-5 w-5"/> Start Session {currentSessionNumber + 1}</>}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setIsHelpDialogOpen(true)} aria-label="Help with Story So Far">
+            <HelpCircle className="h-6 w-6" />
+          </Button>
+        </div>
       </div>
       <p className="text-muted-foreground">Currently logging events for: <span className="font-semibold text-primary">Session {currentSessionNumber}</span></p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Plot Point Log & Input */}
         <div className="lg:col-span-2 space-y-6">
            <Card>
             <CardHeader>
@@ -262,7 +323,7 @@ export default function StorySoFarPage() {
                     const summaryText = sessionSummaries[sessionNum];
                     const isLoadingThisSessionSummary = isGeneratingSpecificSessionSummary[sessionNum];
 
-                    if (sessionNum > currentSessionNumber) return null; // Don't render future empty sessions
+                    if (sessionNum > currentSessionNumber) return null; 
 
                     return (
                       <div key={`session-${sessionNum}`}>
@@ -325,7 +386,7 @@ export default function StorySoFarPage() {
                                     <PlusCircle className="mr-2 h-4 w-4"/> Add Event
                                   </Button>
                                 </div>
-                                {(summaryText || (groupedPlotPoints[sessionNum] || []).length > 0) && ( // Show re-gen if summary exists OR if points exist to make one
+                                {(summaryText || (groupedPlotPoints[sessionNum] || []).length > 0) && ( 
                                   <div>
                                     <Button 
                                       variant="outline" 
@@ -351,7 +412,6 @@ export default function StorySoFarPage() {
           </Card>
         </div>
 
-        {/* Right Column: AI Full Campaign Summarizer */}
         <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
@@ -406,17 +466,6 @@ export default function StorySoFarPage() {
               </CardContent>
             </Card>
           )}
-           <Card className="mt-4">
-            <CardHeader>
-                <CardTitle className="text-lg">How to Use</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-                <p>1. Log major events for the <span className="font-semibold">current session ({currentSessionNumber})</span>.</p>
-                <p>2. Use "Start Session {currentSessionNumber + 1}" to advance. This auto-summarizes the completed session.</p>
-                <p>3. Past sessions show summaries. Click "View Details" to see original plot points, add forgotten events, or re-generate their summary.</p>
-                <p>4. Use "Generate Full Campaign Summary" for a recap of everything using the selected detail level.</p>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -435,6 +484,30 @@ export default function StorySoFarPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+        <UIDialogContent className="max-w-lg">
+            <UIDialogHeader>
+                <UIDialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: The Story So Far</UIDialogTitle>
+                <UIDialogDescription>Track your campaign's progress and generate summaries.</UIDialogDescription>
+            </UIDialogHeader>
+            <div className="text-sm text-muted-foreground space-y-3 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                <p>1. Log key events as "Plot Points" for the <strong className="text-foreground">current session ({currentSessionNumber})</strong> using the input field.</p>
+                <p>2. When a session ends, click "<ChevronRightSquare className="inline h-4 w-4 align-text-bottom mr-0.5"/> Start Session {currentSessionNumber + 1}". If the completed session had plot points, an AI summary will be automatically generated for it using the selected detail level.</p>
+                <p>3. Past sessions default to showing their summary. Click "<List className="inline h-4 w-4 align-text-bottom mr-0.5"/> View Details" to see the original plot points. From the detail view, you can:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                    <li>Add a forgotten event to that past session using the "Add Event to Session X" input.</li>
+                    <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Re-generate Summary" to update its summary if you've added new details or want to change the detail level.</li>
+                </ul>
+                <p>4. Use "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Generate Full Campaign Summary" in the right panel for a recap of everything, also using the selected detail level.</p>
+            </div>
+            <UIDialogFooter>
+                <DialogClose asChild>
+                    <Button>Close</Button>
+                </DialogClose>
+            </UIDialogFooter>
+        </UIDialogContent>
+      </Dialog>
     </div>
   );
 }
