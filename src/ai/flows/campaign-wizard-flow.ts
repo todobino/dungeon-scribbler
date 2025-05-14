@@ -15,13 +15,9 @@ import {z} from 'genkit';
 const SuggestibleCampaignFieldsSchema = z.enum([
     "campaignConcept",
     "tone",
-    "worldStyle", 
-    "regionFocus", 
-    "technologyLevel", 
-    "factionTypes", 
-    "powerBalance",
-    "length" 
-    // Add other fields as needed
+    "length",
+    "factionTypes"
+    // Removed: "worldStyle", "regionFocus", "technologyLevel", "powerBalance" 
 ]);
 
 export const GenerateCampaignIdeaInputSchema = z.object({
@@ -54,16 +50,18 @@ export async function generateCampaignIdea(
 
   let suggestion = `Mock suggestion for ${input.fieldToSuggest}.`;
   if (input.currentName) suggestion += ` Considering campaign name: "${input.currentName}".`;
-  if (input.currentWorldStyle) suggestion += ` World style is ${input.currentWorldStyle}.`;
-  if (input.currentTone) suggestion += ` Tone is ${input.currentTone}.`;
   
-  // Simple conditional mock
-  if (input.fieldToSuggest === "factionTypes" && input.currentWorldStyle === "Steampunk") {
+  // Add more context to mock if available
+  if (input.fieldToSuggest === "length" && input.currentConcept) {
+    suggestion = `For a concept like "${input.currentConcept.substring(0,30)}...", a "Medium Campaign (6-15 Sessions)" might fit well.`;
+  } else if (input.fieldToSuggest === "factionTypes" && input.currentWorldStyle === "Steampunk") {
     suggestion = "Clockwork Artisans Guild, Sky-Pirate Confederacy, Alchemists' Collective.";
   } else if (input.fieldToSuggest === "campaignConcept" && input.currentName) {
     suggestion = `A thrilling adventure where heroes must uncover the secrets of the ${input.currentName} to save the land from an ancient evil.`;
   } else if (input.fieldToSuggest === "campaignConcept") {
     suggestion = `The players awaken with amnesia in a world on the brink of magical catastrophe.`;
+  } else if (input.fieldToSuggest === "tone" && input.currentConcept) {
+     suggestion = `Given the concept, perhaps a "Mysterious with Heroic undertones" tone?`;
   }
 
 
@@ -93,6 +91,7 @@ Based on the existing details (if any), provide a concise and creative suggestio
 If "{{fieldToSuggest}}" is "campaignConcept", provide a 1-2 sentence high-level concept.
 If "{{fieldToSuggest}}" is "factionTypes", list 2-3 distinct and thematic faction archetypes.
 If "{{fieldToSuggest}}" is "tone", suggest a fitting tone or expand on the user's input.
+If "{{fieldToSuggest}}" is "length", suggest a suitable campaign length option.
 For other fields, provide a suitable single value or a short descriptive phrase.
 
 Be creative and inspiring.
@@ -119,3 +118,4 @@ const campaignWizardFlow = ai.defineFlow(
     return output;
   }
 );
+

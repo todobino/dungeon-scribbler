@@ -109,17 +109,68 @@ export const getFactionReputationColorClass = (reputation: number): string => {
 };
 
 // CAMPAIGN WIZARD OPTIONS
-export const CAMPAIGN_LENGTH_OPTIONS = ["One-Shot", "Short Arc (2-5 Sessions)", "Medium Campaign (6-15 Sessions)", "Long Campaign (16+ Sessions)", "Open-Ended/Sandbox"];
+export interface CampaignOption {
+  value: string;
+  description: string;
+}
+
+export const CAMPAIGN_LENGTH_OPTIONS: CampaignOption[] = [
+  { value: "One-Shot", description: "A complete adventure designed to be played in a single session (typically 2-4 hours)." },
+  { value: "Short Arc (2-5 Sessions)", description: "A brief storyline or mini-campaign that resolves over a few sessions." },
+  { value: "Medium Campaign (6-15 Sessions)", description: "A more substantial adventure with character development and a multi-faceted plot." },
+  { value: "Long Campaign (16+ Sessions)", description: "An epic journey spanning many levels and significant in-game time, often with world-altering consequences." },
+  { value: "Open-Ended/Sandbox", description: "A campaign focused on player agency and exploration, with no predefined endpoint." }
+];
+
 export const CAMPAIGN_TONE_OPTIONS = ["Heroic Fantasy", "Dark Fantasy/Grimdark", "Lighthearted/Comedic", "Intrigue/Political", "Mystery/Horror", "Exploration/Discovery", "Action/Adventure"];
-export const WORLD_STYLE_OPTIONS = ["High Fantasy", "Low Magic", "Sword & Sorcery", "Steampunk", "Post-Apocalyptic", "Urban Fantasy", "Sci-Fi Fantasy"];
-export const REGION_FOCUS_OPTIONS = ["Frontier Wilderness", "Bustling Imperial City", "Floating Archipelago", "Ancient Desert Kingdom", "Frozen Icy North", "Fae-Touched Woods", "Underground Society", "Planar Crossroads"];
-export const TECHNOLOGY_LEVEL_OPTIONS = ["Stone Age", "Bronze Age", "Iron Age/Classical", "Medieval", "Renaissance", "Industrial Revolution/Steampunk", "Magitech", "Modern", "Futuristic/Spacefaring"];
+
+export const WORLD_STYLE_OPTIONS: CampaignOption[] = [
+  { value: "High Fantasy", description: "A world brimming with magic, mythical creatures, and epic heroism. Think Lord of the Rings or Dungeons & Dragons' Forgotten Realms." },
+  { value: "Low Magic", description: "Magic is rare, subtle, or dangerous. Mundane solutions are common. Think Game of Thrones or The Witcher (books)." },
+  { value: "Sword & Sorcery", description: "Focuses on personal heroism, dangerous magic, and often morally ambiguous protagonists. Think Conan the Barbarian." },
+  { value: "Steampunk", description: "A world powered by steam technology and clockwork, often with Victorian aesthetics and fantastical inventions." },
+  { value: "Post-Apocalyptic", description: "A setting after a cataclysmic event, where survivors navigate a changed and often hazardous world. Think Mad Max or Fallout." },
+  { value: "Urban Fantasy", description: "Magic and the supernatural exist hidden within a modern, contemporary urban setting. Think The Dresden Files." },
+  { value: "Sci-Fi Fantasy", description: "Blends elements of science fiction (spaceships, advanced tech) with fantasy tropes (magic, mythical races). Think Star Wars or Shadowrun." }
+];
+
+export const REGION_FOCUS_OPTIONS: CampaignOption[] = [
+  { value: "Frontier Wilderness", description: "Uncharted territories, dangerous wilds, sparse settlements, focus on exploration and survival." },
+  { value: "Bustling Imperial City", description: "A vast metropolis, center of power, trade, and intrigue. Opportunities for urban adventure and politics." },
+  { value: "Floating Archipelago", description: "A chain of islands, possibly in the sky or sea, emphasizing travel, naval encounters, and unique island cultures." },
+  { value: "Ancient Desert Kingdom", description: "Vast deserts, hidden oases, ancient ruins, and cultures adapted to harsh environments." },
+  { value: "Frozen Icy North", description: "Harsh, cold climates, survival challenges, isolated communities, and creatures adapted to the frost." },
+  { value: "Fae-Touched Woods", description: "An enchanted forest where the veil to the Feywild is thin, full of strange creatures and unpredictable magic." },
+  { value: "Underground Society", description: "Civilizations that dwell beneath the earth's surface, such as dwarves, drow, or other subterranean races." },
+  { value: "Planar Crossroads", description: "A location where different planes of existence intersect, leading to diverse encounters and planar travel." }
+];
+
+export const TECHNOLOGY_LEVEL_OPTIONS: CampaignOption[] = [
+  { value: "Stone Age", description: "Primitive tools, hunter-gatherer societies, early shamanism." },
+  { value: "Bronze Age", description: "Emergence of city-states, early metalworking, chariots, mythic heroes." },
+  { value: "Iron Age/Classical", description: "Empires, organized armies, philosophy, early republics. Think Ancient Rome or Greece." },
+  { value: "Medieval", description: "Feudalism, castles, knights, widespread use of iron weapons and armor. Common D&D setting." },
+  { value: "Renaissance", description: "Rebirth of art and science, early firearms, exploration, burgeoning merchant class." },
+  { value: "Industrial Revolution/Steampunk", description: "Factories, steam power, early mass production, clockwork mechanisms alongside emerging social change." },
+  { value: "Magitech", description: "Magic and technology are intertwined, with spells powering devices or technology enhancing magic." },
+  { value: "Modern", description: "Roughly equivalent to present-day Earth technology." },
+  { value: "Futuristic/Spacefaring", description: "Advanced technologies, space travel, cybernetics, potentially interstellar societies." }
+];
+
 export const FACTION_TYPE_EXAMPLES = "e.g., Thieves' guilds, noble houses, religious orders, mages' circles, merchant consortiums, revolutionary groups, ancient cults, foreign powers, monstrous hordes.";
-export const POWER_BALANCE_OPTIONS = ["One Dominant Power", "Cold War (Two Superpowers)", "Multiple Competing Powers", "Chaotic Free-for-All", "Hidden Powers Manipulating Events", "Power Vacuum"];
+
+export const POWER_BALANCE_OPTIONS: CampaignOption[] = [
+  { value: "One Dominant Power", description: "A single empire, kingdom, or organization holds significant control over the known world or region." },
+  { value: "Cold War (Two Superpowers)", description: "Two major powers vie for influence, often through proxy conflicts, espionage, and an arms race." },
+  { value: "Multiple Competing Powers", description: "Several factions or nations of roughly equal strength constantly shift alliances and compete for dominance." },
+  { value: "Chaotic Free-for-All", description: "No central authority, widespread lawlessness, and many small groups or warlords fighting for scraps." },
+  { value: "Hidden Powers Manipulating Events", description: "Secret societies, ancient evils, or celestial beings pull the strings from behind the scenes." },
+  { value: "Power Vacuum", description: "A recent collapse of authority has left a void, with various groups scrambling to fill it." }
+];
 
 
 // Storage Key Prefixes & Names
-const SHARED_PREFIX = "adventureArchitect_"; // Changed from "dungeonScribbler"
+const SHARED_PREFIX = "adventureArchitect_"; 
 
 // Campaign Context Storage Keys
 export const CAMPAIGNS_STORAGE_KEY = `${SHARED_PREFIX}Campaigns`;
@@ -134,7 +185,7 @@ export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Locations_`;
 export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs`; 
 
 // Campaign Journal Page Key
-export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Notes_`;
+export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 
 // Map Integration Page Key
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
@@ -150,5 +201,5 @@ export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = `${SHARED_PREFIX}Refac
 // Next Session Goals (Refactored) Page Keys
 export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}RefactoredGoals_`;
 
-// Campaign Wizard Page Key (if needed for drafts, though often transient)
+// Campaign Wizard Page Key
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;

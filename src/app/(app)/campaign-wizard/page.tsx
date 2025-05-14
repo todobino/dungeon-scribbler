@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { DraftingCompass, Wand2, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -20,7 +21,8 @@ import {
   TECHNOLOGY_LEVEL_OPTIONS, 
   FACTION_TYPE_EXAMPLES, 
   POWER_BALANCE_OPTIONS,
-  CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX
+  CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX,
+  type CampaignOption
 } from "@/lib/constants";
 // import { generateCampaignIdea, type GenerateCampaignIdeaInput, type GenerateCampaignIdeaOutput } from "@/ai/flows/campaign-wizard-flow"; // Placeholder for actual AI flow
 
@@ -35,28 +37,28 @@ interface CampaignWizardFormState {
   technologyLevel: string;
   factionTypes: string;
   powerBalance: string;
-  campaignConcept: string; // Added for a general concept
+  campaignConcept: string;
 }
 
-type IdeaField = keyof Omit<CampaignWizardFormState, 'name' | 'playerLevelStart' | 'playerLevelEnd' | 'campaignConcept'> | 'campaignConcept';
+type IdeaField = "campaignConcept" | "length" | "tone" | "factionTypes";
 
 
 export default function CampaignWizardPage() {
   const router = useRouter();
-  const { addCampaign, activeCampaign } = useCampaign();
+  const { addCampaign } = useCampaign();
   const { toast } = useToast();
 
   const initialFormState: CampaignWizardFormState = {
     name: "",
-    length: CAMPAIGN_LENGTH_OPTIONS[2], // Default to Medium Campaign
+    length: "", // Default to empty for placeholder
     tone: "",
     playerLevelStart: 1,
     playerLevelEnd: 10,
-    worldStyle: WORLD_STYLE_OPTIONS[0], // Default to High Fantasy
-    regionFocus: "",
-    technologyLevel: TECHNOLOGY_LEVEL_OPTIONS[3], // Default to Medieval
+    worldStyle: "", // Default to empty for placeholder
+    regionFocus: "", // Default to empty for placeholder
+    technologyLevel: "", // Default to empty for placeholder
     factionTypes: "",
-    powerBalance: POWER_BALANCE_OPTIONS[0],
+    powerBalance: "", // Default to empty for placeholder
     campaignConcept: "",
   };
 
@@ -65,11 +67,9 @@ export default function CampaignWizardPage() {
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
   
   const getDraftStorageKey = () => {
-    // Using a generic key for now, or could be user-specific if users were a thing
     return `${CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX}current`;
   };
 
-  // Load draft
   useEffect(() => {
     try {
       const draftKey = getDraftStorageKey();
@@ -82,7 +82,6 @@ export default function CampaignWizardPage() {
     }
   }, []);
 
-  // Save draft
   useEffect(() => {
     try {
       const draftKey = getDraftStorageKey();
@@ -107,24 +106,17 @@ export default function CampaignWizardPage() {
     setFormState(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
   };
   
-  // Mock AI Idea Generation
   const handleGenerateIdea = async (field: IdeaField) => {
     setIsLoadingIdea(prev => ({ ...prev, [field]: true }));
-    // const inputForAI: GenerateCampaignIdeaInput = {
-    //   currentName: formState.name,
-    //   currentTone: formState.tone,
-    //   currentWorldStyle: formState.worldStyle,
-    //   currentRegionFocus: formState.regionFocus,
-    //   fieldToSuggest: field,
-    //   // ... pass other relevant fields from formState
-    // };
+    // const inputForAI: GenerateCampaignIdeaInput = { /* ... */ }; // Actual AI input
     try {
-      // const result: GenerateCampaignIdeaOutput = await generateCampaignIdea(inputForAI); // Actual AI call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      const result = { suggestedValue: `AI generated idea for ${field} based on: ${formState.name || 'new campaign'}, tone: ${formState.tone || 'any'}, style: ${formState.worldStyle || 'any'}.` };
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      const result = { suggestedValue: `AI generated idea for ${field} based on current form values.` };
 
       if (result.suggestedValue) {
-        setFormState(prev => ({ ...prev, [field]: result.suggestedValue }));
+        if (field === "campaignConcept" || field === "tone" || field === "factionTypes" || field === "length") {
+             setFormState(prev => ({ ...prev, [field]: result.suggestedValue }));
+        }
         toast({ title: `Idea Generated for ${field.replace(/([A-Z])/g, ' $1')}`});
       } else {
         toast({ title: "AI couldn't generate an idea", description: "Try adding more details to other fields.", variant: "destructive" });
@@ -144,11 +136,9 @@ export default function CampaignWizardPage() {
     }
     setIsCreatingCampaign(true);
     try {
-      // Here you might want to save more details from formState to the campaign object
-      // For now, just saving the name as per current useCampaign context
       await addCampaign(formState.name.trim()); 
       toast({ title: "Campaign Created!", description: `"${formState.name.trim()}" is ready.` });
-      localStorage.removeItem(getDraftStorageKey()); // Clear draft
+      localStorage.removeItem(getDraftStorageKey()); 
       router.push("/campaign-management");
     } catch (error) {
       console.error("Error creating campaign:", error);
@@ -157,6 +147,36 @@ export default function CampaignWizardPage() {
     setIsCreatingCampaign(false);
   };
 
+  const renderSelectWithTooltips = (
+    id: keyof CampaignWizardFormState,
+    label: string,
+    options: CampaignOption[],
+    placeholder: string,
+    description?: string
+  ) => (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      <Select value={formState[id] as string} onValueChange={(value) => handleSelectChange(id, value || "")}>
+        <SelectTrigger id={id} className="text-base">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(opt => (
+            <Tooltip key={opt.value} delayDuration={100}>
+              <TooltipTrigger asChild>
+                <SelectItem value={opt.value}>{opt.value}</SelectItem>
+              </TooltipTrigger>
+              <TooltipContent side="right" align="start" className="max-w-xs z-[60]">
+                <p>{opt.description}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+  
   const renderFieldWithGenerator = (
     id: IdeaField, 
     label: string, 
@@ -183,8 +203,8 @@ export default function CampaignWizardPage() {
   );
 
   return (
+    <TooltipProvider>
     <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 flex flex-col bg-background">
-      {/* Header Section */}
       <div className="pb-6 mb-6 border-b border-border">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold flex items-center">
@@ -198,10 +218,8 @@ export default function CampaignWizardPage() {
         <p className="text-muted-foreground mt-2">Craft the foundations of your new adventure. Use the "Suggest" buttons for AI-powered inspiration!</p>
       </div>
 
-      {/* Form Section */}
       <div className="flex-grow space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"> {/* Increased gap-x */}
-              {/* Column 1 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="space-y-6">
                   <div>
                       <Label htmlFor="name" className="text-lg">Campaign Name*</Label>
@@ -209,18 +227,29 @@ export default function CampaignWizardPage() {
                   </div>
 
                   {renderFieldWithGenerator("campaignConcept", "Overall Campaign Concept", 
-                      <Textarea id="campaignConcept" name="campaignConcept" value={formState.campaignConcept} onChange={handleInputChange} placeholder="A brief, 1-2 sentence high-level concept for your campaign. What is it about?" rows={3}/>
+                      <Textarea id="campaignConcept" name="campaignConcept" value={formState.campaignConcept} onChange={handleInputChange} placeholder="A brief, 1-2 sentence high-level concept for your campaign. What is it about?" rows={3} className="text-base"/>
                   )}
 
                   {renderFieldWithGenerator("length", "Length/Commitment",
-                      <Select value={formState.length} onValueChange={(value) => handleSelectChange("length", value)}>
-                          <SelectTrigger id="length"><SelectValue /></SelectTrigger>
-                          <SelectContent>{CAMPAIGN_LENGTH_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                      <Select value={formState.length} onValueChange={(value) => handleSelectChange("length", value || "")}>
+                          <SelectTrigger id="length" className="text-base"><SelectValue placeholder="Select length/commitment"/></SelectTrigger>
+                          <SelectContent>
+                            {CAMPAIGN_LENGTH_OPTIONS.map(opt => (
+                                <Tooltip key={opt.value} delayDuration={100}>
+                                    <TooltipTrigger asChild>
+                                        <SelectItem value={opt.value}>{opt.value}</SelectItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" align="start" className="max-w-xs z-[60]">
+                                        <p>{opt.description}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            ))}
+                          </SelectContent>
                       </Select>
                   )}
 
                   {renderFieldWithGenerator("tone", "Tone", 
-                      <Input id="tone" name="tone" value={formState.tone} onChange={handleInputChange} placeholder="e.g., Heroic, Gritty, Humorous, Mysterious" />
+                      <Input id="tone" name="tone" value={formState.tone} onChange={handleInputChange} placeholder="e.g., Heroic, Gritty, Humorous, Mysterious" className="text-base"/>
                   )}
 
                   <div>
@@ -228,54 +257,30 @@ export default function CampaignWizardPage() {
                       <div className="flex items-center gap-4">
                           <div className="flex-1">
                           <Label htmlFor="playerLevelStart" className="text-sm">Start Level</Label>
-                          <Input id="playerLevelStart" name="playerLevelStart" type="number" value={formState.playerLevelStart.toString()} onChange={handleNumberInputChange} min="1" max="20"/>
+                          <Input id="playerLevelStart" name="playerLevelStart" type="number" value={formState.playerLevelStart.toString()} onChange={handleNumberInputChange} min="1" max="20" className="text-base"/>
                           </div>
                           <div className="flex-1">
                           <Label htmlFor="playerLevelEnd" className="text-sm">End Level</Label>
-                          <Input id="playerLevelEnd" name="playerLevelEnd" type="number" value={formState.playerLevelEnd.toString()} onChange={handleNumberInputChange} min={formState.playerLevelStart} max="20"/>
+                          <Input id="playerLevelEnd" name="playerLevelEnd" type="number" value={formState.playerLevelEnd.toString()} onChange={handleNumberInputChange} min={formState.playerLevelStart} max="20" className="text-base"/>
                           </div>
                       </div>
                   </div>
               </div>
 
-              {/* Column 2 */}
               <div className="space-y-6">
-                  {renderFieldWithGenerator("worldStyle", "World Style",
-                      <Select value={formState.worldStyle} onValueChange={(value) => handleSelectChange("worldStyle", value)}>
-                          <SelectTrigger id="worldStyle"><SelectValue /></SelectTrigger>
-                          <SelectContent>{WORLD_STYLE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                      </Select>
-                  )}
-
-                  {renderFieldWithGenerator("regionFocus", "Primary Region Focus",
-                      <Select value={formState.regionFocus} onValueChange={(value) => handleSelectChange("regionFocus", value)}>
-                          <SelectTrigger id="regionFocus" placeholder="Select a primary region type"><SelectValue /></SelectTrigger>
-                          <SelectContent>{REGION_FOCUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                      </Select>
-                  )}
-                  
-                  {renderFieldWithGenerator("technologyLevel", "Technology Level",
-                      <Select value={formState.technologyLevel} onValueChange={(value) => handleSelectChange("technologyLevel", value)}>
-                          <SelectTrigger id="technologyLevel"><SelectValue /></SelectTrigger>
-                          <SelectContent>{TECHNOLOGY_LEVEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                      </Select>
-                  )}
+                  {renderSelectWithTooltips("worldStyle", "World Style", WORLD_STYLE_OPTIONS, "Select a world style")}
+                  {renderSelectWithTooltips("regionFocus", "Primary Region Focus", REGION_FOCUS_OPTIONS, "Select a primary region type")}
+                  {renderSelectWithTooltips("technologyLevel", "Technology Level", TECHNOLOGY_LEVEL_OPTIONS, "Select a technology level")}
                   
                   {renderFieldWithGenerator("factionTypes", "Key Faction Archetypes", 
-                      <Textarea id="factionTypes" name="factionTypes" value={formState.factionTypes} onChange={handleInputChange} placeholder={FACTION_TYPE_EXAMPLES} rows={3}/>
+                      <Textarea id="factionTypes" name="factionTypes" value={formState.factionTypes} onChange={handleInputChange} placeholder={FACTION_TYPE_EXAMPLES} rows={3} className="text-base"/>
                   )}
 
-                  {renderFieldWithGenerator("powerBalance", "Power Balance",
-                      <Select value={formState.powerBalance} onValueChange={(value) => handleSelectChange("powerBalance", value)}>
-                          <SelectTrigger id="powerBalance"><SelectValue /></SelectTrigger>
-                          <SelectContent>{POWER_BALANCE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                      </Select>
-                  )}
+                  {renderSelectWithTooltips("powerBalance", "Power Balance", POWER_BALANCE_OPTIONS, "Select power balance")}
               </div>
           </div>
       </div>
 
-      {/* Footer Section */}
       <div className="pt-6 mt-auto border-t border-border">
         <Button 
           onClick={handleCreateCampaign} 
@@ -288,5 +293,6 @@ export default function CampaignWizardPage() {
         </Button>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
