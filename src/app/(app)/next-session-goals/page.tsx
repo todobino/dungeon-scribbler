@@ -17,9 +17,9 @@ import { useCampaign } from "@/contexts/campaign-context";
 import Link from "next/link";
 import { 
   GOALS_KEY_PREFIX,
-  PLOT_POINTS_KEY_PREFIX,
-  CURRENT_SESSION_KEY_PREFIX,
-  FULL_CAMPAIGN_SUMMARY_KEY_PREFIX
+  REFACTORED_PLOT_POINTS_KEY_PREFIX,
+  REFACTORED_CURRENT_SESSION_KEY_PREFIX,
+  REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX
 } from "@/lib/constants";
 
 interface Goal {
@@ -223,9 +223,9 @@ export default function NextSessionGoalsPage() {
       return;
     }
 
-    const plotPointsKey = getCampaignSpecificKey(PLOT_POINTS_KEY_PREFIX);
-    const currentSessionKey = getCampaignSpecificKey(CURRENT_SESSION_KEY_PREFIX);
-    const fullCampaignSummaryKey = getCampaignSpecificKey(FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
+    const plotPointsKey = getCampaignSpecificKey(REFACTORED_PLOT_POINTS_KEY_PREFIX);
+    const currentSessionKey = getCampaignSpecificKey(REFACTORED_CURRENT_SESSION_KEY_PREFIX);
+    const fullCampaignSummaryKey = getCampaignSpecificKey(REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
 
     if (!plotPointsKey || !currentSessionKey || !fullCampaignSummaryKey) {
         toast({title: "Error", description: "Campaign keys are missing.", variant: "destructive"});
