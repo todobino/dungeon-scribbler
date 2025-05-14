@@ -24,18 +24,20 @@ const PLOT_POINTS_STORAGE_KEY = "dungeonScribblerPlotPoints";
 const CURRENT_SESSION_STORAGE_KEY = "dungeonScribblerCurrentSession";
 const SESSION_SUMMARIES_STORAGE_KEY = "dungeonScribblerSessionSummaries";
 const SESSION_VIEW_MODES_STORAGE_KEY = "dungeonScribblerSessionViewModes";
+const FULL_CAMPAIGN_SUMMARY_STORAGE_KEY = "dungeonScribblerFullCampaignSummary";
+const SUMMARY_DETAIL_LEVEL_STORAGE_KEY = "dungeonScribblerSummaryDetailLevel";
 
 export default function StorySoFarPage() {
   const [plotPoints, setPlotPoints] = useState<PlotPoint[]>([]);
-  const [newPlotPointText, setNewPlotPointText] = useState(""); // Renamed for clarity
+  const [newPlotPointText, setNewPlotPointText] = useState("");
   const [currentSessionNumber, setCurrentSessionNumber] = useState(1);
   
   const [fullCampaignSummary, setFullCampaignSummary] = useState<string | null>(null);
   const [sessionSummaries, setSessionSummaries] = useState<Record<number, string>>({});
   const [sessionViewModes, setSessionViewModes] = useState<Record<number, 'summary' | 'details'>>({});
 
-  const [isGeneratingGlobalSummary, setIsGeneratingGlobalSummary] = useState(false); // For full campaign summary
-  const [isGeneratingSpecificSessionSummary, setIsGeneratingSpecificSessionSummary] = useState<Record<number, boolean>>({}); // For specific session regen
+  const [isGeneratingGlobalSummary, setIsGeneratingGlobalSummary] = useState(false);
+  const [isGeneratingSpecificSessionSummary, setIsGeneratingSpecificSessionSummary] = useState<Record<number, boolean>>({});
 
   const [summaryDetailLevel, setSummaryDetailLevel] = useState<SummaryDetailLevel>("normal");
   const [isConfirmSessionAdvanceOpen, setIsConfirmSessionAdvanceOpen] = useState(false);
@@ -55,6 +57,13 @@ export default function StorySoFarPage() {
 
     const storedSessionViewModes = localStorage.getItem(SESSION_VIEW_MODES_STORAGE_KEY);
     if (storedSessionViewModes) setSessionViewModes(JSON.parse(storedSessionViewModes));
+
+    const storedFullSummary = localStorage.getItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+    if (storedFullSummary) setFullCampaignSummary(JSON.parse(storedFullSummary));
+
+    const storedDetailLevel = localStorage.getItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY);
+    if (storedDetailLevel) setSummaryDetailLevel(storedDetailLevel as SummaryDetailLevel);
+
   }, []);
 
   useEffect(() => {
@@ -73,6 +82,24 @@ export default function StorySoFarPage() {
     localStorage.setItem(SESSION_VIEW_MODES_STORAGE_KEY, JSON.stringify(sessionViewModes));
   }, [sessionViewModes]);
 
+  useEffect(() => {
+    if (fullCampaignSummary) {
+      localStorage.setItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY, JSON.stringify(fullCampaignSummary));
+    } else {
+      localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
+    }
+  }, [fullCampaignSummary]);
+
+  useEffect(() => {
+    localStorage.setItem(SUMMARY_DETAIL_LEVEL_STORAGE_KEY, summaryDetailLevel);
+  }, [summaryDetailLevel]);
+
+
+  const clearFullCampaignSummary = () => {
+    setFullCampaignSummary(null);
+    // localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY); // Handled by useEffect on fullCampaignSummary
+  };
+
   const handleAddPlotPointToCurrentSession = () => {
     if (newPlotPointText.trim()) {
       setPlotPoints(prev => [
@@ -85,6 +112,7 @@ export default function StorySoFarPage() {
         }
       ]);
       setNewPlotPointText("");
+      clearFullCampaignSummary();
     }
   };
   
@@ -99,11 +127,10 @@ export default function StorySoFarPage() {
           timestamp: new Date().toISOString(),
           text: textToAdd.trim(),
         }
-      ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())); // Keep chronological within session
+      ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
       
-      setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: "" })); // Clear input
-      
-      // Re-generate summary for this past session
+      setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: "" }));
+      clearFullCampaignSummary();
       await handleRegenerateSessionSummary(sessionNum);
     }
   };
@@ -113,7 +140,6 @@ export default function StorySoFarPage() {
     if (relevantPlotPoints.length === 0) {
       return `No plot points recorded for Session ${sessionNumberToSummarize}.`;
     }
-    // Placeholder for AI call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     return `AI Generated Summary for Session ${sessionNumberToSummarize} (Detail: ${detailLevel}): Key events from ${relevantPlotPoints.length} plot point(s) include... The adventurers ${relevantPlotPoints[0]?.text.substring(0,30)}... and then they ${relevantPlotPoints[relevantPlotPoints.length-1]?.text.substring(0,30)}... [Placeholder for session ${sessionNumberToSummarize}]`;
   };
@@ -127,7 +153,7 @@ export default function StorySoFarPage() {
       setSessionViewModes(prev => ({ ...prev, [currentSessionNumber]: 'summary' }));
       setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [currentSessionNumber]: false }));
       setCurrentSessionNumber(prev => prev + 1);
-      setFullCampaignSummary(null); 
+      clearFullCampaignSummary();
     } else {
       setIsConfirmSessionAdvanceOpen(true);
     }
@@ -135,10 +161,11 @@ export default function StorySoFarPage() {
   
   const handleGenerateFullCampaignSummary = async () => {
     setIsGeneratingGlobalSummary(true);
-    setFullCampaignSummary(null);
+    setFullCampaignSummary(null); // Clear previous before generating new
     const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\n');
     await new Promise(resolve => setTimeout(resolve, 1500)); 
-    setFullCampaignSummary(`AI Generated Full Story Summary (Detail: ${summaryDetailLevel}): Based on ${plotPoints.length} total plot points across all sessions... The grand saga unfolds! [Placeholder Content referring to: ${allPlotPointsText.substring(0,100)}...]`);
+    const newSummary = `AI Generated Full Story Summary (Detail: ${summaryDetailLevel}): Based on ${plotPoints.length} total plot points across all sessions... The grand saga unfolds! [Placeholder Content referring to: ${allPlotPointsText.substring(0,100)}...]`;
+    setFullCampaignSummary(newSummary);
     setIsGeneratingGlobalSummary(false);
   };
 
@@ -146,6 +173,7 @@ export default function StorySoFarPage() {
     setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: true }));
     const summaryText = await generateSessionSummaryText(sessionNum, summaryDetailLevel);
     setSessionSummaries(prev => ({ ...prev, [sessionNum]: summaryText }));
+    clearFullCampaignSummary(); // Full summary is now potentially outdated
     setIsGeneratingSpecificSessionSummary(prev => ({ ...prev, [sessionNum]: false }));
   };
 
@@ -153,7 +181,7 @@ export default function StorySoFarPage() {
   const handleConfirmAndAdvanceEmptySession = () => {
     setCurrentSessionNumber(prev => prev + 1);
     setIsConfirmSessionAdvanceOpen(false);
-    setFullCampaignSummary(null); 
+    clearFullCampaignSummary();
   };
 
   const toggleSessionView = (sessionNum: number) => {
@@ -165,15 +193,14 @@ export default function StorySoFarPage() {
 
   const groupedPlotPoints = plotPoints.reduce((acc, point) => {
     (acc[point.sessionNumber] = acc[point.sessionNumber] || []).push(point);
-    // Sort points within each session by timestamp when grouping
     acc[point.sessionNumber].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     return acc;
   }, {} as Record<number, PlotPoint[]>);
 
   const sortedSessionNumbers = Object.keys(groupedPlotPoints)
     .map(Number)
-    .sort((a, b) => b - a)
-    .filter(sessionNum => sessionNum <= currentSessionNumber); 
+    .sort((a, b) => b - a) 
+    .filter(sessionNum => sessionNum <= currentSessionNumber +1); // Show current and all past
 
 
   return (
@@ -189,7 +216,7 @@ export default function StorySoFarPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Plot Point Log & Input */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
+           <Card>
             <CardHeader>
               <CardTitle>Add New Plot Point for Session {currentSessionNumber}</CardTitle>
             </CardHeader>
@@ -220,8 +247,7 @@ export default function StorySoFarPage() {
                 <p className="text-muted-foreground">No plot points recorded yet. Add the first one above!</p>
               )}
               <div className="max-h-[70vh] overflow-y-auto space-y-6 pr-2">
-                 { currentSessionNumber > 0 && (groupedPlotPoints[currentSessionNumber] || []).length === 0 && !sortedSessionNumbers.includes(currentSessionNumber) && (
-                     // Handle case where current session is new and has no points yet
+                 { currentSessionNumber > 0 && (groupedPlotPoints[currentSessionNumber] || []).length === 0 && !Object.keys(groupedPlotPoints).map(Number).includes(currentSessionNumber) && (
                       <div key={`session-${currentSessionNumber}-current-empty`}>
                         <div className="flex justify-between items-center mb-2 sticky top-0 bg-card py-1 z-10 border-b">
                             <h3 className="text-lg font-semibold text-primary">Session {currentSessionNumber} (Current)</h3>
@@ -235,6 +261,8 @@ export default function StorySoFarPage() {
                     const viewMode = isCurrentSession ? 'details' : (sessionViewModes[sessionNum] || 'summary');
                     const summaryText = sessionSummaries[sessionNum];
                     const isLoadingThisSessionSummary = isGeneratingSpecificSessionSummary[sessionNum];
+
+                    if (sessionNum > currentSessionNumber) return null; // Don't render future empty sessions
 
                     return (
                       <div key={`session-${sessionNum}`}>
@@ -277,7 +305,6 @@ export default function StorySoFarPage() {
                                 <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session, and no summary generated yet.</p>
                             )}
 
-                            {/* Inject/Regenerate for PAST sessions when in details view */}
                             {!isCurrentSession && viewMode === 'details' && (
                               <Card className="mt-4 p-4 space-y-3 bg-card border-dashed">
                                 <div>
@@ -298,7 +325,7 @@ export default function StorySoFarPage() {
                                     <PlusCircle className="mr-2 h-4 w-4"/> Add Event
                                   </Button>
                                 </div>
-                                {summaryText && (
+                                {(summaryText || (groupedPlotPoints[sessionNum] || []).length > 0) && ( // Show re-gen if summary exists OR if points exist to make one
                                   <div>
                                     <Button 
                                       variant="outline" 
