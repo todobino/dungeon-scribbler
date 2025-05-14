@@ -15,8 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import Link from "next/link";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  REFACTORED_GOALS_KEY_PREFIX, // New key for this refactored page
+  REFACTORED_GOALS_KEY_PREFIX, 
   REFACTORED_PLOT_POINTS_KEY_PREFIX,
   REFACTORED_CURRENT_SESSION_KEY_PREFIX,
   REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX
@@ -500,3 +501,4 @@ export default function NextSessionGoalsRefactoredPage() {
     </div>
   );
 }
+
