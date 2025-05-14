@@ -5,12 +5,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCampaign } from "@/contexts/campaign-context";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { DraftingCompass, Wand2, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -185,110 +183,110 @@ export default function CampaignWizardPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-      <Card className="shadow-xl">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-3xl font-bold flex items-center">
-              <DraftingCompass className="mr-3 h-8 w-8 text-primary"/>
-              Campaign Creation Wizard
-            </CardTitle>
-            <Button variant="outline" asChild>
-              <Link href="/campaign-management"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Campaigns</Link>
-            </Button>
-          </div>
-          <CardDescription>Craft the foundations of your new adventure. Use the "Suggest" buttons for AI-powered inspiration!</CardDescription>
-        </CardHeader>
-        <ScrollArea className="max-h-[calc(100vh-250px)]"> {/* Adjust max-h as needed */}
-            <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Column 1 */}
-                    <div className="space-y-6">
-                        <div>
-                            <Label htmlFor="name" className="text-lg">Campaign Name*</Label>
-                            <Input id="name" name="name" value={formState.name} onChange={handleInputChange} placeholder="e.g., The Shadow of the Dragon Lord" className="text-base"/>
-                        </div>
-
-                        {renderFieldWithGenerator("campaignConcept", "Overall Campaign Concept", 
-                            <Textarea id="campaignConcept" name="campaignConcept" value={formState.campaignConcept} onChange={handleInputChange} placeholder="A brief, 1-2 sentence high-level concept for your campaign. What is it about?" rows={3}/>
-                        )}
-
-                        {renderFieldWithGenerator("length", "Length/Commitment",
-                            <Select value={formState.length} onValueChange={(value) => handleSelectChange("length", value)}>
-                                <SelectTrigger id="length"><SelectValue /></SelectTrigger>
-                                <SelectContent>{CAMPAIGN_LENGTH_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                            </Select>
-                        )}
-
-                        {renderFieldWithGenerator("tone", "Tone", 
-                            <Input id="tone" name="tone" value={formState.tone} onChange={handleInputChange} placeholder="e.g., Heroic, Gritty, Humorous, Mysterious" />
-                        )}
-
-                        <div>
-                            <Label className="block mb-1.5">Player Level Range</Label>
-                            <div className="flex items-center gap-4">
-                                <div className="flex-1">
-                                <Label htmlFor="playerLevelStart" className="text-sm">Start Level</Label>
-                                <Input id="playerLevelStart" name="playerLevelStart" type="number" value={formState.playerLevelStart.toString()} onChange={handleNumberInputChange} min="1" max="20"/>
-                                </div>
-                                <div className="flex-1">
-                                <Label htmlFor="playerLevelEnd" className="text-sm">End Level</Label>
-                                <Input id="playerLevelEnd" name="playerLevelEnd" type="number" value={formState.playerLevelEnd.toString()} onChange={handleNumberInputChange} min={formState.playerLevelStart} max="20"/>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Column 2 */}
-                    <div className="space-y-6">
-                        {renderFieldWithGenerator("worldStyle", "World Style",
-                            <Select value={formState.worldStyle} onValueChange={(value) => handleSelectChange("worldStyle", value)}>
-                                <SelectTrigger id="worldStyle"><SelectValue /></SelectTrigger>
-                                <SelectContent>{WORLD_STYLE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                            </Select>
-                        )}
-
-                        {renderFieldWithGenerator("regionFocus", "Primary Region Focus",
-                            <Select value={formState.regionFocus} onValueChange={(value) => handleSelectChange("regionFocus", value)}>
-                                <SelectTrigger id="regionFocus" placeholder="Select a primary region type"><SelectValue /></SelectTrigger>
-                                <SelectContent>{REGION_FOCUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                            </Select>
-                        )}
-                        
-                        {renderFieldWithGenerator("technologyLevel", "Technology Level",
-                            <Select value={formState.technologyLevel} onValueChange={(value) => handleSelectChange("technologyLevel", value)}>
-                                <SelectTrigger id="technologyLevel"><SelectValue /></SelectTrigger>
-                                <SelectContent>{TECHNOLOGY_LEVEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                            </Select>
-                        )}
-                        
-                        {renderFieldWithGenerator("factionTypes", "Key Faction Archetypes", 
-                            <Textarea id="factionTypes" name="factionTypes" value={formState.factionTypes} onChange={handleInputChange} placeholder={FACTION_TYPE_EXAMPLES} rows={3}/>
-                        )}
-
-                        {renderFieldWithGenerator("powerBalance", "Power Balance",
-                            <Select value={formState.powerBalance} onValueChange={(value) => handleSelectChange("powerBalance", value)}>
-                                <SelectTrigger id="powerBalance"><SelectValue /></SelectTrigger>
-                                <SelectContent>{POWER_BALANCE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                            </Select>
-                        )}
-                    </div>
-                </div>
-            </CardContent>
-        </ScrollArea>
-        <CardFooter className="border-t pt-6">
-          <Button 
-            onClick={handleCreateCampaign} 
-            disabled={!formState.name.trim() || isCreatingCampaign} 
-            size="lg"
-            className="w-full md:w-auto"
-          >
-            {isCreatingCampaign ? <Loader2 className="mr-2 h-5 w-5 animate-spin"/> : <DraftingCompass className="mr-2 h-5 w-5"/>}
-            {isCreatingCampaign ? "Creating Campaign..." : "Create Campaign"}
+    <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 flex flex-col bg-background">
+      {/* Header Section */}
+      <div className="pb-6 mb-6 border-b border-border">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold flex items-center">
+            <DraftingCompass className="mr-3 h-8 w-8 text-primary"/>
+            Campaign Creation Wizard
+          </h1>
+          <Button variant="outline" asChild>
+            <Link href="/campaign-management"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Campaigns</Link>
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+        <p className="text-muted-foreground mt-2">Craft the foundations of your new adventure. Use the "Suggest" buttons for AI-powered inspiration!</p>
+      </div>
+
+      {/* Form Section */}
+      <div className="flex-grow space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"> {/* Increased gap-x */}
+              {/* Column 1 */}
+              <div className="space-y-6">
+                  <div>
+                      <Label htmlFor="name" className="text-lg">Campaign Name*</Label>
+                      <Input id="name" name="name" value={formState.name} onChange={handleInputChange} placeholder="e.g., The Shadow of the Dragon Lord" className="text-base"/>
+                  </div>
+
+                  {renderFieldWithGenerator("campaignConcept", "Overall Campaign Concept", 
+                      <Textarea id="campaignConcept" name="campaignConcept" value={formState.campaignConcept} onChange={handleInputChange} placeholder="A brief, 1-2 sentence high-level concept for your campaign. What is it about?" rows={3}/>
+                  )}
+
+                  {renderFieldWithGenerator("length", "Length/Commitment",
+                      <Select value={formState.length} onValueChange={(value) => handleSelectChange("length", value)}>
+                          <SelectTrigger id="length"><SelectValue /></SelectTrigger>
+                          <SelectContent>{CAMPAIGN_LENGTH_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                      </Select>
+                  )}
+
+                  {renderFieldWithGenerator("tone", "Tone", 
+                      <Input id="tone" name="tone" value={formState.tone} onChange={handleInputChange} placeholder="e.g., Heroic, Gritty, Humorous, Mysterious" />
+                  )}
+
+                  <div>
+                      <Label className="block mb-1.5">Player Level Range</Label>
+                      <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                          <Label htmlFor="playerLevelStart" className="text-sm">Start Level</Label>
+                          <Input id="playerLevelStart" name="playerLevelStart" type="number" value={formState.playerLevelStart.toString()} onChange={handleNumberInputChange} min="1" max="20"/>
+                          </div>
+                          <div className="flex-1">
+                          <Label htmlFor="playerLevelEnd" className="text-sm">End Level</Label>
+                          <Input id="playerLevelEnd" name="playerLevelEnd" type="number" value={formState.playerLevelEnd.toString()} onChange={handleNumberInputChange} min={formState.playerLevelStart} max="20"/>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Column 2 */}
+              <div className="space-y-6">
+                  {renderFieldWithGenerator("worldStyle", "World Style",
+                      <Select value={formState.worldStyle} onValueChange={(value) => handleSelectChange("worldStyle", value)}>
+                          <SelectTrigger id="worldStyle"><SelectValue /></SelectTrigger>
+                          <SelectContent>{WORLD_STYLE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                      </Select>
+                  )}
+
+                  {renderFieldWithGenerator("regionFocus", "Primary Region Focus",
+                      <Select value={formState.regionFocus} onValueChange={(value) => handleSelectChange("regionFocus", value)}>
+                          <SelectTrigger id="regionFocus" placeholder="Select a primary region type"><SelectValue /></SelectTrigger>
+                          <SelectContent>{REGION_FOCUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                      </Select>
+                  )}
+                  
+                  {renderFieldWithGenerator("technologyLevel", "Technology Level",
+                      <Select value={formState.technologyLevel} onValueChange={(value) => handleSelectChange("technologyLevel", value)}>
+                          <SelectTrigger id="technologyLevel"><SelectValue /></SelectTrigger>
+                          <SelectContent>{TECHNOLOGY_LEVEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                      </Select>
+                  )}
+                  
+                  {renderFieldWithGenerator("factionTypes", "Key Faction Archetypes", 
+                      <Textarea id="factionTypes" name="factionTypes" value={formState.factionTypes} onChange={handleInputChange} placeholder={FACTION_TYPE_EXAMPLES} rows={3}/>
+                  )}
+
+                  {renderFieldWithGenerator("powerBalance", "Power Balance",
+                      <Select value={formState.powerBalance} onValueChange={(value) => handleSelectChange("powerBalance", value)}>
+                          <SelectTrigger id="powerBalance"><SelectValue /></SelectTrigger>
+                          <SelectContent>{POWER_BALANCE_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                      </Select>
+                  )}
+              </div>
+          </div>
+      </div>
+
+      {/* Footer Section */}
+      <div className="pt-6 mt-auto border-t border-border">
+        <Button 
+          onClick={handleCreateCampaign} 
+          disabled={!formState.name.trim() || isCreatingCampaign} 
+          size="lg"
+          className="w-full md:w-auto"
+        >
+          {isCreatingCampaign ? <Loader2 className="mr-2 h-5 w-5 animate-spin"/> : <DraftingCompass className="mr-2 h-5 w-5"/>}
+          {isCreatingCampaign ? "Creating Campaign..." : "Create Campaign"}
+        </Button>
+      </div>
     </div>
   );
 }
-
