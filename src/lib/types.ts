@@ -110,3 +110,10 @@ export interface Location {
   factionId?: string; 
   notes?: string;
 }
+
+export interface PlotPoint {
+  id: string;
+  sessionNumber: number; // Added to group by session
+  timestamp: string;
+  text: string;
+}
