@@ -1,13 +1,17 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Campaign, PlayerCharacter } from '@/lib/types';
 import type { DndClass } from '@/lib/constants';
+import { 
+  CAMPAIGNS_STORAGE_KEY, 
+  ACTIVE_CAMPAIGN_ID_STORAGE_KEY, 
+  PARTY_STORAGE_KEY_PREFIX 
+} from '@/lib/constants';
 
-// Define a type for the character data used in add/update functions
-// Omit 'id' as it's generated, 'abilities' and 'racialTraits' as they are derived/lookup
-// initiativeModifier is now part of PlayerCharacter, so it will be included here.
+
 export type CharacterFormData = Omit<PlayerCharacter, 'id' | 'abilities' | 'racialTraits'>;
 
 
@@ -29,9 +33,7 @@ interface CampaignContextType {
 
 const CampaignContext = createContext<CampaignContextType | undefined>(undefined);
 
-const CAMPAIGNS_STORAGE_KEY = 'dungeonScribblerCampaigns';
-const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = 'dungeonScribblerActiveCampaignId';
-const getPartyStorageKey = (campaignId: string) => `dungeonScribblerCharacters_${campaignId}`;
+const getPartyStorageKey = (campaignId: string) => `${PARTY_STORAGE_KEY_PREFIX}${campaignId}`;
 
 export function CampaignProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -58,16 +60,28 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoadingCampaigns) {
-      localStorage.setItem(CAMPAIGNS_STORAGE_KEY, JSON.stringify(campaigns));
+      try {
+        localStorage.setItem(CAMPAIGNS_STORAGE_KEY, JSON.stringify(campaigns));
+      } catch (error) {
+        console.error("Error saving campaigns to localStorage", error);
+      }
     }
   }, [campaigns, isLoadingCampaigns]);
 
   useEffect(() => {
     if (!isLoadingCampaigns) {
       if (activeCampaignId) {
-        localStorage.setItem(ACTIVE_CAMPAIGN_ID_STORAGE_KEY, activeCampaignId);
+        try {
+          localStorage.setItem(ACTIVE_CAMPAIGN_ID_STORAGE_KEY, activeCampaignId);
+        } catch (error) {
+          console.error("Error saving active campaign ID to localStorage", error);
+        }
       } else {
-        localStorage.removeItem(ACTIVE_CAMPAIGN_ID_STORAGE_KEY);
+        try {
+          localStorage.removeItem(ACTIVE_CAMPAIGN_ID_STORAGE_KEY);
+        } catch (error) {
+          console.error("Error removing active campaign ID from localStorage", error);
+        }
       }
     }
   }, [activeCampaignId, isLoadingCampaigns]);
@@ -130,7 +144,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     const newCharacter: PlayerCharacter = {
       ...characterData,
       id: Date.now().toString(),
-      initiativeModifier: characterData.initiativeModifier || 0, // Ensure default
+      initiativeModifier: characterData.initiativeModifier || 0, 
     };
     setActiveCampaignParty(prevParty => [...prevParty, newCharacter]);
   }, [activeCampaignId]);

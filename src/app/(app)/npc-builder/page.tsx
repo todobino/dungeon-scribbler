@@ -1,14 +1,15 @@
+
 "use client";
 
 import type { NPC } from "@/lib/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { generateNpc, type GenerateNpcInput, type GenerateNpcOutput } from "@/ai/flows/npc-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, UserCog, Zap, Trash2, Eye, Save } from "lucide-react";
+import { PlusCircle, UserCog, Zap, Trash2, Eye, Save, Library, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,8 +23,12 @@ import {
   DialogFooter,
   DialogClose
 } from "@/components/ui/dialog";
+import { useCampaign } from "@/contexts/campaign-context";
+import { NPCS_STORAGE_KEY } from "@/lib/constants";
+import Link from "next/link";
 
 export default function NpcBuilderPage() {
+  const { activeCampaign, isLoadingCampaigns } = useCampaign(); // Use activeCampaign to control UI
   const [npcs, setNpcs] = useState<NPC[]>([]);
   const [npcInput, setNpcInput] = useState<GenerateNpcInput>({
     name: "",
@@ -34,10 +39,49 @@ export default function NpcBuilderPage() {
   });
   const [generatedNpc, setGeneratedNpc] = useState<GenerateNpcOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingNpcs, setIsLoadingNpcs] = useState(true);
   const { toast } = useToast();
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [currentNpcToView, setCurrentNpcToView] = useState<NPC | null>(null);
+
+  useEffect(() => {
+    // Load NPCs only once on component mount, not tied to campaign
+    setIsLoadingNpcs(true);
+    try {
+      const storedNpcs = localStorage.getItem(NPCS_STORAGE_KEY);
+      if (storedNpcs) {
+        setNpcs(JSON.parse(storedNpcs));
+      } else {
+        setNpcs([]);
+      }
+    } catch (error) {
+      console.error("Error loading NPCs from localStorage", error);
+      setNpcs([]);
+    }
+    setIsLoadingNpcs(false);
+  }, []);
+
+  useEffect(() => {
+    // Save NPCs whenever the list changes
+    if (!isLoadingNpcs) {
+      try {
+        localStorage.setItem(NPCS_STORAGE_KEY, JSON.stringify(npcs));
+      } catch (error) {
+        console.error("Error saving NPCs to localStorage", error);
+      }
+    }
+  }, [npcs, isLoadingNpcs]);
+
+  // Set setting from active campaign if available
+  useEffect(() => {
+    if (activeCampaign) {
+      setNpcInput(prev => ({ ...prev, setting: activeCampaign.name }));
+    } else {
+      setNpcInput(prev => ({ ...prev, setting: "" }));
+    }
+  }, [activeCampaign]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -80,16 +124,16 @@ export default function NpcBuilderPage() {
         name: npcInput.name,
         race: npcInput.race,
         occupation: npcInput.occupation,
-        setting: npcInput.setting,
+        setting: npcInput.setting, // This will be the campaign name or manually entered one
         description: generatedNpc.description,
         personalityTraits: generatedNpc.personalityTraits,
         backstory: generatedNpc.backstory,
         motivations: generatedNpc.motivations,
       };
       setNpcs(prevNpcs => [...prevNpcs, newNpc]);
-      setGeneratedNpc(null); // Clear generated details
-      setNpcInput({ name: "", race: "", occupation: "", setting: "", additionalDetails: ""}); // Reset form
-      setIsFormDialogOpen(false); // Close dialog
+      setGeneratedNpc(null); 
+      setNpcInput({ name: "", race: "", occupation: "", setting: activeCampaign?.name || "", additionalDetails: ""}); 
+      setIsFormDialogOpen(false); 
       toast({
         title: "NPC Saved!",
         description: `${newNpc.name} has been added to your collection.`,
@@ -97,17 +141,6 @@ export default function NpcBuilderPage() {
     }
   };
   
-  useEffect(() => {
-    const storedNpcs = localStorage.getItem("dungeonScribblerNpcs");
-    if (storedNpcs) {
-      setNpcs(JSON.parse(storedNpcs));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("dungeonScribblerNpcs", JSON.stringify(npcs));
-  }, [npcs]);
-
   const handleDeleteNpc = (id: string) => {
     setNpcs(npcs.filter(npc => npc.id !== id));
     toast({ title: "NPC Deleted", description: "The NPC has been removed." });
@@ -118,14 +151,20 @@ export default function NpcBuilderPage() {
     setIsViewDialogOpen(true);
   };
 
+  if (isLoadingCampaigns || isLoadingNpcs) {
+    return <div className="text-center p-10">Loading NPC data...</div>;
+  }
+
+  // This page does not strictly require an active campaign to view/manage global NPCs
+  // but adding a new NPC can pre-fill the 'setting' if a campaign is active.
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">NPC Builder</h1>
+        <h1 className="text-3xl font-bold">NPC Builder {activeCampaign ? `(for ${activeCampaign.name})` : "(Global)"}</h1>
         <Button onClick={() => {
-          setGeneratedNpc(null); // Clear previous generation
-          setNpcInput({ name: "", race: "", occupation: "", setting: "", additionalDetails: ""}); // Reset form
+          setGeneratedNpc(null); 
+          setNpcInput({ name: "", race: "", occupation: "", setting: activeCampaign?.name || "", additionalDetails: ""}); 
           setIsFormDialogOpen(true);
         }}>
           <PlusCircle className="mr-2 h-5 w-5" /> Create New NPC
@@ -136,7 +175,7 @@ export default function NpcBuilderPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create New NPC</DialogTitle>
-            <DialogDescription>Define the core attributes and let AI help flesh out the details.</DialogDescription>
+            <DialogDescription>Define the core attributes and let AI help flesh out the details. {activeCampaign ? `Default setting: ${activeCampaign.name}.` : "No active campaign, please specify setting."}</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] p-1 pr-3">
             <div className="space-y-4 py-4">
@@ -154,7 +193,7 @@ export default function NpcBuilderPage() {
                 </div>
                 <div>
                   <Label htmlFor="setting">Setting</Label>
-                  <Input id="setting" name="setting" value={npcInput.setting} onChange={handleInputChange} placeholder="e.g., Forgotten Realms, Eberron" />
+                  <Input id="setting" name="setting" value={npcInput.setting} onChange={handleInputChange} placeholder={activeCampaign ? activeCampaign.name : "e.g., Forgotten Realms"} />
                 </div>
                 <div>
                   <Label htmlFor="additionalDetails">Additional Details (Optional)</Label>
@@ -220,7 +259,11 @@ export default function NpcBuilderPage() {
             <CardDescription>Start by creating your first Non-Player Character.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => setIsFormDialogOpen(true)}>
+            <Button onClick={() => {
+                 setGeneratedNpc(null); 
+                 setNpcInput({ name: "", race: "", occupation: "", setting: activeCampaign?.name || "", additionalDetails: ""}); 
+                 setIsFormDialogOpen(true);
+            }}>
               <PlusCircle className="mr-2 h-5 w-5" /> Create Your First NPC
             </Button>
           </CardContent>
@@ -238,7 +281,7 @@ export default function NpcBuilderPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                   </div>
-                  <CardDescription>{npc.race} {npc.occupation}</CardDescription>
+                  <CardDescription>{npc.race} {npc.occupation} {npc.setting ? `(from ${npc.setting})` : ''}</CardDescription>
                 </CardHeader>
                 <CardContent className="h-20 overflow-hidden text-ellipsis">
                   <p className="text-sm text-muted-foreground line-clamp-3">{npc.description || "No description available."}</p>
@@ -259,7 +302,7 @@ export default function NpcBuilderPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl">{currentNpcToView?.name}</DialogTitle>
-            <DialogDescription>{currentNpcToView?.race} {currentNpcToView?.occupation} - From {currentNpcToView?.setting}</DialogDescription>
+            <DialogDescription>{currentNpcToView?.race} {currentNpcToView?.occupation} {currentNpcToView?.setting ? `- From ${currentNpcToView.setting}` : ''}</DialogDescription>
           </DialogHeader>
           {currentNpcToView && (
             <ScrollArea className="max-h-[70vh] p-1 pr-3">

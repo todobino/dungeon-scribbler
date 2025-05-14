@@ -12,7 +12,7 @@ export interface NavItem {
   isGenAI?: boolean;
 }
 
-export const APP_NAME = "Dungeon Scribbler";
+export const APP_NAME = "Adventure Architect";
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
@@ -107,15 +107,33 @@ export const getFactionReputationColorClass = (reputation: number): string => {
   return "text-green-500"; // Using a Tailwind color directly
 };
 
-// Storage Key Prefixes for Campaign-Specific Data
+// Storage Key Prefixes for Campaign-Specific Data & Global Data
+
+// Campaign Context Storage Keys
+export const CAMPAIGNS_STORAGE_KEY = 'adventureArchitectCampaigns';
+export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = 'adventureArchitectActiveCampaignId';
+export const PARTY_STORAGE_KEY_PREFIX = 'adventureArchitectCharacters_'; // Used in getPartyStorageKey
+
+// Factions Page Keys
+export const FACTIONS_STORAGE_KEY_PREFIX = 'adventureArchitectFactions_';
+export const LOCATIONS_STORAGE_KEY_PREFIX = 'adventureArchitectLocations_';
+
+// Global NPC List Key
+export const NPCS_STORAGE_KEY = 'adventureArchitectNpcs'; 
+
+// Campaign Journal Page Key
+export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = "adventureArchitectNotes_"; // Make campaign specific
+
+// Map Integration Page Key
+export const MAPS_STORAGE_KEY_PREFIX = "adventureArchitectMaps_"; // Make campaign specific
 
 // Adventure Recap (formerly Story So Far Refactored) Page Keys
-export const REFACTORED_PLOT_POINTS_KEY_PREFIX = "dsRefactoredPlotPoints_";
-export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = "dsRefactoredCurrentSession_";
-export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = "dsRefactoredSessionSummaries_";
-export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = "dsRefactoredSessionViewModes_";
-export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = "dsRefactoredFullCampaignSummary_";
-export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = "dsRefactoredSummaryDetailLevel_";
+export const REFACTORED_PLOT_POINTS_KEY_PREFIX = "aaRefactoredPlotPoints_";
+export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = "aaRefactoredCurrentSession_";
+export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = "aaRefactoredSessionSummaries_";
+export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = "aaRefactoredSessionViewModes_";
+export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = "aaRefactoredFullCampaignSummary_";
+export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = "aaRefactoredSummaryDetailLevel_";
 
 // Next Session Goals (Refactored) Page Keys
-export const REFACTORED_GOALS_KEY_PREFIX = "dsRefactoredGoals_";
+export const REFACTORED_GOALS_KEY_PREFIX = "aaRefactoredGoals_";

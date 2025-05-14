@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Faction, NPC, Location } from "@/lib/types";
@@ -14,17 +15,21 @@ import { Badge } from "@/components/ui/badge";
 import { PlusCircle, ShieldCheck, Users, Trash2, Edit3, Eye, Library, Target, Activity, FileText, UserCircle2, Home, Link2, UserCog, Brain, Users2, Clapperboard, Wand2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { FACTION_REPUTATION_SCALE, getFactionReputationLabel, getFactionReputationColorClass } from "@/lib/constants";
+import { 
+  FACTION_REPUTATION_SCALE, 
+  getFactionReputationLabel, 
+  getFactionReputationColorClass,
+  FACTIONS_STORAGE_KEY_PREFIX,
+  NPCS_STORAGE_KEY,
+  LOCATIONS_STORAGE_KEY_PREFIX
+} from "@/lib/constants";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { generateFactionIntroduction, type GenerateFactionIntroductionInput } from "@/ai/flows/faction-intro-generator";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const FACTIONS_STORAGE_KEY_PREFIX = 'dungeonScribblerFactions_';
-const getFactionsStorageKey = (campaignId: string) => `${FACTIONS_STORAGE_KEY_PREFIX}${campaignId}`;
 
-const NPCS_STORAGE_KEY = 'dungeonScribblerNpcs'; // Global NPC list
-const LOCATIONS_STORAGE_KEY_PREFIX = 'dungeonScribblerLocations_';
+const getFactionsStorageKey = (campaignId: string) => `${FACTIONS_STORAGE_KEY_PREFIX}${campaignId}`;
 const getLocationsStorageKey = (campaignId: string) => `${LOCATIONS_STORAGE_KEY_PREFIX}${campaignId}`;
 
 
@@ -139,7 +144,7 @@ export default function FactionsPage() {
           name: name.trim(),
           description: `${role} of ${factionName}`,
           occupation: role,
-          // Other NPC fields can be populated later via NPC Builder
+          setting: activeCampaign?.name || "Unknown",
         };
         npcsList.push(newNpc);
         localStorage.setItem(NPCS_STORAGE_KEY, JSON.stringify(npcsList));
@@ -161,7 +166,6 @@ export default function FactionsPage() {
           campaignId: campaignId,
           name: name.trim(),
           description: `Headquarters of ${factionName}`,
-          // Other Location fields can be populated later
         };
         locationsList.push(newLocation);
         localStorage.setItem(locationsKey, JSON.stringify(locationsList));

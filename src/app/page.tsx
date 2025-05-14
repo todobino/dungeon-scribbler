@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Zap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { APP_NAME } from "@/lib/constants";
 
 export default function HomePage() {
   return (
@@ -10,19 +11,19 @@ export default function HomePage() {
       <Card className="w-full max-w-2xl shadow-2xl text-center">
         <CardHeader className="pb-4">
           <div className="flex justify-center mb-6">
-            <Image src="https://picsum.photos/seed/dungeonlogo/100/100" alt="Dungeon Scribbler Logo" width={100} height={100} className="rounded-full" data-ai-hint="fantasy scroll" />
+            <Image src="https://picsum.photos/seed/adventurelogo/100/100" alt="Adventure Architect Logo" width={100} height={100} className="rounded-full" data-ai-hint="fantasy scroll" />
           </div>
           <CardTitle className="text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary/80">
-            Dungeon Scribbler
+            {APP_NAME}
           </CardTitle>
           <CardDescription className="text-xl text-muted-foreground mt-2">
-            Your All-in-One Co-Dungeon-Master Tool
+            Your All-in-One Co-DM Tool
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           <p className="text-lg leading-relaxed">
             Forge epic tales, manage intricate campaigns, and bring your worlds to life with ease.
-            Dungeon Scribbler is designed to be your trusted companion, helping you track everything
+            {APP_NAME} is designed to be your trusted companion, helping you track everything
             from player characters and cunning NPCs to sprawling maps and thrilling encounters.
           </p>
           <div className="flex justify-center">

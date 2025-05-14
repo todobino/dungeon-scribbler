@@ -10,8 +10,8 @@ const geistSans = GeistSans;
 // const geistMono = GeistMono; // Removed
 
 export const metadata: Metadata = {
-  title: 'Dungeon Scribbler',
-  description: 'Your Co-Dungeon-Master Tool',
+  title: 'Adventure Architect',
+  description: 'Your All-in-One Co-DM Tool',
 };
 
 export default function RootLayout({

@@ -1,25 +1,77 @@
+
 "use client";
 
 import type { MapData } from "@/lib/types";
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, type ChangeEvent, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MapIcon, Upload, Trash2, Eye } from "lucide-react";
+import { PlusCircle, MapIcon, Upload, Trash2, Eye, Library, Users } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
-
+import { useCampaign } from "@/contexts/campaign-context";
+import { MAPS_STORAGE_KEY_PREFIX } from "@/lib/constants";
+import Link from "next/link";
 
 export default function MapIntegrationPage() {
+  const { activeCampaign, isLoadingCampaigns } = useCampaign();
   const [maps, setMaps] = useState<MapData[]>([]);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [mapName, setMapName] = useState("");
   const [mapFile, setMapFile] = useState<File | null>(null);
   const [mapPreview, setMapPreview] = useState<string | null>(null);
   const [selectedMap, setSelectedMap] = useState<MapData | null>(null);
+  const [isLoadingMaps, setIsLoadingMaps] = useState(true);
   const { toast } = useToast();
+
+  const getMapsStorageKey = useCallback(() => {
+    if (!activeCampaign) return null;
+    return `${MAPS_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
+  }, [activeCampaign]);
+
+  useEffect(() => {
+    if (isLoadingCampaigns) return;
+
+    if (!activeCampaign) {
+      setMaps([]);
+      setIsLoadingMaps(false);
+      return;
+    }
+    setIsLoadingMaps(true);
+    const storageKey = getMapsStorageKey();
+    if (storageKey) {
+      try {
+        const storedMaps = localStorage.getItem(storageKey);
+        if (storedMaps) {
+          setMaps(JSON.parse(storedMaps));
+        } else {
+          setMaps([]);
+        }
+      } catch (error) {
+        console.error("Error loading maps from localStorage for "+activeCampaign.name, error);
+        setMaps([]);
+      }
+    } else {
+      setMaps([]);
+    }
+    setIsLoadingMaps(false);
+  }, [activeCampaign, isLoadingCampaigns, getMapsStorageKey]);
+
+  useEffect(() => {
+    if (activeCampaign && !isLoadingMaps) {
+      const storageKey = getMapsStorageKey();
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(maps));
+        } catch (error) {
+          console.error("Error saving maps to localStorage for "+activeCampaign.name, error);
+        }
+      }
+    }
+  }, [maps, activeCampaign, isLoadingMaps, getMapsStorageKey]);
+
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -34,11 +86,11 @@ export default function MapIntegrationPage() {
   };
 
   const handleUploadMap = () => {
-    if (mapName && mapFile && mapPreview) {
+    if (mapName && mapFile && mapPreview && activeCampaign) {
       const newMap: MapData = {
         id: Date.now().toString(),
         name: mapName,
-        imageUrl: mapPreview, // In a real app, upload to storage and use URL
+        imageUrl: mapPreview, 
       };
       setMaps([...maps, newMap]);
       setMapName("");
@@ -57,22 +109,34 @@ export default function MapIntegrationPage() {
     toast({ title: "Map Deleted", description: "The map has been removed." });
   };
   
-  useEffect(() => {
-    const storedMaps = localStorage.getItem("dungeonScribblerMaps");
-    if (storedMaps) {
-      setMaps(JSON.parse(storedMaps));
-    }
-  }, []);
+  if (isLoadingCampaigns || isLoadingMaps) {
+    return <div className="text-center p-10">Loading map data...</div>;
+  }
 
-  useEffect(() => {
-    localStorage.setItem("dungeonScribblerMaps", JSON.stringify(maps));
-  }, [maps]);
+  if (!activeCampaign) {
+    return (
+      <Card className="text-center py-12">
+        <CardHeader>
+          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+          <CardTitle className="mt-4">No Active Campaign</CardTitle>
+          <CardDescription>Please select or create a campaign to manage its maps.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/campaign-management">
+              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Map Integration</h1>
+        <h1 className="text-3xl font-bold">Map Integration for {activeCampaign.name}</h1>
         <Button onClick={() => setIsUploadDialogOpen(true)}>
           <PlusCircle className="mr-2 h-5 w-5" /> Upload New Map
         </Button>

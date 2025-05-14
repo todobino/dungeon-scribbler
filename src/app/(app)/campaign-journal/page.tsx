@@ -1,27 +1,80 @@
+
 "use client";
 
 import type { CampaignNote } from "@/lib/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, BookText, Trash2, Eye, Edit3 } from "lucide-react";
+import { PlusCircle, BookText, Trash2, Eye, Edit3, Library, Users } from "lucide-react";
 import { format } from 'date-fns';
+import { useCampaign } from "@/contexts/campaign-context";
+import { JOURNAL_NOTES_STORAGE_KEY_PREFIX } from "@/lib/constants";
+import Link from "next/link";
 
 export default function CampaignJournalPage() {
+  const { activeCampaign, isLoadingCampaigns } = useCampaign();
   const [notes, setNotes] = useState<CampaignNote[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [currentNote, setCurrentNote] = useState<CampaignNote | null>(null);
   const [editingNote, setEditingNote] = useState<CampaignNote | null>(null);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
 
   const [newNoteData, setNewNoteData] = useState<{ title: string; content: string }>({
     title: "",
     content: "",
   });
+
+  const getJournalStorageKey = useCallback(() => {
+    if (!activeCampaign) return null;
+    return `${JOURNAL_NOTES_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
+  }, [activeCampaign]);
+
+  useEffect(() => {
+    if (isLoadingCampaigns) return;
+
+    if (!activeCampaign) {
+      setNotes([]);
+      setIsLoadingNotes(false);
+      return;
+    }
+    setIsLoadingNotes(true);
+    const storageKey = getJournalStorageKey();
+    if (storageKey) {
+      try {
+        const storedNotes = localStorage.getItem(storageKey);
+        if (storedNotes) {
+          setNotes(JSON.parse(storedNotes));
+        } else {
+          setNotes([]);
+        }
+      } catch (error) {
+        console.error("Error loading journal notes from localStorage for "+activeCampaign.name, error);
+        setNotes([]); 
+      }
+    } else {
+      setNotes([]);
+    }
+    setIsLoadingNotes(false);
+  }, [activeCampaign, isLoadingCampaigns, getJournalStorageKey]);
+
+  useEffect(() => {
+    if (activeCampaign && !isLoadingNotes) {
+      const storageKey = getJournalStorageKey();
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+        } catch (error) {
+          console.error("Error saving journal notes to localStorage for "+activeCampaign.name, error);
+        }
+      }
+    }
+  }, [notes, activeCampaign, isLoadingNotes, getJournalStorageKey]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -29,7 +82,7 @@ export default function CampaignJournalPage() {
   };
 
   const handleSubmitNote = () => {
-    if (newNoteData.title && newNoteData.content) {
+    if (newNoteData.title && newNoteData.content && activeCampaign) {
       const noteToSave: CampaignNote = {
         id: editingNote ? editingNote.id : Date.now().toString(),
         title: newNoteData.title,
@@ -65,21 +118,33 @@ export default function CampaignJournalPage() {
     setNotes(notes.filter(note => note.id !== id));
   };
 
-  useEffect(() => {
-    const storedNotes = localStorage.getItem("dungeonScribblerNotes");
-    if (storedNotes) {
-      setNotes(JSON.parse(storedNotes));
-    }
-  }, []);
+  if (isLoadingCampaigns || isLoadingNotes) {
+    return <div className="text-center p-10">Loading journal data...</div>;
+  }
 
-  useEffect(() => {
-    localStorage.setItem("dungeonScribblerNotes", JSON.stringify(notes));
-  }, [notes]);
+  if (!activeCampaign) {
+    return (
+      <Card className="text-center py-12">
+        <CardHeader>
+          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+          <CardTitle className="mt-4">No Active Campaign</CardTitle>
+          <CardDescription>Please select or create a campaign to manage its journal.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/campaign-management">
+              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Campaign Journal</h1>
+        <h1 className="text-3xl font-bold">Campaign Journal for {activeCampaign.name}</h1>
         <Button onClick={() => { setEditingNote(null); setNewNoteData({title: "", content: ""}); setIsFormOpen(true); }}>
           <PlusCircle className="mr-2 h-5 w-5" /> New Journal Entry
         </Button>
