@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, ClipboardList, Zap, Brain, HelpCircle, Edit3, Trash2, ChevronDown, Eye, PlusSquare, ClipboardCheck } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter as UIDialogFooter, DialogClose } from "@/components/ui/dialog"; // Renamed DialogFooter to UIDialogFooter
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter as UIDialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +38,6 @@ export default function NextSessionGoalsPage() {
   const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
 
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
-  const [editingDetails, setEditingDetails] = useState<string>(""); 
   
   const [openAccordionItem, setOpenAccordionItem] = useState<string | null>(null);
 
@@ -59,7 +58,7 @@ export default function NextSessionGoalsPage() {
       }
     } catch (error) {
       console.error("Error loading goals from localStorage:", error);
-      setGoals([]);
+      setGoals([]); // Initialize to empty array on error
     }
   }, []);
 
@@ -88,9 +87,8 @@ export default function NextSessionGoalsPage() {
       setGoals(prev => [...prev, newGoal]);
       setNewGoalText("");
       setAddGoalDialogOpen(false);
-      setOpenAccordionItem(newGoal.id); // Optionally open the new goal
-      setEditingGoalId(newGoal.id); // Optionally enter edit mode for the new goal
-      setEditingDetails("");
+      setOpenAccordionItem(newGoal.id); 
+      setEditingGoalId(newGoal.id);
     }
   };
 
@@ -101,14 +99,11 @@ export default function NextSessionGoalsPage() {
   };
 
   const handleToggleEditMode = (goalId: string) => {
-    if (editingGoalId === goalId) { // If currently editing this goal, toggle to view mode
+    if (editingGoalId === goalId) { 
       setEditingGoalId(null);
-      // Details are auto-saved, so no explicit save needed here
-    } else { // If not editing this goal, or editing another, switch to edit this one
-      const goal = goals.find(g => g.id === goalId);
-      setEditingDetails(goal?.details || "");
+    } else { 
       setEditingGoalId(goalId);
-      if (openAccordionItem !== goalId) { // Ensure it's open if we start editing
+      if (openAccordionItem !== goalId) { 
         setOpenAccordionItem(goalId);
       }
     }
@@ -120,7 +115,6 @@ export default function NextSessionGoalsPage() {
 
     setIsGeneratingIdeasForGoal(prev => ({...prev, [goalId]: true}));
     
-    // Placeholder for AI call
     const promptText = `Goal: ${goal.text}\nDetails: ${goal.details || "No specific details provided."}`;
     await new Promise(resolve => setTimeout(resolve, 1500)); 
     const mockIdeas: GeneratedIdea[] = [
@@ -164,8 +158,8 @@ export default function NextSessionGoalsPage() {
   const handleAccordionChange = (value: string | string[]) => {
     const newOpenItem = Array.isArray(value) ? value[0] : value;
     setOpenAccordionItem(newOpenItem || null);
-    if (editingGoalId && newOpenItem !== editingGoalId) { // If opening a different item or closing current editing one
-      setEditingGoalId(null); // Exit edit mode for the previous one
+    if (editingGoalId && newOpenItem !== editingGoalId) { 
+      setEditingGoalId(null); 
     }
   };
 
@@ -204,32 +198,32 @@ export default function NextSessionGoalsPage() {
       
       const storedSessionNumber = localStorage.getItem(CURRENT_SESSION_STORAGE_KEY);
       let currentSessionNumber = storedSessionNumber ? parseInt(storedSessionNumber, 10) : 1;
-      if (isNaN(currentSessionNumber)) currentSessionNumber = 1;
+      if (isNaN(currentSessionNumber) || currentSessionNumber < 1) currentSessionNumber = 1;
 
 
       const newPlotPoint: PlotPoint = {
         id: Date.now().toString(),
         sessionNumber: currentSessionNumber,
         timestamp: new Date().toISOString(),
-        text: `Completed Goal: ${goal.text}${goal.details ? `\nDetails: ${goal.details}` : ''}`,
+        text: `Completed Goal: ${goal.text}${goal.details ? `\nDetails:\n${goal.details}` : ''}`,
       };
 
       plotPoints.push(newPlotPoint);
       plotPoints.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       
       localStorage.setItem(PLOT_POINTS_STORAGE_KEY, JSON.stringify(plotPoints));
-      localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY); // Invalidate full summary
+      localStorage.removeItem(FULL_CAMPAIGN_SUMMARY_STORAGE_KEY);
 
       toast({
         title: "Goal Logged!",
-        description: `"${goal.text}" marked as completed in session ${currentSessionNumber} log.`,
+        description: `"${goal.text.substring(0,30)}..." marked as completed in session ${currentSessionNumber} log.`,
       });
 
     } catch (error) {
       console.error("Error logging goal as completed:", error);
       toast({
-        title: "Error",
-        description: "Could not log goal. Check console for details.",
+        title: "Error Logging Goal",
+        description: "Could not log goal as completed. Check console for details.",
         variant: "destructive",
       });
     }
@@ -250,9 +244,12 @@ export default function NextSessionGoalsPage() {
           <div>
             <CardTitle>Planned Plot Beats / Goals</CardTitle>
             <CardDescription>
-              Plan your session. Click a goal to view details, or <Edit3 className="inline h-3 w-3 align-text-bottom mr-0.5"/> to edit and generate ideas.
+              Plan your session. Expand goals to view, or click edit (<Edit3 className="inline h-3 w-3 align-text-bottom mr-0.5"/>) to modify and generate ideas.
             </CardDescription>
           </div>
+           <Button onClick={handleOpenAddGoalDialog}>
+                <PlusCircle className="mr-2 h-5 w-5" /> Add Goal
+            </Button>
         </CardHeader>
         <CardContent>
           {goals.length === 0 ? (
@@ -273,8 +270,8 @@ export default function NextSessionGoalsPage() {
             >
               {goals.map(goal => (
                 <AccordionItem value={goal.id} key={goal.id} className="border rounded-md px-3 bg-card shadow-sm">
-                  <div className="flex items-center">
-                    <AccordionTrigger className="flex-1 py-3 hover:no-underline">
+                  <div className="flex items-center py-1">
+                    <AccordionTrigger className="flex-1 py-2 hover:no-underline">
                         <div className="flex items-center w-full">
                             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 mr-2 accordion-chevron" />
                             <span className="text-base font-medium text-left flex-1 truncate pr-2">{goal.text}</span>
@@ -341,7 +338,6 @@ export default function NextSessionGoalsPage() {
                         </div>
                       </>
                     ) : (
-                      // Read-only view of details
                       <div className="text-sm py-2">
                         {renderFormattedDetails(goal.details)}
                       </div>
@@ -403,14 +399,14 @@ export default function NextSessionGoalsPage() {
         <DialogContent className="max-w-lg">
             <DialogHeader>
                 <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: Next Session Goals</DialogTitle>
-                <UIDialogDescription>Outline and develop plot beats for upcoming sessions.</UIDialogDescription>
+                <DialogDescription>Outline and develop plot beats for upcoming sessions.</DialogDescription>
             </DialogHeader>
             <div className="text-sm text-muted-foreground space-y-3 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" to input a new plot beat or objective.</p>
+                <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" (in the card header or footer) to open a dialog and input a new plot beat or objective.</p>
                 <p>2. For each goal in the list:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                    <li>Click the goal text or the <ChevronDown className="inline h-4 w-4 align-text-bottom accordion-chevron"/> icon to expand/collapse and view its formatted details.</li>
-                    <li>Click the <Edit3 className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon to enter edit mode. The icon will change to <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/>.</li>
+                    <li>Click the goal text or the <ChevronDown className="inline h-4 w-4 align-text-bottom accordion-chevron mr-0.5"/> icon (on the left) to expand/collapse and view its formatted details.</li>
+                    <li>Click the <Edit3 className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon (on the right) to enter edit mode for that goal. The icon will change to <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/>.</li>
                 </ul>
                 <p>3. When a goal is in <strong className="text-foreground">edit mode</strong> (expanded, and <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon visible):</p>
                 <ul className="list-disc pl-5 space-y-1">
@@ -420,7 +416,7 @@ export default function NextSessionGoalsPage() {
                     <li>Click "<ClipboardCheck className="inline h-4 w-4 align-text-bottom mr-0.5"/> Log as Completed" to add this goal to the "Story So Far" log for the current session.</li>
                     <li>Click "<Trash2 className="inline h-4 w-4 align-text-bottom mr-0.5"/> Delete Goal" to remove it (confirmation required).</li>
                 </ul>
-                <p>4. Click the <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon (when in edit mode) to return to the read-only formatted view of the details for that goal.</p>
+                <p>4. Click the <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon (when in edit mode) to return to the read-only formatted view of the details for that goal (it remains expanded).</p>
             </div>
             <UIDialogFooter>
                 <DialogClose asChild>
