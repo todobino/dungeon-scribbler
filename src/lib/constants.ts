@@ -1,5 +1,6 @@
+
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -22,6 +23,11 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Campaign Journal', href: '/campaign-journal', icon: BookText },
   { label: 'Random Tables', href: '/random-tables', icon: Dice5 },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
+];
+
+export const STORY_NAV_ITEMS: NavItem[] = [
+  { label: 'The Story So Far', href: '/story-so-far', icon: History, isGenAI: true, disabled: false },
+  { label: 'Next Session Goals', href: '/next-session-goals', icon: ClipboardList, isGenAI: true, disabled: false },
 ];
 
 export const WORLD_NAV_ITEMS: NavItem[] = [
@@ -103,3 +109,4 @@ export const getFactionReputationColorClass = (reputation: number): string => {
   if (reputation < 3) return "text-blue-500"; // Using a Tailwind color directly
   return "text-green-500"; // Using a Tailwind color directly
 };
+

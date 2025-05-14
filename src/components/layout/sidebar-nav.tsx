@@ -5,7 +5,7 @@ import type { PlayerCharacter } from "@/lib/types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, APP_NAME, ADVANCED_NAV_ITEMS, SETTINGS_NAV_ITEMS, WORLD_NAV_ITEMS, type NavItem } from "@/lib/constants";
+import { NAV_ITEMS, APP_NAME, ADVANCED_NAV_ITEMS, SETTINGS_NAV_ITEMS, WORLD_NAV_ITEMS, STORY_NAV_ITEMS, type NavItem } from "@/lib/constants";
 import {
   Sidebar,
   SidebarHeader,
@@ -166,6 +166,9 @@ export function SidebarNav() {
           </div>
           
           <SidebarSeparator className="my-2 group-data-[collapsible=icon]:hidden" />
+          
+          {renderNavItems(STORY_NAV_ITEMS, "Story Tools")}
+          <SidebarSeparator className="my-4" />
 
           {renderNavItems(WORLD_NAV_ITEMS, "World Management")}
           <SidebarSeparator className="my-4" />
