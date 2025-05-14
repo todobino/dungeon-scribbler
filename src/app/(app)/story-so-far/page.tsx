@@ -138,19 +138,8 @@ export default function StorySoFarPage() {
 
   const sortedSessionNumbers = Object.keys(groupedPlotPoints)
     .map(Number)
-    .sort((a, b) => a - b)
-    .filter(sessionNum => sessionNum <= currentSessionNumber); // Only show up to current session
-
-  // Ensure currentSessionNumber is in sortedSessionNumbers if no plot points exist for it yet
-  if (!sortedSessionNumbers.includes(currentSessionNumber) && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) {
-     const maxLoggedSession = sortedSessionNumbers.length > 0 ? Math.max(...sortedSessionNumbers) : 0;
-     if (currentSessionNumber > maxLoggedSession) {
-        // This logic path is a bit complex; ensure currentSessionNumber is always represented if active
-        // For simplicity, we'll rely on the main log display logic to handle it.
-        // It's more about what's available to display. If currentSessionNumber has no points, its div won't show in the loop.
-        // The "Add New Plot Point for Session X" card will always show the correct currentSessionNumber.
-     }
-  }
+    .sort((a, b) => b - a) // Changed to b - a for reverse chronological order
+    .filter(sessionNum => sessionNum <= currentSessionNumber); 
 
 
   return (
@@ -168,14 +157,57 @@ export default function StorySoFarPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
+              <CardTitle>Add New Plot Point for Session {currentSessionNumber}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="new-plot-point">Event Description</Label>
+                <Textarea 
+                  id="new-plot-point" 
+                  value={newPlotPoint} 
+                  onChange={(e) => setNewPlotPoint(e.target.value)}
+                  placeholder="e.g., The party discovered the hidden cultist hideout."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleAddPlotPoint}><PlusCircle className="mr-2 h-5 w-5"/>Add to Log (Session {currentSessionNumber})</Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Campaign Log</CardTitle>
-              <CardDescription>A chronological log of key events, summarized for past sessions.</CardDescription>
+              <CardDescription>A chronological log of key events, summarized for past sessions. Most recent sessions appear first.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {plotPoints.length === 0 && (
-                <p className="text-muted-foreground">No plot points recorded yet. Add the first one below!</p>
+                <p className="text-muted-foreground">No plot points recorded yet. Add the first one above!</p>
               )}
               <div className="max-h-[70vh] overflow-y-auto space-y-6 pr-2">
+                 {/* Display Current Session (Always Detailed) first if it is part of sorted numbers */}
+                 {/* Or handle if currentSessionNumber is not in sortedSessionNumbers yet (first session) */}
+                 { (groupedPlotPoints[currentSessionNumber] || []).length > 0 || !sortedSessionNumbers.includes(currentSessionNumber) ? (
+                    <div key={`session-${currentSessionNumber}-current`}>
+                        <div className="flex justify-between items-center mb-2 sticky top-0 bg-card py-1 z-10 border-b">
+                            <h3 className="text-lg font-semibold text-primary">Session {currentSessionNumber} (Current)</h3>
+                        </div>
+                        <div className="space-y-3">
+                            {(groupedPlotPoints[currentSessionNumber] || []).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(point => (
+                            <div key={point.id} className="p-3 border rounded-md bg-muted/30 shadow-sm">
+                                <p className="text-sm">{point.text}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{new Date(point.timestamp).toLocaleString()}</p>
+                            </div>
+                            ))}
+                            {(groupedPlotPoints[currentSessionNumber] || []).length === 0 && (
+                                 <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session yet.</p>
+                            )}
+                        </div>
+                    </div>
+                 ) : null }
+
+
                 {/* Display Past Sessions (Summarized or Detailed) */}
                 {sortedSessionNumbers.filter(sessionNum => sessionNum < currentSessionNumber).map(sessionNum => {
                   const viewMode = sessionViewModes[sessionNum] || 'summary'; // Default to summary for past
@@ -184,7 +216,7 @@ export default function StorySoFarPage() {
                     <div key={`session-${sessionNum}`}>
                       <div className="flex justify-between items-center mb-2 sticky top-0 bg-card py-1 z-10 border-b">
                         <h3 className="text-lg font-semibold">Session {sessionNum}</h3>
-                        {summaryText ? ( // Only show toggle if a summary exists
+                        {summaryText ? ( 
                           <Button variant="outline" size="sm" onClick={() => toggleSessionView(sessionNum)}>
                             {viewMode === 'summary' ? <List className="mr-2 h-4 w-4"/> : <AlignLeft className="mr-2 h-4 w-4"/>}
                             {viewMode === 'summary' ? 'View Details' : 'View Summary'}
@@ -213,47 +245,8 @@ export default function StorySoFarPage() {
                     </div>
                   );
                 })}
-                
-                {/* Display Current Session (Always Detailed) */}
-                <div>
-                    <div className="flex justify-between items-center mb-2 sticky top-0 bg-card py-1 z-10 border-b">
-                        <h3 className="text-lg font-semibold text-primary">Session {currentSessionNumber} (Current)</h3>
-                    </div>
-                    <div className="space-y-3">
-                        {(groupedPlotPoints[currentSessionNumber] || []).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map(point => (
-                        <div key={point.id} className="p-3 border rounded-md bg-muted/30 shadow-sm">
-                            <p className="text-sm">{point.text}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{new Date(point.timestamp).toLocaleString()}</p>
-                        </div>
-                        ))}
-                        {(groupedPlotPoints[currentSessionNumber] || []).length === 0 && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0 && (
-                             <p className="text-sm text-muted-foreground italic px-1">No plot points recorded for this session yet.</p>
-                        )}
-                    </div>
-                </div>
               </div>
             </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Add New Plot Point for Session {currentSessionNumber}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="new-plot-point">Event Description</Label>
-                <Textarea 
-                  id="new-plot-point" 
-                  value={newPlotPoint} 
-                  onChange={(e) => setNewPlotPoint(e.target.value)}
-                  placeholder="e.g., The party discovered the hidden cultist hideout."
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleAddPlotPoint}><PlusCircle className="mr-2 h-5 w-5"/>Add to Log (Session {currentSessionNumber})</Button>
-            </CardFooter>
           </Card>
         </div>
 
@@ -308,7 +301,7 @@ export default function StorySoFarPage() {
                 <CardTitle className="text-lg">How to Use</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
-                <p>1. Log major events for the <span className="font-semibold">current session ({currentSessionNumber})</span>.</p>
+                <p>1. Log major events for the <span className="font-semibold">current session ({currentSessionNumber})</span> using the input above the log.</p>
                 <p>2. Use "Start Next Session" to advance. This automatically summarizes the completed session if it has plot points.</p>
                 <p>3. Past sessions will show their summary by default. Click "View Details" to see the original plot points.</p>
                 <p>4. Use the "Generate Full Campaign Summary" for a recap of everything.</p>
@@ -335,3 +328,4 @@ export default function StorySoFarPage() {
     </div>
   );
 }
+
