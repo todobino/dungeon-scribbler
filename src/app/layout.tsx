@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 // import { GeistMono } from 'geist/font/mono'; // Removed due to module not found error
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
 import AppProviders from '@/components/layout/app-providers';
+import ClientToaster from '@/components/layout/client-toaster';
+
 
 const geistSans = GeistSans;
 // const geistMono = GeistMono; // Removed
@@ -24,7 +25,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} font-sans antialiased`}>
         <AppProviders>
           {children}
-          <Toaster />
+          <ClientToaster />
         </AppProviders>
       </body>
     </html>
