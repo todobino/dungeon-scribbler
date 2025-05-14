@@ -16,9 +16,6 @@ export const APP_NAME = "Dungeon Scribbler";
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
-  // Dashboard is removed, Party Manager access is moved.
-  // { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  // { label: 'Party Manager', href: '/party-manager', icon: Users },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Campaign Journal', href: '/campaign-journal', icon: BookText },
   { label: 'Random Tables', href: '/random-tables', icon: Dice5 },
@@ -26,15 +23,14 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const STORY_NAV_ITEMS: NavItem[] = [
-  // Original "Story So Far" removed
-  { label: 'Story So Far (Refactored)', href: '/story-so-far-refactored', icon: History, isGenAI: true, disabled: false },
-  { label: 'Next Session Goals', href: '/next-session-goals', icon: ClipboardList, isGenAI: true, disabled: false },
+  { label: 'Adventure Recap', href: '/story-so-far-refactored', icon: History, isGenAI: true, disabled: false },
+  { label: 'Next Session Goals', href: '/next-session-goals-refactored', icon: ClipboardList, isGenAI: true, disabled: false },
 ];
 
 export const WORLD_NAV_ITEMS: NavItem[] = [
   { label: 'Factions', href: '/world/factions', icon: ShieldCheck, disabled: false },
   { label: 'Locations', href: '/world/locations', icon: MapPinIcon, disabled: true },
-  { label: 'NPCs List', href: '/world/npcs', icon: Users, disabled: true }, // Renamed to NPCs List for clarity
+  { label: 'NPCs List', href: '/world/npcs', icon: Users, disabled: true },
 ];
 
 export const ADVANCED_NAV_ITEMS: NavItem[] = [
@@ -112,10 +108,8 @@ export const getFactionReputationColorClass = (reputation: number): string => {
 };
 
 // Storage Key Prefixes for Campaign-Specific Data
-// Old Story So Far keys removed
-export const GOALS_KEY_PREFIX = "dungeonScribblerGoals_";
 
-// Refactored Story So Far Page Keys - These are now the primary keys for story logging
+// Adventure Recap (formerly Story So Far Refactored) Page Keys
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = "dsRefactoredPlotPoints_";
 export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = "dsRefactoredCurrentSession_";
 export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = "dsRefactoredSessionSummaries_";
@@ -123,3 +117,5 @@ export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = "dsRefactoredSessionView
 export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = "dsRefactoredFullCampaignSummary_";
 export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = "dsRefactoredSummaryDetailLevel_";
 
+// Next Session Goals (Refactored) Page Keys
+export const REFACTORED_GOALS_KEY_PREFIX = "dsRefactoredGoals_";
