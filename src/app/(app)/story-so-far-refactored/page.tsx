@@ -361,7 +361,7 @@ export default function StorySoFarRefactoredPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center"><History className="mr-3 h-8 w-8 text-primary"/>Adventure Recap</h1>
+        <h1 className="text-3xl font-bold">Adventure Recap</h1>
         <div className="flex items-center gap-2">
           <Button 
             onClick={handleAdvanceSession} 
@@ -378,17 +378,16 @@ export default function StorySoFarRefactoredPage() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6"> {/* This column now holds only the Campaign Log */}
-           <Card>
+           <Card className="flex flex-col"> {/* Make card a flex column */}
             <CardHeader>
               <CardTitle>Campaign Log</CardTitle>
-              {/* Description removed as per request */}
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 flex-grow min-h-0"> {/* Make content grow and handle overflow */}
               {allSessionNumbers.length === 0 || (allSessionNumbers.length === 1 && allSessionNumbers[0] === currentSessionNumber && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) ? (
                 <p className="text-muted-foreground text-center py-4 px-6">No plot points recorded yet for this campaign. Add the first one using the input on the right!</p>
               ) : (
-                <ScrollArea className="max-h-[70vh]"> {/* ScrollArea directly inside CardContent before mapping sessions */}
-                  <div className="space-y-6"> {/* This div will handle spacing between session blocks */}
+                <ScrollArea className="h-full max-h-[70vh]"> {/* ScrollArea takes full height or max-h */}
+                  <div className="space-y-6"> 
                     {allSessionNumbers.map(sessionNum => {
                       const isCurrentSession = sessionNum === currentSessionNumber;
                       const sessionPoints = plotPoints.filter(p => p.sessionNumber === sessionNum);
@@ -410,7 +409,7 @@ export default function StorySoFarRefactoredPage() {
                             )}
                           </div>
                           
-                          <div className="px-6 pt-2"> {/* Padding for content below sticky header */}
+                          <div className="px-6 pt-2"> 
                             {isLoadingThisSessionSummary && (
                                 <div className="p-3 border rounded-md bg-muted/30 shadow-sm flex items-center justify-center">
                                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -478,8 +477,8 @@ export default function StorySoFarRefactoredPage() {
           </Card>
         </div>
 
-        <div className="lg:col-span-1 space-y-6"> {/* This column now holds Add Plot Point & AI Tools */}
-          <Card> {/* Moved "Add Plot Point" to top of right column */}
+        <div className="lg:col-span-1 space-y-6"> 
+          <Card> 
             <CardHeader>
               <CardTitle>Add Plot Point to Current Session ({currentSessionNumber})</CardTitle>
             </CardHeader>
