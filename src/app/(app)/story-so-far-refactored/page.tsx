@@ -377,17 +377,18 @@ export default function StorySoFarRefactoredPage() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6"> {/* This column now holds only the Campaign Log */}
            <Card>
             <CardHeader>
               <CardTitle>Campaign Log</CardTitle>
+              {/* Description removed as per request */}
             </CardHeader>
             <CardContent className="p-0">
               {allSessionNumbers.length === 0 || (allSessionNumbers.length === 1 && allSessionNumbers[0] === currentSessionNumber && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) ? (
                 <p className="text-muted-foreground text-center py-4 px-6">No plot points recorded yet for this campaign. Add the first one using the input on the right!</p>
               ) : (
-                <ScrollArea className="max-h-[70vh]">
-                  <div className="space-y-6">
+                <ScrollArea className="max-h-[70vh]"> {/* ScrollArea directly inside CardContent before mapping sessions */}
+                  <div className="space-y-6"> {/* This div will handle spacing between session blocks */}
                     {allSessionNumbers.map(sessionNum => {
                       const isCurrentSession = sessionNum === currentSessionNumber;
                       const sessionPoints = plotPoints.filter(p => p.sessionNumber === sessionNum);
@@ -409,7 +410,7 @@ export default function StorySoFarRefactoredPage() {
                             )}
                           </div>
                           
-                          <div className="px-6 pt-2">
+                          <div className="px-6 pt-2"> {/* Padding for content below sticky header */}
                             {isLoadingThisSessionSummary && (
                                 <div className="p-3 border rounded-md bg-muted/30 shadow-sm flex items-center justify-center">
                                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -427,9 +428,9 @@ export default function StorySoFarRefactoredPage() {
                               <div className="space-y-4">
                                 {renderFormattedPlotPoints(sessionPoints)}
                                 {!isCurrentSession && viewMode === 'details' && (
-                                  <Card className="mt-4 p-4 space-y-3 bg-card border-dashed">
+                                  <div className="space-y-4 mt-4 border-t pt-4">
                                     <div>
-                                      <Label htmlFor={`past-plot-point-${sessionNum}`}>Add Forgotten Event to Session {sessionNum}</Label>
+                                      <h4 className="font-semibold text-sm mb-2">Add Forgotten Event to Session {sessionNum}</h4>
                                       <Textarea 
                                         id={`past-plot-point-${sessionNum}`}
                                         value={pastPlotPointInput[sessionNum] || ""}
@@ -449,6 +450,7 @@ export default function StorySoFarRefactoredPage() {
                                     </div>
                                     {(summaryText || sessionPoints.length > 0) && ( 
                                       <div>
+                                        <h4 className="font-semibold text-sm mb-2">Session Summary Tools</h4>
                                         <Button 
                                           variant="outline" 
                                           size="sm" 
@@ -456,12 +458,12 @@ export default function StorySoFarRefactoredPage() {
                                           disabled={isLoadingThisSessionSummary || isGeneratingGlobalSummary}
                                         >
                                           <Zap className="mr-2 h-4 w-4"/> 
-                                          { isLoadingThisSessionSummary ? 'Regenerating...' : 'Re-generate Summary for Session ' + sessionNum }
+                                          { isLoadingThisSessionSummary ? 'Regenerating...' : 'Re-generate Summary' }
                                         </Button>
-                                        <p className="text-xs text-muted-foreground mt-1">Uses the global detail level from the right panel.</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Uses the global detail level.</p>
                                       </div>
                                     )}
-                                  </Card>
+                                  </div>
                                 )}
                               </div>
                             )}
@@ -476,8 +478,8 @@ export default function StorySoFarRefactoredPage() {
           </Card>
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
+        <div className="lg:col-span-1 space-y-6"> {/* This column now holds Add Plot Point & AI Tools */}
+          <Card> {/* Moved "Add Plot Point" to top of right column */}
             <CardHeader>
               <CardTitle>Add Plot Point to Current Session ({currentSessionNumber})</CardTitle>
             </CardHeader>
@@ -497,6 +499,7 @@ export default function StorySoFarRefactoredPage() {
               <Button onClick={handleAddPlotPointToCurrentSession} disabled={!newPlotPointText.trim()}><PlusCircle className="mr-2 h-5 w-5"/>Add to Log</Button>
             </CardFooter>
           </Card>
+          
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary"/>AI Story Tools</CardTitle>
