@@ -17,6 +17,7 @@ import type { SpellSummary, SpellDetail, HomebrewSpellFormData } from "@/lib/typ
 import { SPELLBOOK_HOMEBREW_STORAGE_KEY, SPELL_SCHOOLS } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
 
 interface SpellbookDrawerProps {
   open: boolean;
@@ -109,7 +110,7 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
 
 
   useEffect(() => {
-    let currentCombined = [...apiSpells, ...homebrewSpells.map(hb => ({...hb, index: hb.index || hb.name.toLowerCase().replace(/\s+/g, '-'), name: hb.name, url: ''}))]; // Ensure homebrew has index
+    let currentCombined = [...apiSpells, ...homebrewSpells.map(hb => ({...hb, index: hb.index || hb.name.toLowerCase().replace(/\s+/g, '-'), name: hb.name, url: ''}))]; 
     if (showHomebrewOnly) {
       currentCombined = homebrewSpells.map(hb => ({...hb, index: hb.index || hb.name.toLowerCase().replace(/\s+/g, '-'), name: hb.name, url: ''}));
     }
@@ -135,7 +136,7 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
         setIsUnsavedChangesDialogOpen(true);
         return;
     }
-    handleExitCreationMode(); // Clear form if switching
+    handleExitCreationMode(); 
 
     if (spellDetailsCache[spellIndex]) {
       setOpenAccordionItem(spellIndex);
@@ -173,7 +174,7 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
         setIsUnsavedChangesDialogOpen(true);
         return;
     }
-    handleExitCreationMode(); // Clear form if switching
+    handleExitCreationMode(); 
 
     setOpenAccordionItem(value || null);
     if (value && !spellDetailsCache[value] && !isLoadingDetail[value]) {
@@ -223,7 +224,7 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
       subclasses: homebrewSpellFormData.subclasses?.split(',').map(sc => sc.trim()).filter(Boolean) || [],
       isHomebrew: true,
       source: 'homebrew',
-      ritual: false, // Default, could add to form
+      ritual: false, 
     };
     
     if (editingHomebrewSpellIndex) {
@@ -295,13 +296,13 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
     setIsUnsavedChangesDialogOpen(false);
     if (action === 'save') {
       handleSaveHomebrewSpell();
-      // if save was successful and there was a pending action, proceed
-      if (pendingActionArgs && (!error || !homebrewSpellFormData.name.trim())) { // Check error to avoid proceeding if save failed
+      
+      if (pendingActionArgs && (!error || !homebrewSpellFormData.name.trim())) { 
         if (pendingActionArgs.type === 'select_spell' && pendingActionArgs.spellIndex) {
           const spell = combinedSpells.find(s => s.index === pendingActionArgs.spellIndex);
           fetchSpellDetail(pendingActionArgs.spellIndex, (spell as SpellDetail)?.source || 'api');
         } else if (pendingActionArgs.type === 'create_new') {
-          handleOpenCreateHomebrewForm(); // Re-open clean form
+          handleOpenCreateHomebrewForm(); 
         }
       }
     } else if (action === 'discard') {
@@ -345,11 +346,10 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
     const classesString = typeof detail.classes === 'string' ? detail.classes : Array.isArray(detail.classes) ? detail.classes.map(c => typeof c === 'string' ? c : c.name).join(", ") : "";
     const subclassesString = typeof detail.subclasses === 'string' ? detail.subclasses : Array.isArray(detail.subclasses) ? detail.subclasses.map(sc => typeof sc === 'string' ? sc : sc.name).join(", ") : "";
 
-
     return (
       <div className="space-y-2 text-xs">
         <div className="flex justify-between items-center">
-            <p><strong>Level:</strong> {detail.level === 0 ? "Cantrip" : detail.level} ({detail.school.name})</p>
+            <p><strong>Level:</strong> {detail.level === 0 ? "Cantrip" : detail.level} ({detail.school ? detail.school.name : 'Unknown School'})</p>
             {detail.isHomebrew && (
                 <Button variant="ghost" size="sm" onClick={() => handleOpenEditHomebrewForm(detail)}><Edit3 className="mr-1 h-3 w-3"/> Edit Homebrew</Button>
             )}
@@ -401,12 +401,12 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
     <>
     <Sheet open={open} onOpenChange={(isOpen) => {
         if (!isOpen && isCreatingHomebrewSpell && isHomebrewFormDirty) {
-            setIsUnsavedChangesDialogOpen(true); // Prompt before closing sheet
-            setPendingActionArgs(null); // No specific action, just closing sheet
-            return; // Don't close sheet yet
+            setIsUnsavedChangesDialogOpen(true); 
+            setPendingActionArgs(null); 
+            return; 
         }
         onOpenChange(isOpen);
-        if (!isOpen) handleExitCreationMode(); // Reset form if sheet closes
+        if (!isOpen) handleExitCreationMode(); 
     }}>
       <SheetContent
         side="right"
@@ -475,7 +475,7 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
                   <div className="grid grid-cols-2 gap-3 items-center">
                     <div><Label htmlFor="hb-duration">Duration*</Label><Input id="hb-duration" name="duration" value={homebrewSpellFormData.duration} onChange={handleHomebrewFormChange} /></div>
                     <div className="flex items-center space-x-2 pt-5">
-                        <Switch id="hb-concentration" name="concentration" checked={homebrewSpellFormData.concentration} onCheckedChange={(checked) => setHomebrewSpellFormData(prev => ({...prev, concentration: checked}))}/>
+                        <Switch id="hb-concentration" name="concentration" checked={homebrewSpellFormData.concentration} onCheckedChange={(checked) => { setIsHomebrewFormDirty(true); setHomebrewSpellFormData(prev => ({...prev, concentration: checked})); }}/>
                         <Label htmlFor="hb-concentration">Concentration?</Label>
                     </div>
                   </div>
@@ -546,7 +546,7 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
                             <span className="text-muted-foreground">Loading details...</span>
                           </div>
                         ) : (
-                          renderSpellDetailContent(spellDetailsCache[(spell as SpellDetail).index] || (spell as SpellDetail)?.isHomebrew ? (spell as SpellDetail) : undefined)
+                          renderSpellDetailContent(spellDetailsCache[(spell as SpellDetail).index] || ((spell as SpellDetail)?.isHomebrew ? (spell as SpellDetail) : undefined))
                         )}
                       </AccordionContent>
                     </AccordionItem>
@@ -640,4 +640,3 @@ const buttonVariants = cva(
   }
 );
 
-import { cva, type VariantProps } from "class-variance-authority"; // Moved import down
