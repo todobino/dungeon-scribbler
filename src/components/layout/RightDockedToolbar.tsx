@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react"; // Added React import
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
@@ -30,7 +30,7 @@ export function RightDockedToolbar() {
   };
 
   const isCombinedToolActive = (itemId: string) => {
-    return openDrawerId === COMBINED_TOOLS_DRAWER_ID && 
+    return openDrawerId === COMBINED_TOOLS_DRAWER_ID &&
            (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) &&
            activeCombinedTab === itemId;
   };
@@ -49,7 +49,7 @@ export function RightDockedToolbar() {
                     size="icon"
                     className={cn(
                       "h-12 w-12 rounded-md", // Increased size
-                      (isCombinedToolActive(item.id) || openDrawerId === item.id) && 
+                      (isCombinedToolActive(item.id) || openDrawerId === item.id) &&
                       "bg-primary/20 text-primary ring-2 ring-primary"
                     )}
                     onClick={() => handleToggleDrawer(item.id)}
@@ -73,9 +73,9 @@ export function RightDockedToolbar() {
         onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
         defaultTab={activeCombinedTab}
       />
-      <MonsterMashDrawer 
-        open={openDrawerId === MONSTER_MASH_DRAWER_ID} 
-        onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)} 
+      <MonsterMashDrawer
+        open={openDrawerId === MONSTER_MASH_DRAWER_ID}
+        onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
       />
     </>
   );
