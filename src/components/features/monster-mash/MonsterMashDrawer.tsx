@@ -38,7 +38,7 @@ import { Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, Shi
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 
 
 const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
@@ -57,7 +57,7 @@ interface SortConfig {
 }
 
 const crToNumber = (cr: string | number | undefined): number => {
-  if (cr === undefined) return -1; // Treat undefined CR as lowest for sorting/filtering if needed
+  if (cr === undefined) return -1;
   if (typeof cr === 'number') return cr;
   if (typeof cr === 'string') {
     if (cr.toLowerCase() === "unknown" || cr.toLowerCase() === "n/a") return -1;
@@ -67,7 +67,7 @@ const crToNumber = (cr: string | number | undefined): number => {
     }
     return parseFloat(cr);
   }
-  return -1; // Fallback for unexpected types
+  return -1; 
 };
 
 const formatCRDisplay = (crValue: string | number | undefined): string => {
@@ -81,14 +81,12 @@ const formatCRDisplay = (crValue: string | number | undefined): string => {
     if (numCR === 0.5) return "1/2";
     if (numCR === 0.75) return "3/4"; 
     if (Number.isInteger(numCR)) return numCR.toString();
-    // For other fractions, attempt to display or fallback
     if (numCR > 0 && numCR < 1) {
-        // A simple fallback for unhandled fractions. Could be improved.
         for (let i = 8; i >= 2; i /= 2) {
             if (Math.abs(numCR - 1/i) < 0.001) return `1/${i}`;
         }
     }
-    return numCR.toString(); // Fallback for other decimal values if any
+    return numCR.toString(); 
 };
 
 const CR_SLIDER_MIN = 0;
@@ -96,12 +94,12 @@ const CR_SLIDER_MAX = 30;
 
 const snapCRValue = (rawValue: number): number => {
   if (rawValue <= 0) return 0;
-  if (rawValue < 0.125) return 0; // Snap to 0 if very close
-  if (rawValue < (0.125 + 0.25) / 2) return 0.125; // Snap to 1/8
-  if (rawValue < (0.25 + 0.5) / 2) return 0.25;   // Snap to 1/4
-  if (rawValue < (0.5 + 0.75) / 2) return 0.5;    // Snap to 1/2
-  if (rawValue < (0.75 + 1) / 2) return 0.75;     // Snap to 3/4
-  return Math.round(rawValue); // Snap to nearest integer for 1 and above
+  if (rawValue < 0.125) return 0; 
+  if (rawValue < (0.125 + 0.25) / 2) return 0.125; 
+  if (rawValue < (0.25 + 0.5) / 2) return 0.25;   
+  if (rawValue < (0.5 + 0.75) / 2) return 0.5;    
+  if (rawValue < (0.75 + 1) / 2) return 0.75;     
+  return Math.round(rawValue); 
 };
 
 const initialHomebrewFormData: HomebrewMonsterFormData = {
@@ -156,11 +154,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [isCreatingHomebrew, setIsCreatingHomebrew] = useState(false);
   const [editingHomebrewIndex, setEditingHomebrewIndex] = useState<string | null>(null); 
   const [homebrewFormData, setHomebrewFormData] = useState<HomebrewMonsterFormData>(initialHomebrewFormData);
-  const [initialEditFormData, setInitialEditFormData] = useState<HomebrewMonsterFormData | null>(null); // To track original data for dirty check during edit
+  const [initialEditFormData, setInitialEditFormData] = useState<HomebrewMonsterFormData | null>(null);
 
   const [isHomebrewFormDirty, setIsHomebrewFormDirty] = useState(false);
   const [isUnsavedChangesDialogOpen, setIsUnsavedChangesDialogOpen] = useState(false);
-  const [pendingActionArgs, setPendingActionArgs] = useState<{ type: 'fetchMonster' | 'createHomebrew', monsterIndex?: string, source?: 'api' | 'homebrew' } | null>(null);
+  const [pendingMonsterFetchArgs, setPendingMonsterFetchArgs] = useState<{ index: string; source?: 'api' | 'homebrew' } | null>(null);
 
 
   const [isDeleteHomebrewConfirmOpen, setIsDeleteHomebrewConfirmOpen] = useState(false);
@@ -178,7 +176,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [resultsSortConfig, setResultsSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
   const [favoritesSortConfig, setFavoritesSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
   const [homebrewSortConfig, setHomebrewSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
-
 
   const applyFiltersAndSort = useCallback(() => {
     let combinedData: MonsterSummaryWithCR[] = [
@@ -254,10 +251,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
               source: 'api' as 'api'
             };
           }
-          // console.warn(`Failed to fetch details for ${summary.name}: ${detailResponse.statusText}`);
           return { index: summary.index, name: summary.name, url: summary.url, source: 'api' as 'api', cr: undefined, type: undefined };
         } catch (detailError) {
-            // console.warn(`Error fetching details for ${summary.name}:`, detailError);
             return { index: summary.index, name: summary.name, url: summary.url, source: 'api' as 'api', cr: undefined, type: undefined };
         }
       });
@@ -268,16 +263,15 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       localStorage.setItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY, JSON.stringify(validEnrichedMonsters));
       setAllMonstersData(validEnrichedMonsters);
     } catch (err: any) {
-      console.error("Error building full monster index:", err);
-      setError("Could not build local monster index. Some features might be limited. Please try refreshing.");
+      setError("Could not build local monster index. Refresh to try again. Some features may be limited.");
       if (allMonstersData.length === 0) { 
          try {
             const summaryResponseFallback = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
             if (summaryResponseFallback.ok) {
                 const summaryDataFallback = await summaryResponseFallback.json();
                 setAllMonstersData((summaryDataFallback.results || []).map((m: MonsterSummary) => ({...m, source: 'api', cr: undefined, type: undefined })));
-            } else { setError("Failed to load even basic monster list. Please try again later."); }
-         } catch (fallbackErr) { setError("Failed to load basic monster list after index build error. Please try again later."); }
+            } else { setError("Failed to load monster list. Please try again later."); }
+         } catch (fallbackErr) { setError("Failed to load monster list. Please try again later."); }
       }
     } finally {
       setIsBuildingIndex(false);
@@ -299,7 +293,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 fetchAndCacheFullMonsterIndex();
             }
         } catch (e) {
-            console.error("Error loading cached monster index:", e);
             fetchAndCacheFullMonsterIndex(); 
         }
     }
@@ -327,14 +320,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       if (storedFavorites) {
         setFavorites(JSON.parse(storedFavorites));
       }
-    } catch (e) { console.error("Error loading favorites from localStorage", e); setFavorites([]); }
+    } catch (e) { setFavorites([]); }
 
     try {
       const storedHomebrew = localStorage.getItem(MONSTER_MASH_HOMEBREW_STORAGE_KEY);
       if (storedHomebrew) {
         setHomebrewMonsters(JSON.parse(storedHomebrew));
       }
-    } catch (e) { console.error("Error loading homebrew monsters from localStorage", e); setHomebrewMonsters([]); }
+    } catch (e) { setHomebrewMonsters([]); }
   }, []);
 
   useEffect(() => {
@@ -357,16 +350,13 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
 
   const proceedWithPendingAction = () => {
-    if (pendingActionArgs) {
-      if (pendingActionArgs.type === 'fetchMonster' && pendingActionArgs.monsterIndex) {
-        fetchMonsterDetail(pendingActionArgs.monsterIndex, pendingActionArgs.source || 'api');
-      } else if (pendingActionArgs.type === 'createHomebrew') {
-        handleOpenCreateHomebrewForm(true); // Pass a flag to skip dirty check
+    if (pendingMonsterFetchArgs) {
+      if (pendingMonsterFetchArgs.index) {
+        fetchMonsterDetail(pendingMonsterFetchArgs.index, pendingMonsterFetchArgs.source || 'api');
       }
-      setPendingActionArgs(null);
+      setPendingMonsterFetchArgs(null);
     }
-    // Ensure form is reset if we were creating and now proceeding to fetch
-    if (isCreatingHomebrew && pendingActionArgs?.type === 'fetchMonster') {
+    if (isCreatingHomebrew && pendingMonsterFetchArgs?.index) {
         setIsCreatingHomebrew(false);
         setEditingHomebrewIndex(null);
         setHomebrewFormData(initialHomebrewFormData);
@@ -379,7 +369,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     setIsUnsavedChangesDialogOpen(false);
     if (choice === 'save') {
       handleSaveHomebrewMonster(); 
-      setTimeout(() => { // Give save a moment to complete state updates
+      setTimeout(() => { 
         proceedWithPendingAction();
       }, 100); 
     } else if (choice === 'discard') {
@@ -389,8 +379,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setInitialEditFormData(null); 
       setIsHomebrewFormDirty(false);
       proceedWithPendingAction();
-    } else { // Cancel
-      setPendingActionArgs(null); // Clear any pending action if user cancels
+    } else { 
+      setPendingMonsterFetchArgs(null); 
     }
   };
 
@@ -406,7 +396,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     };
 
     if (!skipDirtyCheck && isCreatingHomebrew && isHomebrewFormDirty) {
-        setPendingActionArgs({ type: 'createHomebrew' });
+        setPendingMonsterFetchArgs(null); // No monster to fetch, just deciding about current form
         setIsUnsavedChangesDialogOpen(true);
     } else {
         action();
@@ -424,34 +414,27 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         setIsHomebrewFormDirty(false); 
     };
     if (isCreatingHomebrew && isHomebrewFormDirty && editingHomebrewIndex !== monster.index) {
-      setPendingActionArgs({ type: 'fetchMonster', monsterIndex: monster.index, source: 'homebrew' }); 
+      setPendingMonsterFetchArgs({ index: monster.index, source: 'homebrew' }); 
       setIsUnsavedChangesDialogOpen(true);
     } else {
       action();
     }
   };
 
-  const handleMonsterClick = (monsterIndex: string, source: 'api' | 'homebrew' = 'api') => {
-     if (isCreatingHomebrew && isHomebrewFormDirty && (!editingHomebrewIndex || editingHomebrewIndex !== monsterIndex)) {
-      setPendingActionArgs({ type: 'fetchMonster', monsterIndex, source });
-      setIsUnsavedChangesDialogOpen(true);
-    } else {
-      fetchMonsterDetail(monsterIndex, source);
-    }
-  };
-
   const fetchMonsterDetail = async (monsterIndex: string, source: 'api' | 'homebrew' = 'api') => {
     if (!monsterIndex) return;
 
-    // This action should always clear any creation/edit state unless it's re-editing the same monster
-    if (isCreatingHomebrew && editingHomebrewIndex !== monsterIndex) {
-        setIsCreatingHomebrew(false);
-        setEditingHomebrewIndex(null);
-        setHomebrewFormData(initialHomebrewFormData);
-        setInitialEditFormData(null);
-        setIsHomebrewFormDirty(false);
+    if (isCreatingHomebrew && isHomebrewFormDirty && editingHomebrewIndex !== monsterIndex) {
+        setPendingMonsterFetchArgs({index: monsterIndex, source});
+        setIsUnsavedChangesDialogOpen(true);
+        return;
     }
-
+    
+    setIsCreatingHomebrew(false);
+    setEditingHomebrewIndex(null);
+    setHomebrewFormData(initialHomebrewFormData);
+    setInitialEditFormData(null);
+    setIsHomebrewFormDirty(false);
 
     setIsLoadingDetail(true); setError(null); setSelectedMonster(null); 
     if (source === 'homebrew') {
@@ -471,7 +454,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         const data: MonsterDetail = await response.json();
         setSelectedMonster({...data, source: 'api'}); 
     } catch (err: any) {
-        console.error("Error fetching monster detail:", err);
         setError(err.message || `Could not load details for ${monsterIndex}.`);
         setSelectedMonster(null);
     } finally {
@@ -487,52 +469,17 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     } else {
       let crNum: number;
       let typeValue: string | undefined;
-      let sourceValue: 'api' | 'homebrew' = (monsterToToggle as MonsterSummaryWithCR).source || 'api';
+      let sourceValue: 'api' | 'homebrew' = (monsterToToggle as MonsterSummaryWithCR).source || ( (monsterToToggle as MonsterDetail).isHomebrew ? 'homebrew' : 'api' );
 
       if ('challenge_rating' in monsterToToggle && monsterToToggle.challenge_rating !== undefined) { 
         crNum = crToNumber(monsterToToggle.challenge_rating);
         typeValue = monsterToToggle.type;
-        if ((monsterToToggle as MonsterDetail).isHomebrew || (monsterToToggle as MonsterDetail).source === 'homebrew') sourceValue = 'homebrew'; 
       } else if ('cr' in monsterToToggle && monsterToToggle.cr !== undefined) { 
         crNum = monsterToToggle.cr;
         typeValue = monsterToToggle.type;
       } else {
-        if (sourceValue === 'homebrew') {
-             // This case should ideally not happen if homebrew monsters always have CR
-             const hbMonster = homebrewMonsters.find(m => m.index === monsterToToggle.index);
-             crNum = hbMonster ? crToNumber(hbMonster.challenge_rating) : -1;
-             typeValue = hbMonster?.type;
-             if (crNum === -1) {
-                setError(`CR undefined for homebrew ${monsterToToggle.name}. Cannot add to favorites.`);
-                return;
-             }
-        } else {
-            // If API and CR not on summary, fetch details
-            setIsLoadingDetail(true); 
-            try {
-                const detailResponse = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToToggle.index}`);
-                if (!detailResponse.ok) {
-                    setError(`Could not fetch details for ${monsterToToggle.name} to add to favorites.`);
-                    setIsLoadingDetail(false);
-                    return;
-                }
-                const detailData: MonsterDetail = await detailResponse.json();
-                crNum = crToNumber(detailData.challenge_rating);
-                if (crNum === -1 && detailData.source !== 'homebrew') { // Check again after fetching
-                    setError(`CR undefined for ${detailData.name} after fetching. Cannot add to favorites.`);
-                    setIsLoadingDetail(false);
-                    return;
-                }
-                typeValue = detailData.type;
-                sourceValue = detailData.source || 'api'; 
-            } catch (favError) {
-                setError(`Error fetching details for ${monsterToToggle.name}. Cannot add to favorites.`);
-                setIsLoadingDetail(false);
-                return;
-            } finally {
-                setIsLoadingDetail(false);
-            }
-        }
+          setError(`CR undefined for ${monsterToToggle.name}. Cannot add to favorites.`);
+          return;
       }
       
       const newFavorite: FavoriteMonster = {
@@ -547,6 +494,17 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   };
 
   const isFavorite = (monsterIndex: string) => favorites.some(f => f.index === monsterIndex);
+
+  useEffect(() => {
+    if (isCreatingHomebrew && !editingHomebrewIndex && JSON.stringify(homebrewFormData) !== JSON.stringify(initialHomebrewFormData)) {
+      if(!isHomebrewFormDirty) setIsHomebrewFormDirty(true);
+    } else if (isCreatingHomebrew && editingHomebrewIndex && JSON.stringify(homebrewFormData) !== JSON.stringify(initialEditFormData)) {
+       if(!isHomebrewFormDirty) setIsHomebrewFormDirty(true);
+    }
+    // This effect is only to set dirty on first change if it's not already dirty
+    // No need to reset it to false here, that's handled on save/cancel.
+  }, [homebrewFormData, isCreatingHomebrew, editingHomebrewIndex, initialEditFormData, isHomebrewFormDirty]);
+
 
   const handleHomebrewFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -642,7 +600,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const handleCancelHomebrewForm = () => {
      if (isHomebrewFormDirty) {
         setIsUnsavedChangesDialogOpen(true);
-        setPendingActionArgs(null); 
+        setPendingMonsterFetchArgs(null); 
     } else {
         setIsCreatingHomebrew(false);
         setEditingHomebrewIndex(null);
@@ -754,7 +712,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     })
   , [homebrewMonsters, homebrewSortConfig]);
 
-  // END OF JS/TS LOGIC
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
@@ -762,86 +719,38 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden" 
         hideCloseButton={true} 
       >
-        <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex flex-row items-center justify-between sticky top-0 z-20 pr-8">
-          <div className="flex items-center gap-2">
-            <Skull className="mr-3 h-7 w-7"/>
-            <SheetTitle className="flex items-center text-2xl text-primary-foreground">
-              Monster Mash
-            </SheetTitle>
-          </div>
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80" tabIndex={-1}>
-                  <HelpCircle className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p>Search the D&D 5e bestiary or your homebrew creations. Building the local monster index (with CRs) may be slow on first open.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </SheetHeader>
+        <div className="flex flex-col h-full pr-8">
+            <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex flex-row items-center justify-between sticky top-0 z-20">
+            <div className="flex items-center gap-2">
+                <Skull className="mr-3 h-7 w-7"/>
+                <SheetTitle className="flex items-center text-2xl text-primary-foreground">
+                Monster Mash
+                </SheetTitle>
+            </div>
+            <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80" tabIndex={-1}>
+                    <HelpCircle className="h-5 w-5" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                    <p>Search the D&D 5e bestiary or your homebrew creations. Building the local monster index may be slow on first open.</p>
+                </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            </SheetHeader>
 
-        <div className="flex flex-1 min-h-0 border-t pr-8"> 
-          {/* Left Sidebar */}
-          <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-background flex flex-col overflow-y-auto">
-            <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
-              {/* Favorites Section */}
-              <AccordionItem value="favorites-section">
-                <div className="flex justify-between items-center w-full px-3 py-2 bg-muted rounded-t-md">
-                  <AccordionTrigger className="py-0 hover:no-underline text-left flex-grow text-lg font-semibold text-foreground">
-                    Favorites ({favorites.length})
-                  </AccordionTrigger>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup value={favoritesSortConfig.key} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
-                        <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Order</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup value={favoritesSortConfig.order} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
-                        <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <AccordionContent className="pt-1 pb-0 px-1">
-                  <Separator className="mb-2" />
-                  <ScrollArea className="h-60">
-                    {favorites.length === 0 ? <p className="text-sm text-muted-foreground p-2">No favorites yet.</p> : (
-                      <ul className="space-y-1">
-                        {sortedFavorites.map(fav => (
-                          <li key={fav.index} onClick={() => handleMonsterClick(fav.index, fav.source)}
-                            className={cn("p-2 rounded-md hover:bg-accent cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === fav.index && "bg-primary/10 text-primary font-medium")}>
-                            <span className="truncate">{fav.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(fav.cr)})</span></span>
-                            {fav.source === 'homebrew' && (
-                              <TooltipProvider delayDuration={50}>
-                                <Tooltip><TooltipTrigger asChild><Dna className="h-4 w-4 text-muted-foreground ml-1 shrink-0"/></TooltipTrigger><TooltipContent><p>Homebrew</p></TooltipContent></Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </li>))}
-                      </ul>
-                    )}
-                  </ScrollArea>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Homebrew Section */}
-              <AccordionItem value="homebrew-section">
-                 <div className="flex justify-between items-center w-full px-3 py-2 bg-muted">
-                  <AccordionTrigger className="py-0 hover:no-underline text-left flex-grow text-lg font-semibold text-foreground">
-                    Homebrew ({homebrewMonsters.length})
-                  </AccordionTrigger>
-                   <div className="flex items-center">
+            <div className="flex flex-1 min-h-0 border-t"> 
+            {/* Left Sidebar */}
+            <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-background flex flex-col overflow-y-auto">
+                <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
+                {/* Favorites Section */}
+                <AccordionItem value="favorites-section">
+                    <div className="flex justify-between items-center w-full px-3 py-2 bg-muted rounded-t-md">
+                    <AccordionTrigger className="py-0 hover:no-underline text-left flex-grow text-lg font-semibold text-foreground">
+                        Favorites ({favorites.length})
+                    </AccordionTrigger>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
@@ -850,306 +759,362 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
-                        <DropdownMenuRadioGroup value={homebrewSortConfig.key} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
+                        <DropdownMenuRadioGroup value={favoritesSortConfig.key} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
                             <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Order</DropdownMenuLabel>
-                        <DropdownMenuRadioGroup value={homebrewSortConfig.order} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
+                        <DropdownMenuRadioGroup value={favoritesSortConfig.order} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
                             <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
-                </div>
-                <AccordionContent className="pt-1 pb-0 px-1 space-y-2">
-                  <Separator />
-                  <Button onClick={() => handleOpenCreateHomebrewForm()} variant="outline" size="sm" className="w-full">
-                      <PlusCircle className="mr-2 h-4 w-4" /> Create New Homebrew
-                  </Button>
-                  {homebrewMonsters.length === 0 && !isCreatingHomebrew ? (
-                     <p className="text-sm text-muted-foreground p-2 text-center">No homebrew monsters yet.</p>
-                  ) : (
-                    <ScrollArea className="h-60">
-                      <ul className="space-y-1">
-                        {sortedHomebrew.map(hb => (
-                          <li key={hb.index} onClick={() => handleMonsterClick(hb.index, 'homebrew')}
-                            className={cn("p-2 rounded-md hover:bg-accent cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === hb.index && "bg-primary/10 text-primary font-medium")}>
-                            <span>{hb.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(hb.challenge_rating)})</span></span>
-                          </li>))}
-                      </ul>
-                    </ScrollArea>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-
-          {/* Middle Column: Search/Filters & Results List */}
-          <div className="w-2/5 flex flex-col border-r bg-background overflow-y-auto"> 
-            <div className="sticky top-0 bg-background z-10 py-3 px-4 space-y-3 border-b"> 
-                <div className="relative">
-                    <Input 
-                      id="monster-search" 
-                      placeholder="Search by Name..." 
-                      value={searchTerm} 
-                      onChange={(e) => setSearchTerm(e.target.value)} 
-                      className="pr-10 h-9 border-primary focus-visible:ring-primary" 
-                    />
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    {searchTerm && <Button variant="ghost" size="icon" className="absolute right-8 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
-                </div>
-                <div>
-                    <Label htmlFor="cr-slider" className="text-sm mb-1 block">{formatCRSliderRangeLabel()}</Label>
-                    <Slider 
-                      id="cr-slider" 
-                      min={CR_SLIDER_MIN} 
-                      max={CR_SLIDER_MAX} 
-                      step={0.125} 
-                      value={crRange} 
-                      onValueChange={handleCRSliderChange} 
-                      className="my-2"
-                    />
-                </div>
-            </div>
-
-            <div className="flex flex-col border rounded-lg overflow-hidden flex-1 bg-card m-4 mt-0"> 
-              <div className="p-3 bg-muted border-b flex justify-between items-center">
-                <h3 className="text-md font-semibold text-primary">Results ({isLoadingList || isBuildingIndex ? "..." : filteredMonsters.length})</h3>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                        <ArrowUpDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={resultsSortConfig.key} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
-                      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                       <DropdownMenuRadioItem value="cr" disabled={!allMonstersData.every(m => m.cr !== undefined) && !isBuildingIndex}>CR</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Order</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={resultsSortConfig.order} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
-                      <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              {isBuildingIndex ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-                  <p className="text-sm text-muted-foreground">Building local monster index... <br/>This may take a moment.</p>
-                </div>
-              ) : isLoadingList ? (
-                <div className="flex-1 flex items-center justify-center p-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : error && !isLoadingList && allMonstersData.length === 0 && homebrewMonsters.length === 0 ? (
-                 <div className="flex-1 flex flex-col items-center justify-center p-4 text-center"> <AlertTriangle className="h-12 w-12 text-destructive mb-2"/><p className="text-destructive text-center">{error}</p> </div>
-              ) : filteredMonsters.length === 0 && !isLoadingList && !isBuildingIndex ? (
-                <p className="p-4 text-sm text-muted-foreground text-center">
-                  {allMonstersData.length > 0 || homebrewMonsters.length > 0 ? "No monsters match search/filter." : "No monsters loaded."}
-                </p>
-              ) : (
-                <ScrollArea className="flex-1">
-                  <ul className="divide-y">
-                    {filteredMonsters.map(monster => (
-                      <li key={monster.index} className={cn("p-2 hover:bg-accent/50 flex justify-between items-center", selectedMonster?.index === monster.index && "bg-primary/10")}>
-                        <span className="font-medium text-sm cursor-pointer flex-1" onClick={() => handleMonsterClick(monster.index, monster.source)}>
-                          {monster.name} {monster.cr !== undefined ? <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(monster.cr)})</span> : ""}
-                          {monster.source === 'homebrew' && <Badge variant="secondary" className="ml-2 text-xs">Homebrew</Badge>}
-                        </span>
-                        <Button variant="ghost" size="icon" onClick={() => toggleFavorite(monster)} className="h-7 w-7" aria-label={isFavorite(monster.index) ? "Unfavorite" : "Favorite"}>
-                          <Star className={cn("h-4 w-4", isFavorite(monster.index) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")}/>
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </ScrollArea>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Monster Details / Homebrew Form */}
-          <div className="flex-1 flex flex-col bg-card border-l overflow-y-auto">
-            {/* Sticky Header for Details/Form */}
-            <div className="px-3 py-2 border-b flex justify-between items-center sticky top-0 bg-muted z-10"> 
-                <h3 className="text-lg font-semibold truncate pr-2 text-foreground flex items-center"> 
-                    {isCreatingHomebrew 
-                        ? (editingHomebrewIndex ? "Edit Homebrew Monster" : "Create Homebrew Monster")
-                        : (selectedMonster 
-                            ? <> {selectedMonster.name} {selectedMonster.isHomebrew && <Badge variant="outline" className="ml-2 align-middle text-xs">Homebrew</Badge>} </> 
-                            : "Monster Details")
-                    }
-                </h3>
-                 <div className="flex gap-1 items-center">
-                    {isCreatingHomebrew && editingHomebrewIndex && (
-                         <Button onClick={handleSaveHomebrewMonster} disabled={!isHomebrewFormDirty} size="sm">
-                            <Save className="mr-2 h-4 w-4" /> Update Changes
-                        </Button>
-                    )}
-                    {!isCreatingHomebrew && selectedMonster && (
-                        <>
-                            {selectedMonster.isHomebrew && (
-                                <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditHomebrewForm(selectedMonster)} className="h-8 w-8">
-                                    <Edit3 className="h-5 w-5 text-muted-foreground/70 hover:text-muted-foreground"/>
-                                    </Button>
-                                </TooltipTrigger><TooltipContent><p>Edit Homebrew</p></TooltipContent></Tooltip></TooltipProvider>
-                            )}
-                            <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => toggleFavorite(selectedMonster)} className="h-8 w-8" aria-label={isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}>
-                                <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400", !isFavorite(selectedMonster.index) && "text-muted-foreground/70")}/>
-                                </Button>
-                            </TooltipTrigger><TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent></Tooltip></TooltipProvider>
-                            <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Combat (TBD)</TooltipContent></Tooltip></TooltipProvider>
-                            <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip></TooltipProvider>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            <ScrollArea className="flex-1">
-                <div className="p-4"> 
-                {isCreatingHomebrew ? (
-                    <div className="space-y-3 text-sm">
-                        <div><Label htmlFor="hb-name">Name*</Label><Input id="hb-name" name="name" value={homebrewFormData.name} onChange={handleHomebrewFormChange} /></div>
-                        <div><Label htmlFor="hb-cr">CR</Label><Input id="hb-cr" name="challenge_rating" value={homebrewFormData.challenge_rating || ""} onChange={handleHomebrewFormChange} placeholder="e.g., 5 or 1/2"/></div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor="hb-type">Type</Label>
-                            <Select name="type" value={homebrewFormData.type || ""} onValueChange={(value) => handleHomebrewSelectChange("type", value || "")}>
-                              <SelectTrigger id="hb-type"><SelectValue placeholder="Select Type..." /></SelectTrigger>
-                              <SelectContent>{MONSTER_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="hb-size">Size</Label>
-                            <Select name="size" value={homebrewFormData.size || ""} onValueChange={(value) => handleHomebrewSelectChange("size", value || "")}>
-                              <SelectTrigger id="hb-size"><SelectValue placeholder="Select Size..." /></SelectTrigger>
-                              <SelectContent>{MONSTER_SIZES.map(size => <SelectItem key={size} value={size}>{size}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div><Label htmlFor="hb-ac-value">AC Value</Label><Input id="hb-ac-value" name="armor_class_value" value={homebrewFormData.armor_class_value} onChange={handleHomebrewFormChange} /></div>
-                            <div>
-                              <Label htmlFor="hb-ac-type">AC Type</Label>
-                              <Select name="armor_class_type" value={homebrewFormData.armor_class_type || ""} onValueChange={(value) => handleHomebrewSelectChange("armor_class_type", value || "")}>
-                                <SelectTrigger id="hb-ac-type"><SelectValue placeholder="Select AC Type..." /></SelectTrigger>
-                                <SelectContent>{MONSTER_AC_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
-                              </Select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div><Label htmlFor="hb-hp-value">HP Value</Label><Input id="hb-hp-value" name="hit_points_value" value={homebrewFormData.hit_points_value} onChange={handleHomebrewFormChange} /></div>
-                            <div><Label htmlFor="hb-hp-dice">HP Dice</Label><Input id="hb-hp-dice" name="hit_points_dice" value={homebrewFormData.hit_points_dice || ""} onChange={handleHomebrewFormChange} placeholder="e.g., 6d10+12"/></div>
-                        </div>
-                        <div><Label htmlFor="hb-speed">Speed</Label><Input id="hb-speed" name="speed" value={homebrewFormData.speed} onChange={handleHomebrewFormChange} placeholder="e.g., 30 ft., fly 60 ft."/></div>
-
-                        <div className="grid grid-cols-3 gap-2">
-                            <div><Label htmlFor="hb-str">STR</Label><Input id="hb-str" name="str" value={homebrewFormData.str} onChange={handleHomebrewFormChange}/></div>
-                            <div><Label htmlFor="hb-dex">DEX</Label><Input id="hb-dex" name="dex" value={homebrewFormData.dex} onChange={handleHomebrewFormChange}/></div>
-                            <div><Label htmlFor="hb-con">CON</Label><Input id="hb-con" name="con" value={homebrewFormData.con} onChange={handleHomebrewFormChange}/></div>
-                            <div><Label htmlFor="hb-int">INT</Label><Input id="hb-int" name="int" value={homebrewFormData.int} onChange={handleHomebrewFormChange}/></div>
-                            <div><Label htmlFor="hb-wis">WIS</Label><Input id="hb-wis" name="wis" value={homebrewFormData.wis} onChange={handleHomebrewFormChange}/></div>
-                            <div><Label htmlFor="hb-cha">CHA</Label><Input id="hb-cha" name="cha" value={homebrewFormData.cha} onChange={handleHomebrewFormChange}/></div>
-                        </div>
-
-                        <div><Label htmlFor="hb-senses">Senses</Label><Input id="hb-senses" name="senses_text" value={homebrewFormData.senses_text || ""} onChange={handleHomebrewFormChange} placeholder="e.g., Darkvision 60 ft., Passive Perception 10"/></div>
-                        <div><Label htmlFor="hb-languages">Languages</Label><Input id="hb-languages" name="languages" value={homebrewFormData.languages || ""} onChange={handleHomebrewFormChange} placeholder="e.g., Common, Draconic"/></div>
-                        <div>
-                          <Label htmlFor="hb-alignment">Alignment</Label>
-                          <Select name="alignment" value={homebrewFormData.alignment || ""} onValueChange={(value) => handleHomebrewSelectChange("alignment", value || "")}>
-                            <SelectTrigger id="hb-alignment"><SelectValue placeholder="Select Alignment..." /></SelectTrigger>
-                            <SelectContent>{MONSTER_ALIGNMENTS.map(align => <SelectItem key={align} value={align}>{align}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </div>
-
-                        <div><Label htmlFor="hb-vuln">Vulnerabilities (comma-sep)</Label><Input id="hb-vuln" name="damage_vulnerabilities_text" value={homebrewFormData.damage_vulnerabilities_text || ""} onChange={handleHomebrewFormChange}/></div>
-                        <div><Label htmlFor="hb-resist">Resistances (comma-sep)</Label><Input id="hb-resist" name="damage_resistances_text" value={homebrewFormData.damage_resistances_text || ""} onChange={handleHomebrewFormChange}/></div>
-                        <div><Label htmlFor="hb-immune">Immunities (comma-sep)</Label><Input id="hb-immune" name="damage_immunities_text" value={homebrewFormData.damage_immunities_text || ""} onChange={handleHomebrewFormChange}/></div>
-                        <div><Label htmlFor="hb-cond-immune">Condition Immunities (comma-sep)</Label><Input id="hb-cond-immune" name="condition_immunities_text" value={homebrewFormData.condition_immunities_text || ""} onChange={handleHomebrewFormChange}/></div>
-
-                        <div><Label htmlFor="hb-abilities">Special Abilities</Label><Textarea id="hb-abilities" name="special_abilities_text" value={homebrewFormData.special_abilities_text || ""} onChange={handleHomebrewFormChange} rows={3} placeholder="One ability per paragraph. Start with name in bold (e.g. **Keen Smell**. The monster has...)."/></div>
-                        <div><Label htmlFor="hb-actions">Actions</Label><Textarea id="hb-actions" name="actions_text" value={homebrewFormData.actions_text || ""} onChange={handleHomebrewFormChange} rows={3} placeholder="One action per paragraph. Start with name in bold (e.g. **Bite**. Melee Weapon Attack: ...)."/></div>
-                        <div><Label htmlFor="hb-legendary">Legendary Actions</Label><Textarea id="hb-legendary" name="legendary_actions_text" value={homebrewFormData.legendary_actions_text || ""} onChange={handleHomebrewFormChange} rows={2} placeholder="Optional. One action per paragraph."/></div>
-                        <div><Label htmlFor="hb-image">Image URL (Optional)</Label><Input id="hb-image" name="image_url" value={homebrewFormData.image_url || ""} onChange={handleHomebrewFormChange} /></div>
-
-                        {error && <p className="text-sm text-destructive">{error}</p>}
-
-                        <div className="flex gap-2 mt-4 items-center">
-                           {!editingHomebrewIndex && ( 
-                                <Button onClick={handleSaveHomebrewMonster}>
-                                    <Save className="mr-2 h-4 w-4"/>Save New Monster
-                                </Button>
-                            )}
-                             <Button variant="outline" onClick={handleCancelHomebrewForm}>
-                                {editingHomebrewIndex ? "Cancel Editing" : "Cancel Creation"}
-                            </Button>
-                            {editingHomebrewIndex && ( 
-                                <Button variant="destructive" onClick={() => handleOpenDeleteHomebrewConfirm(editingHomebrewIndex)} className="ml-auto">
-                                    <Trash2 className="mr-2 h-4 w-4"/> Delete Monster
-                                </Button>
-                            )}
-                        </div>
                     </div>
-                ) : isLoadingDetail ? (
-                  <div className="flex-1 flex items-center justify-center p-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                ) : selectedMonster ? (
-                  <div className="space-y-3 text-sm">
-                      <p className="text-sm text-muted-foreground">{selectedMonster.size} {selectedMonster.type} {selectedMonster.subtype ? `(${selectedMonster.subtype})` : ''}, {selectedMonster.alignment}</p>
-                      <div className="grid grid-cols-3 gap-2 text-xs border p-2 rounded-md bg-background">
-                        <div><strong>AC:</strong> {formatArmorClass(selectedMonster.armor_class)}</div>
-                        <div><strong>HP:</strong> {selectedMonster.hit_points} {selectedMonster.hit_dice ? `(${selectedMonster.hit_dice})` : ''}</div>
-                        <div><strong>CR:</strong> {formatCRDisplay(selectedMonster.challenge_rating)} {selectedMonster.xp ? `(${selectedMonster.xp} XP)` : ''}</div>
-                      </div>
-                      <div><strong>Speed:</strong> {typeof selectedMonster.speed === 'string' ? selectedMonster.speed : selectedMonster.speed ? Object.entries(selectedMonster.speed).map(([key, val]) => `${key} ${val}`).join(', ') : 'N/A'}</div>
-                      <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-background">
-                        <div className="text-center"><strong>STR</strong><br/>{selectedMonster.strength ?? 'N/A'} ({selectedMonster.strength ? Math.floor((selectedMonster.strength - 10) / 2) : 'N/A'})</div>
-                        <div className="text-center"><strong>DEX</strong><br/>{selectedMonster.dexterity ?? 'N/A'} ({selectedMonster.dexterity ? Math.floor((selectedMonster.dexterity - 10) / 2) : 'N/A'})</div>
-                        <div className="text-center"><strong>CON</strong><br/>{selectedMonster.constitution ?? 'N/A'} ({selectedMonster.constitution ? Math.floor((selectedMonster.constitution - 10) / 2) : 'N/A'})</div>
-                        <div className="text-center"><strong>INT</strong><br/>{selectedMonster.intelligence ?? 'N/A'} ({selectedMonster.intelligence ? Math.floor((selectedMonster.intelligence - 10) / 2) : 'N/A'})</div>
-                        <div className="text-center"><strong>WIS</strong><br/>{selectedMonster.wisdom ?? 'N/A'} ({selectedMonster.wisdom ? Math.floor((selectedMonster.wisdom - 10) / 2) : 'N/A'})</div>
-                        <div className="text-center"><strong>CHA</strong><br/>{selectedMonster.charisma ?? 'N/A'} ({selectedMonster.charisma ? Math.floor((selectedMonster.charisma - 10) / 2) : 'N/A'})</div>
-                      </div>
-                      {selectedMonster.proficiencies?.length > 0 && (<div><strong>Saving Throws & Skills:</strong> {selectedMonster.proficiencies.map(p => `${p.proficiency.name.replace("Saving Throw: ", "").replace("Skill: ", "")} +${p.value}`).join(', ')}</div>)}
-                      {selectedMonster.damage_vulnerabilities?.length > 0 && <div><strong>Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities.join(', ')}</div>}
-                      {selectedMonster.damage_resistances?.length > 0 && <div><strong>Resistances:</strong> {selectedMonster.damage_resistances.join(', ')}</div>}
-                      {selectedMonster.damage_immunities?.length > 0 && <div><strong>Immunities:</strong> {selectedMonster.damage_immunities.join(', ')}</div>}
-                      {selectedMonster.condition_immunities?.length > 0 && <div><strong>Condition Immunities:</strong> {(Array.isArray(selectedMonster.condition_immunities) && selectedMonster.condition_immunities.length > 0 && typeof selectedMonster.condition_immunities[0] !== 'string') ? (selectedMonster.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (selectedMonster.condition_immunities as string[] | string || []).join(', ') }</div>}
-                      <div><strong>Senses:</strong> {typeof selectedMonster.senses === 'string' ? selectedMonster.senses : selectedMonster.senses ? Object.entries(selectedMonster.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ') : 'N/A'}</div>
-                      <div><strong>Languages:</strong> {selectedMonster.languages || "None"}</div>
-                      {renderMonsterTextField("Special Abilities", typeof selectedMonster.special_abilities === 'string' ? selectedMonster.special_abilities : undefined)}
-                      {typeof selectedMonster.special_abilities !== 'string' && renderMonsterActions(selectedMonster.special_abilities as ActionType[])}
-                      {renderMonsterTextField("Actions", typeof selectedMonster.actions === 'string' ? selectedMonster.actions : undefined)}
-                      {typeof selectedMonster.actions !== 'string' && renderMonsterActions(selectedMonster.actions as ActionType[])}
-                      {renderMonsterTextField("Legendary Actions", typeof selectedMonster.legendary_actions === 'string' ? selectedMonster.legendary_actions : undefined)}
-                      {typeof selectedMonster.legendary_actions !== 'string' && renderMonsterActions(selectedMonster.legendary_actions as ActionType[])}
-                      {selectedMonster.image && (<div className="mt-2"><Image src={selectedMonster.source === 'api' ? `${DND5E_API_BASE_URL}${selectedMonster.image}` : selectedMonster.image} alt={selectedMonster.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${selectedMonster.type || 'monster'} image`} /></div>)}
-                  </div>
-                ) : error && !isBuildingIndex && !isLoadingList ? (
-                  <div className="flex-1 flex flex-col items-center justify-center p-4 text-center"> <AlertTriangle className="h-12 w-12 text-destructive mb-2"/><p className="text-destructive text-center">{error}</p> </div>
-                ) : !isBuildingIndex && !isLoadingList && (
-                  <div className="flex-1 flex flex-col items-center justify-center p-4 text-center"> <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/><p className="text-sm text-muted-foreground">Select a monster or create homebrew.</p> </div>
+                    <AccordionContent className="pt-1 pb-0 px-1">
+                    <Separator className="mb-2" />
+                    <ScrollArea className="h-60">
+                        {favorites.length === 0 ? <p className="text-sm text-muted-foreground p-2">No favorites yet.</p> : (
+                        <ul className="space-y-1">
+                            {sortedFavorites.map(fav => (
+                            <li key={fav.index} onClick={() => fetchMonsterDetail(fav.index, fav.source)}
+                                className={cn("p-2 rounded-md hover:bg-accent cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === fav.index && "bg-primary/10 text-primary font-medium")}>
+                                <span className="truncate">{fav.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(fav.cr)})</span></span>
+                                {fav.source === 'homebrew' && (
+                                <TooltipProvider delayDuration={50}>
+                                    <Tooltip><TooltipTrigger asChild><Dna className="h-4 w-4 text-muted-foreground ml-1 shrink-0"/></TooltipTrigger><TooltipContent><p>Homebrew</p></TooltipContent></Tooltip>
+                                </TooltipProvider>
+                                )}
+                            </li>))}
+                        </ul>
+                        )}
+                    </ScrollArea>
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* Homebrew Section */}
+                <AccordionItem value="homebrew-section">
+                    <div className="flex justify-between items-center w-full px-3 py-2 bg-muted">
+                    <AccordionTrigger className="py-0 hover:no-underline text-left flex-grow text-lg font-semibold text-foreground">
+                        Homebrew ({homebrewMonsters.length})
+                    </AccordionTrigger>
+                    <div className="flex items-center">
+                        <TooltipProvider delayDuration={100}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleOpenCreateHomebrewForm();}}>
+                                        <PlusCircle className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Create New Homebrew</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                <ArrowUpDown className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup value={homebrewSortConfig.key} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
+                                <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>Order</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup value={homebrewSortConfig.order} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
+                                <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                    </div>
+                    <AccordionContent className="pt-1 pb-0 px-1 space-y-2">
+                    <Separator />
+                     {homebrewMonsters.length === 0 && !isCreatingHomebrew ? (
+                        <p className="text-sm text-muted-foreground p-2 text-center">No homebrew monsters yet.</p>
+                    ) : (
+                        <ScrollArea className="h-60">
+                        <ul className="space-y-1">
+                            {sortedHomebrew.map(hb => (
+                            <li key={hb.index} onClick={() => fetchMonsterDetail(hb.index, 'homebrew')}
+                                className={cn("p-2 rounded-md hover:bg-accent cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === hb.index && "bg-primary/10 text-primary font-medium")}>
+                                <span>{hb.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(hb.challenge_rating)})</span></span>
+                            </li>))}
+                        </ul>
+                        </ScrollArea>
+                    )}
+                    </AccordionContent>
+                </AccordionItem>
+                </Accordion>
+            </div>
+
+            {/* Middle Column: Search/Filters & Results List */}
+            <div className="w-2/5 flex flex-col border-r bg-background overflow-y-auto"> 
+                <div className="sticky top-0 bg-background z-10 py-3 px-4 space-y-3 border-b"> 
+                    <div className="relative">
+                        <Input 
+                        id="monster-search" 
+                        placeholder="Search by Name..." 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)} 
+                        className="pr-10 h-9 border-primary focus-visible:ring-primary" 
+                        />
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        {searchTerm && <Button variant="ghost" size="icon" className="absolute right-8 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
+                    </div>
+                    <div>
+                        <Label htmlFor="cr-slider" className="text-sm mb-1 block">{formatCRSliderRangeLabel()}</Label>
+                        <Slider 
+                        id="cr-slider" 
+                        min={CR_SLIDER_MIN} 
+                        max={CR_SLIDER_MAX} 
+                        step={0.125} 
+                        value={crRange} 
+                        onValueChange={handleCRSliderChange} 
+                        className="my-2"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex flex-col border rounded-lg overflow-hidden flex-1 bg-card m-4 mt-0"> 
+                <div className="p-3 bg-muted border-b flex justify-between items-center">
+                    <h3 className="text-md font-semibold text-primary">Results ({isLoadingList || isBuildingIndex ? "..." : filteredMonsters.length})</h3>
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                            <ArrowUpDown className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={resultsSortConfig.key} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
+                        <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="cr" disabled={!allMonstersData.every(m => m.cr !== undefined) && !isBuildingIndex}>CR</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Order</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={resultsSortConfig.order} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
+                        <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                {isBuildingIndex ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                    <p className="text-sm text-muted-foreground">Building local monster index... <br/>This may take a moment.</p>
+                    </div>
+                ) : isLoadingList ? (
+                    <div className="flex-1 flex items-center justify-center p-4">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                ) : error && !isLoadingList && allMonstersData.length === 0 && homebrewMonsters.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-4 text-center"> <AlertTriangle className="h-12 w-12 text-destructive mb-2"/><p className="text-destructive text-center">{error}</p> </div>
+                ) : filteredMonsters.length === 0 && !isLoadingList && !isBuildingIndex ? (
+                    <p className="p-4 text-sm text-muted-foreground text-center">
+                    {allMonstersData.length > 0 || homebrewMonsters.length > 0 ? "No monsters match search/filter." : "No monsters loaded."}
+                    </p>
+                ) : (
+                    <ScrollArea className="flex-1">
+                    <ul className="divide-y">
+                        {filteredMonsters.map(monster => (
+                        <li key={monster.index} className={cn("p-2 hover:bg-accent/50 flex justify-between items-center", selectedMonster?.index === monster.index && "bg-primary/10")}>
+                            <span className="font-medium text-sm cursor-pointer flex-1" onClick={() => fetchMonsterDetail(monster.index, monster.source)}>
+                            {monster.name} {monster.cr !== undefined ? <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(monster.cr)})</span> : ""}
+                            {monster.source === 'homebrew' && <Badge variant="secondary" className="ml-2 text-xs">Homebrew</Badge>}
+                            </span>
+                            <Button variant="ghost" size="icon" onClick={() => toggleFavorite(monster)} className="h-7 w-7" aria-label={isFavorite(monster.index) ? "Unfavorite" : "Favorite"}>
+                            <Star className={cn("h-4 w-4", isFavorite(monster.index) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")}/>
+                            </Button>
+                        </li>
+                        ))}
+                    </ul>
+                    </ScrollArea>
                 )}
                 </div>
-            </ScrollArea>
-          </div>
-        </div> 
+            </div>
+
+            {/* Right Column: Monster Details / Homebrew Form */}
+            <div className="flex-1 flex flex-col bg-card border-l overflow-y-auto"> 
+                <div className="px-3 py-2 border-b flex justify-between items-center sticky top-0 bg-muted z-10"> 
+                    <h3 className="text-lg font-semibold truncate pr-2 text-foreground flex items-center"> 
+                        {isCreatingHomebrew 
+                            ? (editingHomebrewIndex ? "Edit Homebrew Monster" : "Create Homebrew Monster")
+                            : (selectedMonster 
+                                ? <> {selectedMonster.name} {selectedMonster.isHomebrew && <Badge variant="outline" className="ml-2 align-middle text-xs">Homebrew</Badge>} </> 
+                                : "Monster Details")
+                        }
+                    </h3>
+                    <div className="flex gap-1 items-center">
+                        {isCreatingHomebrew && editingHomebrewIndex && (
+                            <Button onClick={handleSaveHomebrewMonster} disabled={!isHomebrewFormDirty} size="sm">
+                                <Save className="mr-2 h-4 w-4" /> Update Changes
+                            </Button>
+                        )}
+                        {!isCreatingHomebrew && selectedMonster && (
+                            <>
+                                {selectedMonster.isHomebrew && (
+                                    <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditHomebrewForm(selectedMonster)} className="h-8 w-8">
+                                        <Edit3 className="h-5 w-5 text-muted-foreground/70 hover:text-muted-foreground"/>
+                                        </Button>
+                                    </TooltipTrigger><TooltipContent><p>Edit Homebrew</p></TooltipContent></Tooltip></TooltipProvider>
+                                )}
+                                <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => toggleFavorite(selectedMonster)} className="h-8 w-8" aria-label={isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}>
+                                    <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400", !isFavorite(selectedMonster.index) && "text-muted-foreground/70")}/>
+                                    </Button>
+                                </TooltipTrigger><TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Combat (TBD)</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip></TooltipProvider>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <ScrollArea className="flex-1">
+                    <div className="p-4"> 
+                    {isCreatingHomebrew ? (
+                        <div className="space-y-3 text-sm">
+                            <div><Label htmlFor="hb-name">Name*</Label><Input id="hb-name" name="name" value={homebrewFormData.name} onChange={handleHomebrewFormChange} /></div>
+                            <div><Label htmlFor="hb-cr">CR</Label><Input id="hb-cr" name="challenge_rating" value={homebrewFormData.challenge_rating || ""} onChange={handleHomebrewFormChange} placeholder="e.g., 5 or 1/2"/></div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label htmlFor="hb-type">Type</Label>
+                                <Select name="type" value={homebrewFormData.type || ""} onValueChange={(value) => handleHomebrewSelectChange("type", value || "")}>
+                                <SelectTrigger id="hb-type"><SelectValue placeholder="Select Type..." /></SelectTrigger>
+                                <SelectContent>{MONSTER_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label htmlFor="hb-size">Size</Label>
+                                <Select name="size" value={homebrewFormData.size || ""} onValueChange={(value) => handleHomebrewSelectChange("size", value || "")}>
+                                <SelectTrigger id="hb-size"><SelectValue placeholder="Select Size..." /></SelectTrigger>
+                                <SelectContent>{MONSTER_SIZES.map(size => <SelectItem key={size} value={size}>{size}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div><Label htmlFor="hb-ac-value">AC Value</Label><Input id="hb-ac-value" name="armor_class_value" value={homebrewFormData.armor_class_value} onChange={handleHomebrewFormChange} /></div>
+                                <div>
+                                <Label htmlFor="hb-ac-type">AC Type</Label>
+                                <Select name="armor_class_type" value={homebrewFormData.armor_class_type || ""} onValueChange={(value) => handleHomebrewSelectChange("armor_class_type", value || "")}>
+                                    <SelectTrigger id="hb-ac-type"><SelectValue placeholder="Select AC Type..." /></SelectTrigger>
+                                    <SelectContent>{MONSTER_AC_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+                                </Select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div><Label htmlFor="hb-hp-value">HP Value</Label><Input id="hb-hp-value" name="hit_points_value" value={homebrewFormData.hit_points_value} onChange={handleHomebrewFormChange} /></div>
+                                <div><Label htmlFor="hb-hp-dice">HP Dice</Label><Input id="hb-hp-dice" name="hit_points_dice" value={homebrewFormData.hit_points_dice || ""} onChange={handleHomebrewFormChange} placeholder="e.g., 6d10+12"/></div>
+                            </div>
+                            <div><Label htmlFor="hb-speed">Speed</Label><Input id="hb-speed" name="speed" value={homebrewFormData.speed} onChange={handleHomebrewFormChange} placeholder="e.g., 30 ft., fly 60 ft."/></div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                <div><Label htmlFor="hb-str">STR</Label><Input id="hb-str" name="str" value={homebrewFormData.str} onChange={handleHomebrewFormChange}/></div>
+                                <div><Label htmlFor="hb-dex">DEX</Label><Input id="hb-dex" name="dex" value={homebrewFormData.dex} onChange={handleHomebrewFormChange}/></div>
+                                <div><Label htmlFor="hb-con">CON</Label><Input id="hb-con" name="con" value={homebrewFormData.con} onChange={handleHomebrewFormChange}/></div>
+                                <div><Label htmlFor="hb-int">INT</Label><Input id="hb-int" name="int" value={homebrewFormData.int} onChange={handleHomebrewFormChange}/></div>
+                                <div><Label htmlFor="hb-wis">WIS</Label><Input id="hb-wis" name="wis" value={homebrewFormData.wis} onChange={handleHomebrewFormChange}/></div>
+                                <div><Label htmlFor="hb-cha">CHA</Label><Input id="hb-cha" name="cha" value={homebrewFormData.cha} onChange={handleHomebrewFormChange}/></div>
+                            </div>
+
+                            <div><Label htmlFor="hb-senses">Senses</Label><Input id="hb-senses" name="senses_text" value={homebrewFormData.senses_text || ""} onChange={handleHomebrewFormChange} placeholder="e.g., Darkvision 60 ft., Passive Perception 10"/></div>
+                            <div><Label htmlFor="hb-languages">Languages</Label><Input id="hb-languages" name="languages" value={homebrewFormData.languages || ""} onChange={handleHomebrewFormChange} placeholder="e.g., Common, Draconic"/></div>
+                            <div>
+                            <Label htmlFor="hb-alignment">Alignment</Label>
+                            <Select name="alignment" value={homebrewFormData.alignment || ""} onValueChange={(value) => handleHomebrewSelectChange("alignment", value || "")}>
+                                <SelectTrigger id="hb-alignment"><SelectValue placeholder="Select Alignment..." /></SelectTrigger>
+                                <SelectContent>{MONSTER_ALIGNMENTS.map(align => <SelectItem key={align} value={align}>{align}</SelectItem>)}</SelectContent>
+                            </Select>
+                            </div>
+
+                            <div><Label htmlFor="hb-vuln">Vulnerabilities (comma-sep)</Label><Input id="hb-vuln" name="damage_vulnerabilities_text" value={homebrewFormData.damage_vulnerabilities_text || ""} onChange={handleHomebrewFormChange}/></div>
+                            <div><Label htmlFor="hb-resist">Resistances (comma-sep)</Label><Input id="hb-resist" name="damage_resistances_text" value={homebrewFormData.damage_resistances_text || ""} onChange={handleHomebrewFormChange}/></div>
+                            <div><Label htmlFor="hb-immune">Immunities (comma-sep)</Label><Input id="hb-immune" name="damage_immunities_text" value={homebrewFormData.damage_immunities_text || ""} onChange={handleHomebrewFormChange}/></div>
+                            <div><Label htmlFor="hb-cond-immune">Condition Immunities (comma-sep)</Label><Input id="hb-cond-immune" name="condition_immunities_text" value={homebrewFormData.condition_immunities_text || ""} onChange={handleHomebrewFormChange}/></div>
+
+                            <div><Label htmlFor="hb-abilities">Special Abilities</Label><Textarea id="hb-abilities" name="special_abilities_text" value={homebrewFormData.special_abilities_text || ""} onChange={handleHomebrewFormChange} rows={3} placeholder="One ability per paragraph. Start with name in bold (e.g. **Keen Smell**. The monster has...)."/></div>
+                            <div><Label htmlFor="hb-actions">Actions</Label><Textarea id="hb-actions" name="actions_text" value={homebrewFormData.actions_text || ""} onChange={handleHomebrewFormChange} rows={3} placeholder="One action per paragraph. Start with name in bold (e.g. **Bite**. Melee Weapon Attack: ...)."/></div>
+                            <div><Label htmlFor="hb-legendary">Legendary Actions</Label><Textarea id="hb-legendary" name="legendary_actions_text" value={homebrewFormData.legendary_actions_text || ""} onChange={handleHomebrewFormChange} rows={2} placeholder="Optional. One action per paragraph."/></div>
+                            <div><Label htmlFor="hb-image">Image URL (Optional)</Label><Input id="hb-image" name="image_url" value={homebrewFormData.image_url || ""} onChange={handleHomebrewFormChange} /></div>
+
+                            {error && <p className="text-sm text-destructive">{error}</p>}
+
+                            <div className="flex gap-2 mt-4 items-center">
+                            {!editingHomebrewIndex && ( 
+                                    <Button onClick={handleSaveHomebrewMonster}>
+                                        <Save className="mr-2 h-4 w-4"/>Save New Monster
+                                    </Button>
+                                )}
+                                <Button variant="outline" onClick={handleCancelHomebrewForm}>
+                                    {editingHomebrewIndex ? "Cancel Editing" : "Cancel Creation"}
+                                </Button>
+                                {editingHomebrewIndex && ( 
+                                    <Button variant="destructive" onClick={() => handleOpenDeleteHomebrewConfirm(editingHomebrewIndex)} className="ml-auto">
+                                        <Trash2 className="mr-2 h-4 w-4"/> Delete Monster
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    ) : isLoadingDetail ? (
+                    <div className="flex-1 flex items-center justify-center p-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                    ) : selectedMonster ? (
+                    <div className="space-y-3 text-sm">
+                        <p className="text-sm text-muted-foreground">{selectedMonster.size} {selectedMonster.type} {selectedMonster.subtype ? `(${selectedMonster.subtype})` : ''}, {selectedMonster.alignment}</p>
+                        <div className="grid grid-cols-3 gap-2 text-xs border p-2 rounded-md bg-background">
+                            <div><strong>AC:</strong> {formatArmorClass(selectedMonster.armor_class)}</div>
+                            <div><strong>HP:</strong> {selectedMonster.hit_points} {selectedMonster.hit_dice ? `(${selectedMonster.hit_dice})` : ''}</div>
+                            <div><strong>CR:</strong> {formatCRDisplay(selectedMonster.challenge_rating)} {selectedMonster.xp ? `(${selectedMonster.xp} XP)` : ''}</div>
+                        </div>
+                        <div><strong>Speed:</strong> {typeof selectedMonster.speed === 'string' ? selectedMonster.speed : selectedMonster.speed ? Object.entries(selectedMonster.speed).map(([key, val]) => `${key} ${val}`).join(', ') : 'N/A'}</div>
+                        <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-background">
+                            <div className="text-center"><strong>STR</strong><br/>{selectedMonster.strength ?? 'N/A'} ({selectedMonster.strength ? Math.floor((selectedMonster.strength - 10) / 2) : 'N/A'})</div>
+                            <div className="text-center"><strong>DEX</strong><br/>{selectedMonster.dexterity ?? 'N/A'} ({selectedMonster.dexterity ? Math.floor((selectedMonster.dexterity - 10) / 2) : 'N/A'})</div>
+                            <div className="text-center"><strong>CON</strong><br/>{selectedMonster.constitution ?? 'N/A'} ({selectedMonster.constitution ? Math.floor((selectedMonster.constitution - 10) / 2) : 'N/A'})</div>
+                            <div className="text-center"><strong>INT</strong><br/>{selectedMonster.intelligence ?? 'N/A'} ({selectedMonster.intelligence ? Math.floor((selectedMonster.intelligence - 10) / 2) : 'N/A'})</div>
+                            <div className="text-center"><strong>WIS</strong><br/>{selectedMonster.wisdom ?? 'N/A'} ({selectedMonster.wisdom ? Math.floor((selectedMonster.wisdom - 10) / 2) : 'N/A'})</div>
+                            <div className="text-center"><strong>CHA</strong><br/>{selectedMonster.charisma ?? 'N/A'} ({selectedMonster.charisma ? Math.floor((selectedMonster.charisma - 10) / 2) : 'N/A'})</div>
+                        </div>
+                        {selectedMonster.proficiencies?.length > 0 && (<div><strong>Saving Throws & Skills:</strong> {selectedMonster.proficiencies.map(p => `${p.proficiency.name.replace("Saving Throw: ", "").replace("Skill: ", "")} +${p.value}`).join(', ')}</div>)}
+                        {selectedMonster.damage_vulnerabilities?.length > 0 && <div><strong>Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities.join(', ')}</div>}
+                        {selectedMonster.damage_resistances?.length > 0 && <div><strong>Resistances:</strong> {selectedMonster.damage_resistances.join(', ')}</div>}
+                        {selectedMonster.damage_immunities?.length > 0 && <div><strong>Immunities:</strong> {selectedMonster.damage_immunities.join(', ')}</div>}
+                        {selectedMonster.condition_immunities?.length > 0 && <div><strong>Condition Immunities:</strong> {(Array.isArray(selectedMonster.condition_immunities) && selectedMonster.condition_immunities.length > 0 && typeof selectedMonster.condition_immunities[0] !== 'string') ? (selectedMonster.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (selectedMonster.condition_immunities as string[] | string || []).join(', ') }</div>}
+                        <div><strong>Senses:</strong> {typeof selectedMonster.senses === 'string' ? selectedMonster.senses : selectedMonster.senses ? Object.entries(selectedMonster.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ') : 'N/A'}</div>
+                        <div><strong>Languages:</strong> {selectedMonster.languages || "None"}</div>
+                        {renderMonsterTextField("Special Abilities", typeof selectedMonster.special_abilities === 'string' ? selectedMonster.special_abilities : undefined)}
+                        {typeof selectedMonster.special_abilities !== 'string' && renderMonsterActions(selectedMonster.special_abilities as ActionType[])}
+                        {renderMonsterTextField("Actions", typeof selectedMonster.actions === 'string' ? selectedMonster.actions : undefined)}
+                        {typeof selectedMonster.actions !== 'string' && renderMonsterActions(selectedMonster.actions as ActionType[])}
+                        {renderMonsterTextField("Legendary Actions", typeof selectedMonster.legendary_actions === 'string' ? selectedMonster.legendary_actions : undefined)}
+                        {typeof selectedMonster.legendary_actions !== 'string' && renderMonsterActions(selectedMonster.legendary_actions as ActionType[])}
+                        {selectedMonster.image && (<div className="mt-2"><Image src={selectedMonster.source === 'api' ? `${DND5E_API_BASE_URL}${selectedMonster.image}` : selectedMonster.image} alt={selectedMonster.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${selectedMonster.type || 'monster'} image`} /></div>)}
+                    </div>
+                    ) : error && !isBuildingIndex && !isLoadingList ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-4 text-center"> <AlertTriangle className="h-12 w-12 text-destructive mb-2"/><p className="text-destructive text-center">{error}</p> </div>
+                    ) : !isBuildingIndex && !isLoadingList && (
+                    <div className="flex-1 flex flex-col items-center justify-center p-4 text-center"> <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/><p className="text-sm text-muted-foreground">Select a monster or create homebrew.</p> </div>
+                    )}
+                    </div>
+                </ScrollArea>
+            </div>
+            </div> 
+        </div>
 
         <button 
           onClick={() => {
             if (isCreatingHomebrew && isHomebrewFormDirty) {
               setIsUnsavedChangesDialogOpen(true);
-              setPendingActionArgs(null); 
+              setPendingMonsterFetchArgs(null); 
             } else {
               onOpenChange(false); 
             }
