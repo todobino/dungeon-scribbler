@@ -41,7 +41,8 @@ interface SortConfig {
   order: SortOrder;
 }
 
-const crToNumber = (cr: string | number): number => {
+const crToNumber = (cr: string | number | undefined): number => {
+  if (cr === undefined) return -1; // Treat undefined CR as unfilterable or sortable last.
   if (typeof cr === 'number') return cr;
   if (typeof cr === 'string') {
     if (cr.includes('/')) {
@@ -50,12 +51,12 @@ const crToNumber = (cr: string | number): number => {
     }
     return parseFloat(cr);
   }
-  return -1; // Should ideally not happen with API data
+  return -1; 
 };
 
 const CR_SLIDER_MIN = 0;
 const CR_SLIDER_MAX = 30;
-const CR_SLIDER_STEP = 0.125; // For 1/8 CR
+const CR_SLIDER_STEP = 0.125; 
 
 export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps) {
   const [allMonstersData, setAllMonstersData] = useState<MonsterSummary[]>([]);
@@ -74,30 +75,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [resultsSortConfig, setResultsSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
   const [favoritesSortConfig, setFavoritesSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
 
-  const fetchAllMonsters = useCallback(async () => {
-    if (allMonstersData.length > 0) {
-      applyFiltersAndSort(allMonstersData, searchTerm, crRange, resultsSortConfig);
-      return;
-    }
-    setIsLoadingList(true);
-    setError(null);
-    try {
-      const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
-      if (!response.ok) throw new Error(`Failed to fetch monster list: ${response.status}`);
-      const data = await response.json();
-      setAllMonstersData(data.results); // API summaries don't have CR
-      applyFiltersAndSort(data.results, searchTerm, crRange, resultsSortConfig);
-    } catch (err) {
-      console.error("Error fetching monster list:", err);
-      setError("Could not load monster list. Please try again later.");
-      setAllMonstersData([]);
-      setFilteredMonsters([]);
-    } finally {
-      setIsLoadingList(false);
-    }
-  }, [allMonstersData, searchTerm, crRange, resultsSortConfig]);
-
-
   const applyFiltersAndSort = useCallback((
     monstersToFilter: MonsterSummary[],
     currentSearchTerm: string,
@@ -106,35 +83,35 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   ) => {
     let tempFiltered = [...monstersToFilter];
 
+    // Filter by name
     if (currentSearchTerm.trim() !== "") {
       tempFiltered = tempFiltered.filter(monster =>
         monster.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
       );
     }
     
+    // Filter by CR range
     const [minCR, maxCR] = currentCrRange;
-    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) { // Only filter if range is not default
+    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) { // Only filter if CR range is not default
         tempFiltered = tempFiltered.filter(monster => {
-        // CR filtering works best on details or favorites where CR is reliably known.
-        // For summaries from /api/monsters, CR is NOT available.
-        // This filter will only apply if `monster.challenge_rating` is somehow populated on the summary.
-        const monsterCRString = (monster as MonsterDetail).challenge_rating; // Accessing as MonsterDetail for potential CR
+            // Attempt to access CR. For summaries from /api/monsters, CR is NOT available.
+            // This filter primarily works on details or favorites where CR is known.
+            const monsterCRString = (monster as MonsterDetail).challenge_rating; 
 
-        if (monsterCRString === undefined) {
-            // If CR is not on the summary, exclude it if user has touched the CR slider.
-            // This makes the slider "limit" results by excluding unknowns when active.
-            return false; 
-        }
-        
-        const monsterCR = crToNumber(monsterCRString);
-        if (monsterCR === -1) { // Not parseable
-            return false;
-        }
-        return monsterCR >= minCR && monsterCR <= maxCR;
+            if (monsterCRString === undefined) {
+                // If CR is unknown for this monster summary, and the slider is active (not full range),
+                // then exclude this monster.
+                return false; 
+            }
+            
+            const monsterCR = crToNumber(monsterCRString);
+            if (monsterCR === -1) return false; // Unparseable CR
+            
+            return monsterCR >= minCR && monsterCR <= maxCR;
         });
     }
 
-
+    // Sort
     if (currentSortConfig.key === 'name') {
       tempFiltered.sort((a, b) => {
         const nameA = a.name.toLowerCase();
@@ -145,13 +122,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         return currentSortConfig.order === 'asc' ? comparison : comparison * -1;
       });
     } else if (currentSortConfig.key === 'cr') {
-        // CR sort on results list relies on CR being on summary, which is unlikely.
+        // CR sort on results list relies on CR being on summary, which is unlikely for the initial API fetch.
+        // This sort is more effective on the Favorites list.
         tempFiltered.sort((a, b) => {
             const crA = crToNumber((a as MonsterDetail).challenge_rating);
             const crB = crToNumber((b as MonsterDetail).challenge_rating);
             if (crA === -1 && crB === -1) return 0;
-            if (crA === -1) return 1;
-            if (crB === -1) return -1;
+            if (crA === -1) return currentSortConfig.order === 'asc' ? 1 : -1; // Monsters without CR go to end/start
+            if (crB === -1) return currentSortConfig.order === 'asc' ? -1 : 1;
             return currentSortConfig.order === 'asc' ? crA - crB : crB - crA;
         });
     }
@@ -159,11 +137,35 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   }, []);
 
 
+  const fetchAllMonsters = useCallback(async () => {
+    if (allMonstersData.length > 0) {
+      applyFiltersAndSort(allMonstersData, searchTerm, crRange, resultsSortConfig);
+      return;
+    }
+    setIsLoadingList(true);
+    setError(null);
+    try {
+      const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
+      if (!response.ok) throw new Error(`Failed to fetch monster list: ${response.statusText}`);
+      const data = await response.json();
+      setAllMonstersData(data.results || []); 
+      applyFiltersAndSort(data.results || [], searchTerm, crRange, resultsSortConfig);
+    } catch (err: any) {
+      console.error("Error fetching monster list:", err);
+      setError(err.message || "Could not load monster list. Please try again later.");
+      setAllMonstersData([]);
+      setFilteredMonsters([]);
+    } finally {
+      setIsLoadingList(false);
+    }
+  }, [allMonstersData.length, searchTerm, crRange, resultsSortConfig, applyFiltersAndSort]);
+
+
   useEffect(() => {
-    if (open && allMonstersData.length === 0) {
+    if (open && allMonstersData.length === 0 && !isLoadingList) {
       fetchAllMonsters();
     }
-  }, [open, allMonstersData.length, fetchAllMonsters]);
+  }, [open, allMonstersData.length, fetchAllMonsters, isLoadingList]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -171,12 +173,12 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         if (allMonstersData.length > 0) {
           applyFiltersAndSort(allMonstersData, searchTerm, crRange, resultsSortConfig);
         } else if (!isLoadingList) {
-           fetchAllMonsters();
+           fetchAllMonsters(); // Fetch if still not loaded and drawer is open
         }
       }
     }, 300);
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm, crRange, resultsSortConfig, open, allMonstersData, applyFiltersAndSort, isLoadingList, fetchAllMonsters]);
+  }, [searchTerm, crRange, resultsSortConfig, open, allMonstersData, applyFiltersAndSort, fetchAllMonsters, isLoadingList]);
 
 
   useEffect(() => {
@@ -199,17 +201,18 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   }, [favorites]);
 
   const fetchMonsterDetail = async (monsterIndex: string) => {
+    if (!monsterIndex) return;
     setIsLoadingDetail(true);
     setError(null);
     setSelectedMonster(null);
     try {
       const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterIndex}`);
-      if (!response.ok) throw new Error(`Failed to fetch details for ${monsterIndex}: ${response.status}`);
+      if (!response.ok) throw new Error(`Failed to fetch details for ${monsterIndex}: ${response.statusText}`);
       const data = await response.json();
       setSelectedMonster(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching monster detail:", err);
-      setError(`Could not load details for ${monsterIndex}.`);
+      setError(err.message || `Could not load details for ${monsterIndex}.`);
       setSelectedMonster(null);
     } finally {
       setIsLoadingDetail(false);
@@ -222,9 +225,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setFavorites(favorites.filter(f => f.index !== monsterToIndex.index));
     } else {
       let monsterDetailToSave: MonsterDetail;
+      // Check if monsterToIndex is already a MonsterDetail (has challenge_rating)
       if ('challenge_rating' in monsterToIndex && monsterToIndex.challenge_rating !== undefined) {
         monsterDetailToSave = monsterToIndex as MonsterDetail;
-      } else {
+      } else { // It's a MonsterSummary, need to fetch details
         setIsLoadingDetail(true);
         try {
           const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToIndex.index}`);
@@ -239,20 +243,20 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           setIsLoadingDetail(false);
         }
       }
-       if (monsterDetailToSave.challenge_rating === undefined) {
+      
+      if (monsterDetailToSave.challenge_rating === undefined) {
           console.warn("Cannot add monster to favorites: CR is undefined after fetching details.", monsterDetailToSave.name);
           setError(`Could not determine CR for ${monsterDetailToSave.name} to add to favorites.`);
           return;
       }
-      setFavorites(prevFavs => [...prevFavs, {
+
+      const newFavorite: FavoriteMonster = {
         index: monsterDetailToSave.index,
         name: monsterDetailToSave.name,
-        cr: monsterDetailToSave.challenge_rating,
+        cr: monsterDetailToSave.challenge_rating, // CR is a number here
         type: monsterDetailToSave.type
-      }].sort((a,b) => favoritesSortConfig.order === 'asc' ? 
-                        (favoritesSortConfig.key === 'name' ? a.name.localeCompare(b.name) : crToNumber(a.cr) - crToNumber(b.cr)) : 
-                        (favoritesSortConfig.key === 'name' ? b.name.localeCompare(a.name) : crToNumber(b.cr) - crToNumber(a.cr))
-      ));
+      };
+      setFavorites(prevFavs => [...prevFavs, newFavorite]);
     }
   };
 
@@ -273,7 +277,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         {actions.map(action => (
           <li key={action.name} className="text-sm">
             <strong className="font-medium">{action.name}{action.usage ? ` (${action.usage.type}${action.usage.times ? ` ${action.usage.times} times` : ''}${action.usage.dice ? `, recharges on ${action.usage.dice}` : ''})` : ''}.</strong> {action.desc}
-            { (action as MonsterAction).attack_bonus && <p className="text-xs pl-2">Attack Bonus: +{(action as MonsterAction).attack_bonus}</p> }
+            { (action as MonsterAction).attack_bonus !== undefined && <p className="text-xs pl-2">Attack Bonus: +{(action as MonsterAction).attack_bonus}</p> }
             { (action as MonsterAction).damage && (action as MonsterAction).damage?.map((dmg, i) => (
               <p key={i} className="text-xs pl-2">Damage: {dmg.damage_dice} {dmg.damage_type?.name}</p>
             ))}
@@ -304,16 +308,17 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     if (value === 0.25) return "1/4";
     if (value === 0.5) return "1/2";
     if (Number.isInteger(value)) return value.toString();
-    // For other fractions like 0.375 (3/8), 0.625 (5/8), 0.875 (7/8) if step allows
-    // For simplicity, we'll just show a few decimal places for non-standard fractions.
-    // This can be expanded if more precise fractional display is needed.
-    return value.toFixed(3).replace(/\.?0+$/, ""); // Remove trailing zeros
+    return value.toFixed(3).replace(/\.?0+$/, "");
   }
 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden relative" hideCloseButton>
+      <SheetContent 
+        side="right" 
+        className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden" 
+        hideCloseButton={true} // Hide default X
+      >
         <SheetHeader className="p-4 border-b bg-muted flex flex-row items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-2">
             <SheetTitle className="flex items-center text-2xl text-foreground">
@@ -327,23 +332,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
-                  <p>Search the D&D 5e bestiary and manage your favorite creatures. Note: CR filtering is client-side and most effective after searching or on favorites, as CR is not in API summaries.</p>
+                  <p>Search the D&D 5e bestiary. CR filtering limits results based on known CRs (Favorites, or after details are loaded). For best results with CR, search by name first.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         </SheetHeader>
         
-        {/* Vertical Close Bar */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute top-0 right-0 h-full w-8 bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center cursor-pointer z-[60]"
-          aria-label="Close Monster Mash"
-        >
-          <X className="h-6 w-6" />
-        </button>
-
-        <div className="flex flex-1 min-h-0 border-t pr-8"> {/* Main container for columns, pr-8 for close bar */}
+        <div className="flex flex-1 min-h-0 border-t pr-8 relative"> {/* Main container with padding for close bar */}
 
           {/* Favorites Sidebar (Column 1) */}
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col">
@@ -410,7 +406,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     )}
                 </div>
                  <div>
-                    <Label htmlFor="cr-slider" className="text-xs mb-1 block">
+                    <Label htmlFor="cr-slider" className="text-sm mb-1 block">
                       CR Range: {formatCRSliderLabel(crRange[0])} - {formatCRSliderLabel(crRange[1])}
                     </Label>
                     <Slider
@@ -442,7 +438,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                       <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
                             <DropdownMenuRadioItem value="cr" disabled>Challenge Rating</DropdownMenuRadioItem>
-                       </TooltipTrigger><TooltipContent side="left"><p className="text-xs max-w-xs">CR sort on results is not effective as CR is not in API summaries.</p></TooltipContent></Tooltip></TooltipProvider>
+                       </TooltipTrigger><TooltipContent side="left"><p className="text-xs max-w-xs">CR sort on results only effective after details are loaded (e.g., for favorites or after individual selection).</p></TooltipContent></Tooltip></TooltipProvider>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Order</DropdownMenuLabel>
@@ -458,11 +454,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                  <div className="flex-1 flex items-center justify-center p-4">
                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                  </div>
-              ) : error && !isLoadingList && filteredMonsters.length === 0 ? (
+              ) : error && !isLoadingList && filteredMonsters.length === 0 && searchTerm.trim() === "" && (crRange[0] === CR_SLIDER_MIN && crRange[1] === CR_SLIDER_MAX) ? ( // Show API error only if no filters active
                  <p className="p-4 text-destructive text-center">{error}</p>
               ) : filteredMonsters.length === 0 && !isLoadingList ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">
-                  {allMonstersData.length > 0 ? "No monsters match your search or CR filter." : "Loading initial monster list or API error."}
+                  {allMonstersData.length > 0 ? "No monsters match your search or CR filter." : (isLoadingList ? "Loading..." : "No monsters found or API error.")}
                 </p>
               ) : (
                 <ScrollArea className="flex-1">
@@ -535,14 +531,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                       <div className="text-center"><strong>CHA</strong><br/>{selectedMonster.charisma} ({Math.floor((selectedMonster.charisma - 10) / 2)})</div>
                     </div>
 
-                    {selectedMonster.proficiencies.length > 0 && (
+                    {selectedMonster.proficiencies?.length > 0 && (
                       <div><strong>Saving Throws & Skills:</strong> {selectedMonster.proficiencies.map(p => `${p.proficiency.name.replace("Saving Throw: ", "").replace("Skill: ", "")} +${p.value}`).join(', ')}</div>
                     )}
-                    {selectedMonster.damage_vulnerabilities.length > 0 && <div><strong>Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities.join(', ')}</div>}
-                    {selectedMonster.damage_resistances.length > 0 && <div><strong>Resistances:</strong> {selectedMonster.damage_resistances.join(', ')}</div>}
-                    {selectedMonster.damage_immunities.length > 0 && <div><strong>Immunities:</strong> {selectedMonster.damage_immunities.join(', ')}</div>}
-                    {selectedMonster.condition_immunities.length > 0 && <div><strong>Condition Immunities:</strong> {selectedMonster.condition_immunities.map(ci => ci.name).join(', ')}</div>}
-                    <div><strong>Senses:</strong> {Object.entries(selectedMonster.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ')}</div>
+                    {selectedMonster.damage_vulnerabilities?.length > 0 && <div><strong>Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities.join(', ')}</div>}
+                    {selectedMonster.damage_resistances?.length > 0 && <div><strong>Resistances:</strong> {selectedMonster.damage_resistances.join(', ')}</div>}
+                    {selectedMonster.damage_immunities?.length > 0 && <div><strong>Immunities:</strong> {selectedMonster.damage_immunities.join(', ')}</div>}
+                    {selectedMonster.condition_immunities?.length > 0 && <div><strong>Condition Immunities:</strong> {selectedMonster.condition_immunities.map(ci => ci.name).join(', ')}</div>}
+                    {selectedMonster.senses && <div><strong>Senses:</strong> {Object.entries(selectedMonster.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ')}</div>}
                     <div><strong>Languages:</strong> {selectedMonster.languages || "None"}</div>
 
                     {selectedMonster.special_abilities && selectedMonster.special_abilities.length > 0 && (
@@ -561,15 +557,27 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     )}
                 </div>
               </ScrollArea>
+            ) : error ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+                <AlertTriangle className="h-12 w-12 text-destructive mb-2"/>
+                <p className="text-destructive">{error}</p>
+              </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
                 <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/>
                 <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search and CR filters.</p>
-                {/* Removed the CR filter note from here */}
               </div>
             )}
           </div>
         </div>
+        {/* Vertical Close Bar */}
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute top-0 right-0 h-full w-8 bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center cursor-pointer z-[60]"
+          aria-label="Close Monster Mash"
+        >
+          <X className="h-6 w-6" />
+        </button>
       </SheetContent>
     </Sheet>
   );
