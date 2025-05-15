@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Library, Users, Swords, PlusCircle, Trash2, XCircle, Skull, Star, SaveAll, FolderOpen, ListChecks } from "lucide-react";
+import { Library, Users, Swords, PlusCircle, Trash2, XCircle, Skull, Star, SaveAll, FolderOpen, ListChecks, Edit } from "lucide-react";
 import { useCampaign } from "@/contexts/campaign-context";
 import type { EncounterMonster, SavedEncounter, FavoriteMonster } from "@/lib/types";
 import { ENCOUNTER_STORAGE_KEY_PREFIX, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY } from "@/lib/constants";
@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
 
 
 interface CurrentEncounterData {
@@ -24,14 +24,15 @@ interface CurrentEncounterData {
   monsters: EncounterMonster[];
 }
 
+type DuplicateNameAction = "overwrite" | "rename" | "append";
+
 export default function EncounterPlannerPage() {
   const { activeCampaign, isLoadingCampaigns } = useCampaign();
   const { toast } = useToast();
 
   const [encounterMonsters, setEncounterMonsters] = useState<EncounterMonster[]>([]);
   const [currentEncounterTitle, setCurrentEncounterTitle] = useState("New Encounter");
-  const [isEditingTitle, setIsEditingTitle] = useState(false); // To toggle input field for title
-
+  
   const [isLoadingEncounter, setIsLoadingEncounter] = useState(true);
   const [isLoadingSavedEncounters, setIsLoadingSavedEncounters] = useState(true);
 
@@ -45,6 +46,10 @@ export default function EncounterPlannerPage() {
   const [isFavoriteDialogOpen, setIsFavoriteDialogOpen] = useState(false);
   const [favoritesList, setFavoritesList] = useState<FavoriteMonster[]>([]);
   const [encounterToDelete, setEncounterToDelete] = useState<SavedEncounter | null>(null);
+
+  const [isDuplicateNameDialogOpen, setIsDuplicateNameDialogOpen] = useState(false);
+  const [conflictingEncounterTitle, setConflictingEncounterTitle] = useState("");
+  const [newEncounterNameForRename, setNewEncounterNameForRename] = useState("");
 
 
   const getEncounterStorageKey = useCallback(() => {
@@ -179,7 +184,6 @@ export default function EncounterPlannerPage() {
     };
 
     setEncounterMonsters(prev => [...prev, newEnemy]);
-    // Reset form fields
     setMonsterName("");
     setMonsterQuantity("1");
     setMonsterCR("");
@@ -191,7 +195,6 @@ export default function EncounterPlannerPage() {
   const handleSelectFavorite = (fav: FavoriteMonster) => {
     setMonsterName(fav.name);
     setMonsterCR(formatCRDisplay(fav.cr));
-    // AC & HP are not in FavoriteMonster type, user would input these manually
     setMonsterAC(""); 
     setMonsterHP("");
     setIsFavoriteDialogOpen(false);
@@ -208,27 +211,79 @@ export default function EncounterPlannerPage() {
     toast({ title: "Current Encounter Cleared" });
   };
 
+  const performSaveEncounter = (title: string, monsters: EncounterMonster[], overwriteId?: string) => {
+    const encounterToSave: SavedEncounter = {
+      id: overwriteId || Date.now().toString(),
+      title: title,
+      monsters: [...monsters],
+    };
+
+    if (overwriteId) {
+      setSavedEncounters(prev => prev.map(enc => enc.id === overwriteId ? encounterToSave : enc));
+      toast({ title: "Encounter Overwritten!", description: `"${encounterToSave.title}" has been updated.` });
+    } else {
+      setSavedEncounters(prev => [encounterToSave, ...prev]);
+      toast({ title: "Encounter Saved!", description: `"${encounterToSave.title}" has been added.` });
+    }
+  };
+
   const handleSaveCurrentEncounter = () => {
     if (encounterMonsters.length === 0) {
       toast({ title: "Cannot Save Empty Encounter", description: "Add some enemies before saving.", variant: "destructive" });
       return;
     }
-    if (!currentEncounterTitle.trim()) {
+    const trimmedTitle = currentEncounterTitle.trim();
+    if (!trimmedTitle) {
       toast({ title: "Encounter Title Required", description: "Please give your encounter a title before saving.", variant: "destructive" });
       return;
     }
-    const newSavedEncounter: SavedEncounter = {
-      id: Date.now().toString(),
-      title: currentEncounterTitle.trim(),
-      monsters: [...encounterMonsters],
-    };
-    setSavedEncounters(prev => [newSavedEncounter, ...prev]);
-    toast({ title: "Encounter Saved!", description: `"${newSavedEncounter.title}" has been added to your saved encounters.`});
+
+    const existingEncounter = savedEncounters.find(enc => enc.title.toLowerCase() === trimmedTitle.toLowerCase());
+    if (existingEncounter) {
+      setConflictingEncounterTitle(existingEncounter.title); // Store the exact title for display
+      setNewEncounterNameForRename(trimmedTitle); // Pre-fill rename input
+      setIsDuplicateNameDialogOpen(true);
+    } else {
+      performSaveEncounter(trimmedTitle, encounterMonsters);
+    }
   };
+  
+  const handleDuplicateNameDialogAction = (action: DuplicateNameAction) => {
+    const trimmedOriginalTitle = conflictingEncounterTitle.trim(); // The title that caused conflict
+    const currentTrimmedTitle = currentEncounterTitle.trim(); // Current title in the input field
+
+    if (action === "overwrite") {
+      const existing = savedEncounters.find(enc => enc.title.toLowerCase() === trimmedOriginalTitle.toLowerCase());
+      if (existing) {
+        performSaveEncounter(existing.title, encounterMonsters, existing.id);
+      }
+    } else if (action === "rename") {
+      if (!newEncounterNameForRename.trim()) {
+        toast({ title: "New Name Required", description: "Please enter a new name for the encounter.", variant: "destructive" });
+        return; // Keep dialog open
+      }
+      if (savedEncounters.some(enc => enc.title.toLowerCase() === newEncounterNameForRename.trim().toLowerCase())) {
+         toast({ title: "Name Still Exists", description: "That name is also taken. Please choose another.", variant: "destructive" });
+        return; // Keep dialog open
+      }
+      performSaveEncounter(newEncounterNameForRename.trim(), encounterMonsters);
+    } else if (action === "append") {
+      let newTitle = currentTrimmedTitle;
+      let count = 2;
+      while (savedEncounters.some(enc => enc.title.toLowerCase() === `${currentTrimmedTitle} (${count})`.toLowerCase())) {
+        count++;
+      }
+      newTitle = `${currentTrimmedTitle} (${count})`;
+      performSaveEncounter(newTitle, encounterMonsters);
+    }
+    setIsDuplicateNameDialogOpen(false);
+    setConflictingEncounterTitle("");
+  };
+
 
   const handleLoadSavedEncounter = (encounter: SavedEncounter) => {
     setCurrentEncounterTitle(encounter.title);
-    setEncounterMonsters([...encounter.monsters]); // Create a new array to ensure state update
+    setEncounterMonsters([...encounter.monsters]);
     toast({ title: "Encounter Loaded", description: `"${encounter.title}" is now the current encounter.`});
   };
 
@@ -280,7 +335,7 @@ export default function EncounterPlannerPage() {
                 <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle>Select Favorite Monster</DialogTitle>
-                    <DialogDescription>Choose a monster from your favorites list.</DialogDescription>
+                    <DialogDescription>Choose a monster from your Monster Mash favorites. AC & HP will need to be entered manually.</DialogDescription>
                   </DialogHeader>
                   <ScrollArea className="max-h-[60vh] mt-4">
                     {favoritesList.length === 0 ? (
@@ -470,7 +525,41 @@ export default function EncounterPlannerPage() {
           </UIAlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Duplicate Encounter Name Dialog */}
+      <Dialog open={isDuplicateNameDialogOpen} onOpenChange={(isOpen) => { if(!isOpen) setConflictingEncounterTitle(""); setIsDuplicateNameDialogOpen(isOpen);}}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Duplicate Encounter Name</DialogTitle>
+            <DialogDescription>
+              An encounter named "{conflictingEncounterTitle}" already exists. What would you like to do?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+             <div>
+                <Label htmlFor="newEncounterNameInput">New Name (if renaming):</Label>
+                <Input 
+                    id="newEncounterNameInput" 
+                    value={newEncounterNameForRename} 
+                    onChange={(e) => setNewEncounterNameForRename(e.target.value)}
+                    placeholder="Enter new unique name"
+                />
+            </div>
+            <p className="text-sm text-muted-foreground">
+                Current encounter title is: "{currentEncounterTitle}"
+            </p>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row sm:justify-end gap-2">
+            <Button variant="outline" onClick={() => handleDuplicateNameDialogAction("append")}>Append Number (e.g., "{currentEncounterTitle} (2)")</Button>
+            <Button variant="secondary" onClick={() => handleDuplicateNameDialogAction("rename")} disabled={!newEncounterNameForRename.trim() || newEncounterNameForRename.trim().toLowerCase() === conflictingEncounterTitle.toLowerCase()}>Rename & Save</Button>
+            <Button variant="destructive" onClick={() => handleDuplicateNameDialogAction("overwrite")}>Overwrite "{conflictingEncounterTitle}"</Button>
+            <Button variant="ghost" onClick={() => {setIsDuplicateNameDialogOpen(false); setConflictingEncounterTitle(""); }}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
 
+    
