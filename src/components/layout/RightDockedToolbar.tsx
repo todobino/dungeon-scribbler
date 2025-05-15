@@ -9,26 +9,24 @@ import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMas
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon, ChevronRight, VenetianMask, ListOrdered } from "lucide-react";
-import { useToast } from "@/hooks/use-toast"; // Assuming toast might be used for quick roll log
-import { parseDiceNotation, rollMultipleDice } from "@/lib/dice-utils";
-
+import { Dice5, Swords, Skull, Hexagon, ChevronRight, VenetianMask, ListOrdered } from "lucide-react"; // Ensure all used icons are here
+import { useToast } from "@/hooks/use-toast";
+import { rollMultipleDice } from "@/lib/dice-utils";
 
 interface LandedDieState {
-  x: number;
-  y: number;
-  points: { x: number; y: number }[]; // Path: initial, wobble1, wobble2, final
-  currentStep: number; // 0 (at initial), 1 (at wobble1), 2 (at wobble2), 3 (at final/showing result)
-  result: number | null;
   id: string;
+  points: { x: number; y: number }[]; // Path: initial release, wobble1, wobble2 (final resting)
+  currentPointIndex: number; // 0 for initial, 1 for wobble1, 2 for wobble2/final
+  result: number | null;
   isVisible: boolean;
   opacity: number;
 }
 
-const QUICK_ROLL_HOLD_TIME_MS = 200; // Time to hold before drag starts
+const QUICK_ROLL_HOLD_TIME_MS = 200;
 const QUICK_ROLL_WOBBLE_RADIUS = 75;
 const QUICK_ROLL_ANIMATION_STEP_DURATION = 150; // ms per wobble step
 const QUICK_ROLL_RESULT_VISIBILITY_MS = 5000;
+const LANDED_DIE_SIZE_CLASS = "h-16 w-16"; // Centralized size
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
@@ -38,14 +36,14 @@ export function RightDockedToolbar() {
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
   const [landedDie, setLandedDie] = useState<LandedDieState | null>(null);
-  const landedDieTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const animationStepTimerRef = useRef<NodeJS.Timeout | null>(null);
-
+  
   const diceRollerButtonRef = useRef<HTMLButtonElement>(null);
   const dragStartTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
   const isDragIntendedRef = useRef(false);
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { toast } = useToast(); // For adding to a conceptual quick roll log later
+  const { toast } = useToast();
 
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
@@ -67,17 +65,16 @@ export function RightDockedToolbar() {
            activeCombinedTab === itemId;
   };
 
-  // Clear existing landed die and its timers
-  const clearLandedDie = () => {
-    if (landedDieTimerRef.current) clearTimeout(landedDieTimerRef.current);
-    if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
+  const clearLandedDie = useCallback(() => {
+    if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+    if (visibilityTimeoutRef.current) clearTimeout(visibilityTimeoutRef.current);
     setLandedDie(null);
-  };
+  }, []);
 
   const handleMouseDownDiceRoller = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
-    event.preventDefault(); // Prevent default text selection/drag behaviors
-
+    // event.preventDefault(); // Keep this if you want to prevent text selection, but it can interfere with click for drawer.
+    
     clearLandedDie();
     isDragIntendedRef.current = false;
 
@@ -87,24 +84,25 @@ export function RightDockedToolbar() {
       setDragPosition({ x: event.clientX, y: event.clientY });
       document.body.style.cursor = 'grabbing';
     }, QUICK_ROLL_HOLD_TIME_MS);
-  }, []);
+  }, [clearLandedDie]);
 
   const handleMouseUpDiceRoller = useCallback(() => {
     if (dragStartTimeoutIdRef.current) {
       clearTimeout(dragStartTimeoutIdRef.current);
       dragStartTimeoutIdRef.current = null;
     }
-    if (!isDragIntendedRef.current && !isDraggingDie) {
+    if (!isDragIntendedRef.current && !isDraggingDie) { // This means it was a quick click
       handleToggleDrawer(DICE_ROLLER_TAB_ID);
     }
-    // If it was a drag, global mouseup will handle it
-  }, [isDraggingDie]);
+    // If it was a drag, global mouseup will handle the die landing
+  }, [isDraggingDie, handleToggleDrawer]);
 
 
   const handleMouseUpGlobal = useCallback((event: MouseEvent) => {
-    if (dragStartTimeoutIdRef.current) {
+    if (dragStartTimeoutIdRef.current) { // If mouseup happens before timeout, it's a click
       clearTimeout(dragStartTimeoutIdRef.current);
       dragStartTimeoutIdRef.current = null;
+      // Potentially handle click logic here if not already handled by button's onMouseUp
     }
 
     if (isDraggingDie) {
@@ -114,30 +112,36 @@ export function RightDockedToolbar() {
       const releaseX = event.clientX;
       const releaseY = event.clientY;
       
-      const points = [{ x: releaseX, y: releaseY }]; // Start at release point
-      for (let i = 0; i < 3; i++) { // 2 wobble points + 1 final
-        const angle = Math.random() * 2 * Math.PI;
-        const radius = Math.random() * QUICK_ROLL_WOBBLE_RADIUS;
-        points.push({
-          x: releaseX + Math.cos(angle) * radius,
-          y: releaseY + Math.sin(angle) * radius,
-        });
-      }
-
       const newLandedDieId = Date.now().toString();
-      setLandedDie({
-        x: releaseX, // Initial position is release point
-        y: releaseY,
-        points: points,
-        currentStep: 0,
-        result: null,
-        id: newLandedDieId,
-        isVisible: true,
-        opacity: 1,
+      const points = [{ x: releaseX, y: releaseY }]; // Point 0: Initial release point
+      
+      // Point 1: First wobble
+      const angle1 = Math.random() * 2 * Math.PI;
+      const radius1 = Math.random() * QUICK_ROLL_WOBBLE_RADIUS;
+      points.push({
+        x: releaseX + Math.cos(angle1) * radius1,
+        y: releaseY + Math.sin(angle1) * radius1,
       });
-      isDragIntendedRef.current = false; // Reset for next interaction
+
+      // Point 2: Second wobble (will also be final resting place)
+      const angle2 = Math.random() * 2 * Math.PI;
+      const radius2 = Math.random() * QUICK_ROLL_WOBBLE_RADIUS;
+      points.push({
+        x: releaseX + Math.cos(angle2) * radius2, // Wobble around original release
+        y: releaseY + Math.sin(angle2) * radius2,
+      });
+      
+      setLandedDie({
+        id: newLandedDieId,
+        points: points,
+        currentPointIndex: 0, // Start at initial release point
+        result: null,
+        isVisible: true,
+        opacity: 1, // Start fully visible
+      });
     }
-  }, [isDraggingDie]);
+    isDragIntendedRef.current = false; // Reset for next interaction
+  }, [isDraggingDie, toast]);
   
   useEffect(() => {
     const handleMouseMoveGlobal = (event: MouseEvent) => {
@@ -146,7 +150,7 @@ export function RightDockedToolbar() {
       }
     };
 
-    if (isDraggingDie || dragStartTimeoutIdRef.current) { // Listen if dragging or in hold period
+    if (isDraggingDie || dragStartTimeoutIdRef.current) {
       window.addEventListener('mousemove', handleMouseMoveGlobal);
       window.addEventListener('mouseup', handleMouseUpGlobal);
     } else {
@@ -167,52 +171,62 @@ export function RightDockedToolbar() {
   useEffect(() => {
     if (!landedDie || !landedDie.isVisible) return;
 
-    if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
+    if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+    if (visibilityTimeoutRef.current) clearTimeout(visibilityTimeoutRef.current);
 
-    if (landedDie.currentStep < landedDie.points.length -1) { // -1 because points[0] is initial
-      animationStepTimerRef.current = setTimeout(() => {
-        setLandedDie(prev => {
-          if (!prev || !prev.isVisible) return prev;
-          const nextStep = prev.currentStep + 1;
-          return {
-            ...prev,
-            x: prev.points[nextStep].x,
-            y: prev.points[nextStep].y,
-            currentStep: nextStep,
-          };
-        });
-      }, QUICK_ROLL_ANIMATION_STEP_DURATION);
-    } else if (landedDie.currentStep === landedDie.points.length -1 && landedDie.result === null) { // At final point, roll result
-      const d20Roll = rollMultipleDice(1, 20).sum;
-      setLandedDie(prev => {
-        if (!prev || !prev.isVisible) return prev;
-        // TODO: Add this roll to the Dice Roller log
-        // Example: toast({ title: "Quick Roll", description: `d20 Result: ${d20Roll}` });
-        return { ...prev, result: d20Roll };
+    const animateStep = () => {
+      setLandedDie(prevDie => {
+        if (!prevDie || !prevDie.isVisible) return prevDie;
+
+        const nextPointIndex = prevDie.currentPointIndex + 1;
+
+        if (nextPointIndex < prevDie.points.length) {
+          // Move to the next wobble point
+          animationTimeoutRef.current = setTimeout(() => {
+            animateStep();
+          }, QUICK_ROLL_ANIMATION_STEP_DURATION);
+          return { ...prevDie, currentPointIndex: nextPointIndex };
+        } else {
+          // Reached final point, show result
+          if (prevDie.result === null) {
+            const d20Roll = rollMultipleDice(1, 20).sum;
+            // TODO: Add to Dice Roller Log if drawer is open, or use toast
+            // toast({ title: "Quick Roll", description: `d20 Result: ${d20Roll} (Quick-Rolled)` });
+            
+            visibilityTimeoutRef.current = setTimeout(() => {
+              setLandedDie(d => d ? { ...d, opacity: 0 } : null);
+              setTimeout(() => clearLandedDie(), 500); // Cleanup after fade
+            }, QUICK_ROLL_RESULT_VISIBILITY_MS);
+            
+            return { ...prevDie, result: d20Roll };
+          }
+        }
+        return prevDie; // No change if already at final step with result
       });
-      
-      // Start fade out timer AFTER result is shown
-      if (landedDieTimerRef.current) clearTimeout(landedDieTimerRef.current);
-      landedDieTimerRef.current = setTimeout(() => {
-        setLandedDie(prev => prev ? { ...prev, opacity: 0 } : null); 
-        // Actual removal after fade out
-        setTimeout(() => setLandedDie(null), 500); // match opacity transition duration
-      }, QUICK_ROLL_RESULT_VISIBILITY_MS);
+    };
+
+    // Start the animation sequence
+    if (landedDie.currentPointIndex < landedDie.points.length) {
+       // For the very first step (appearing at release point), no delay
+       // For subsequent steps, use QUICK_ROLL_ANIMATION_STEP_DURATION
+      const delay = landedDie.currentPointIndex === 0 ? 10 : QUICK_ROLL_ANIMATION_STEP_DURATION;
+      animationTimeoutRef.current = setTimeout(animateStep, delay);
     }
 
+
     return () => {
-      if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
+      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+      if (visibilityTimeoutRef.current) clearTimeout(visibilityTimeoutRef.current);
     };
-  }, [landedDie]);
+  }, [landedDie?.id, landedDie?.currentPointIndex, landedDie?.isVisible, toast, clearLandedDie]); // Depend on id and currentPointIndex
 
 
   useEffect(() => { // Cleanup on unmount
     return () => {
-      if (landedDieTimerRef.current) clearTimeout(landedDieTimerRef.current);
-      if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
+      clearLandedDie();
       if (dragStartTimeoutIdRef.current) clearTimeout(dragStartTimeoutIdRef.current);
     };
-  }, []);
+  }, [clearLandedDie]);
 
   return (
     <>
@@ -264,8 +278,8 @@ export function RightDockedToolbar() {
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <div className="relative h-16 w-16 flex items-center justify-center"> {/* Increased size */}
-            <Hexagon className="h-16 w-16 text-primary animate-spin" fill="hsl(var(--primary-foreground))" />
+          <div className={cn("relative flex items-center justify-center", LANDED_DIE_SIZE_CLASS)}>
+            <Hexagon className={cn("animate-spin text-primary", LANDED_DIE_SIZE_CLASS)} fill="hsl(var(--primary-foreground))" />
             <span
               className="absolute -top-1 -right-2 text-primary font-bold text-sm"
               style={{ userSelect: 'none' }}
@@ -280,8 +294,8 @@ export function RightDockedToolbar() {
         <div
           style={{
             position: 'fixed',
-            left: landedDie.x,
-            top: landedDie.y,
+            left: landedDie.points[landedDie.currentPointIndex].x,
+            top: landedDie.points[landedDie.currentPointIndex].y,
             pointerEvents: 'none',
             zIndex: 1999,
             transform: 'translate(-50%, -50%)',
@@ -290,8 +304,8 @@ export function RightDockedToolbar() {
           }}
           className={cn("animate-in fade-in duration-100")}
         >
-          <div className="relative h-16 w-16 flex items-center justify-center"> {/* Increased size */}
-            <Hexagon className="h-16 w-16 text-primary" fill="hsl(var(--primary)/ 0.3)" />
+          <div className={cn("relative flex items-center justify-center", LANDED_DIE_SIZE_CLASS)}>
+            <Hexagon className={cn("text-primary", LANDED_DIE_SIZE_CLASS)} fill="hsl(var(--primary)/ 0.3)" />
             {landedDie.result !== null && (
               <span 
                 className="absolute text-2xl font-bold text-primary-foreground"
@@ -316,5 +330,3 @@ export function RightDockedToolbar() {
     </>
   );
 }
-
-    
