@@ -305,4 +305,15 @@ export interface HomebrewMonsterFormData {
   condition_immunities_text?: string;
 }
 
-```
+// For Status Conditions Drawer
+export interface ConditionSummary {
+  index: string;
+  name: string;
+  url: string;
+}
+
+export interface ConditionDetail {
+  index: string;
+  name: string;
+  desc: string[]; // API returns description as an array of strings
+}

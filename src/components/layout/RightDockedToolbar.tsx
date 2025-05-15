@@ -6,17 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDrawer";
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
-import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
+import { StatusConditionsDrawer } from "@/components/features/status-conditions/StatusConditionsDrawer"; // New Import
+import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, STATUS_CONDITIONS_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants"; // Added STATUS_CONDITIONS_DRAWER_ID
 import type { RollLogEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, XCircle, Hexagon, VenetianMask, ListOrdered } from "lucide-react"; 
+import { Dice5, Swords, Skull, ShieldQuestion } from "lucide-react"; // Added ShieldQuestion
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
-
-  // State for Dice Roller Log (lifted from CombinedToolDrawer)
+  
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
 
@@ -24,21 +24,19 @@ export function RightDockedToolbar() {
     const idToUse = entryIdToUpdate || getNewRollId();
     setRollLog(prevLog => {
       if (entryIdToUpdate && prevLog.find(entry => entry.id === entryIdToUpdate)) {
-        // Update existing entry
         return prevLog.map(entry => 
             entry.id === entryIdToUpdate 
-            ? {...entry, ...rollData, isRolling: false } // Ensure isRolling is set to false on update
+            ? {...entry, ...rollData, isRolling: false } 
             : entry
         );
       } else {
-        // Add new entry
         const newEntry: RollLogEntry = {
             id: idToUse,
             ...rollData,
-            isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false, // Default to false if not specified
+            isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
         };
         const updatedLog = [newEntry, ...prevLog];
-        return updatedLog.slice(0, 10); // Keep only the last 10 entries
+        return updatedLog.slice(0, 10);
       }
     });
   }, [getNewRollId]);
@@ -46,7 +44,6 @@ export function RightDockedToolbar() {
   const handleClearRollLog = useCallback(() => {
     setRollLog([]);
   }, []);
-
 
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
@@ -59,6 +56,8 @@ export function RightDockedToolbar() {
       }
     } else if (itemId === MONSTER_MASH_DRAWER_ID) {
       setOpenDrawerId(prev => (prev === MONSTER_MASH_DRAWER_ID ? null : MONSTER_MASH_DRAWER_ID));
+    } else if (itemId === STATUS_CONDITIONS_DRAWER_ID) {
+      setOpenDrawerId(prev => (prev === STATUS_CONDITIONS_DRAWER_ID ? null : STATUS_CONDITIONS_DRAWER_ID));
     }
   };
   
@@ -72,12 +71,14 @@ export function RightDockedToolbar() {
     <>
       <TooltipProvider delayDuration={100}>
         <div className="fixed top-1/2 -translate-y-1/2 right-0 flex flex-col gap-1 p-1.5 bg-card/80 backdrop-blur-sm shadow-lg rounded-l-lg z-50 border border-r-0">
-          {TOOLBAR_ITEMS.map((item, index) => {
+          {TOOLBAR_ITEMS.map((item) => {
             let IconToRender = item.icon;
             let iconCn = "h-6 w-6"; 
             let buttonBaseCn = "h-10 w-10 rounded-md"; 
             
-            const isActiveTool = isCombinedToolActive(item.id) || (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID);
+            let isActiveTool = isCombinedToolActive(item.id) || 
+                                (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID) ||
+                                (openDrawerId === STATUS_CONDITIONS_DRAWER_ID && item.id === STATUS_CONDITIONS_DRAWER_ID);
             
             let finalButtonCn = cn(
               buttonBaseCn,
@@ -103,6 +104,7 @@ export function RightDockedToolbar() {
                   </TooltipContent>
                 </Tooltip>
                 {item.id === COMBAT_TRACKER_TAB_ID && <Separator className="my-0.5 bg-border/70" />}
+                 {item.id === STATUS_CONDITIONS_DRAWER_ID && item.id !== TOOLBAR_ITEMS[TOOLBAR_ITEMS.length -1].id && <Separator className="my-0.5 bg-border/70" />}
               </React.Fragment>
             );
           })}
@@ -124,7 +126,10 @@ export function RightDockedToolbar() {
         open={openDrawerId === MONSTER_MASH_DRAWER_ID}
         onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
       />
+      <StatusConditionsDrawer
+        open={openDrawerId === STATUS_CONDITIONS_DRAWER_ID}
+        onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
+      />
     </>
   );
 }
-

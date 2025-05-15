@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, Skull, VenetianMask, PlusCircle, XCircle } from 'lucide-react';
+import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -50,6 +50,7 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
 export const TOOLBAR_ITEMS = [
   { id: 'dice-roller', label: 'Dice Roller', icon: Dice5 },
   { id: 'combat-tracker', label: 'Combat Tracker', icon: Swords },
+  { id: 'status-conditions', label: 'Status Conditions', icon: ShieldQuestion },
   { id: 'monster-mash', label: 'Monster Mash', icon: Skull },
 ];
 
@@ -206,6 +207,7 @@ export const MONSTER_MASH_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Ho
 // Toolbar IDs for shared state management
 export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
 export const MONSTER_MASH_DRAWER_ID = "monster-mash";
+export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const DICE_ROLLER_TAB_ID = "dice-roller";
 export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
 
