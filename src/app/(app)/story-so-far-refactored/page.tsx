@@ -11,7 +11,7 @@ import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, H
 import { useState, useEffect, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -69,7 +69,10 @@ export default function StorySoFarRefactoredPage() {
   }, [activeCampaign]);
 
   useEffect(() => {
-    if (isLoadingCampaigns) return;
+    if (isLoadingCampaigns) {
+      setIsLoadingData(true); // Still loading campaign context
+      return;
+    }
 
     if (!activeCampaign) {
       setPlotPoints([]);
@@ -410,7 +413,7 @@ export default function StorySoFarRefactoredPage() {
         <CardHeader>
           <Library className="mx-auto h-16 w-16 text-muted-foreground" />
           <CardTitle className="mt-4">No Active Campaign</CardTitle>
-          <DialogDescription>Please select or create a campaign to manage its story.</DialogDescription>
+          <CardDescription>Please select or create a campaign to manage its story.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild>
@@ -455,7 +458,7 @@ export default function StorySoFarRefactoredPage() {
          <div className="lg:col-span-2 flex flex-col h-full"> {/* Left Column Wrapper */}
             <Card className="flex flex-col flex-grow"> {/* Campaign Log Card */}
                 <CardHeader className="shrink-0">
-                <CardTitle>Campaign Log</CardTitle>
+                  <CardTitle>Campaign Log</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 flex-grow min-h-0">
                 <ScrollArea className="h-full">
@@ -578,7 +581,7 @@ export default function StorySoFarRefactoredPage() {
           <Card> {/* AI Story Tools Card */}
             <CardHeader>
               <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary" />AI Story Tools</CardTitle>
-              <DialogDescription>Generate a summary of the entire campaign or adjust detail level for new summaries.</DialogDescription>
+              <CardDescription>Generate a summary of the entire campaign or adjust detail level for new summaries.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -632,7 +635,7 @@ export default function StorySoFarRefactoredPage() {
             <Card className="bg-primary/10 border-primary">
               <CardHeader>
                 <CardTitle className="text-primary">Generated Full Campaign Summary</CardTitle>
-                <DialogDescription>Detail Level: {summaryDetailLevel}</DialogDescription>
+                <CardDescription>Detail Level: {summaryDetailLevel}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{fullCampaignSummary}</p>
@@ -662,20 +665,18 @@ export default function StorySoFarRefactoredPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
-        <UIAlertDialogContent>
-          <UIAlertDialogHeader>
-            <UIAlertDialogTitle>Delete Plot Point?</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
-              Are you sure you want to delete this plot point? This action cannot be undone.
-            </UIAlertDialogDescription>
-          </UIAlertDialogHeader>
-          <UIAlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeletePlotPointConfirmOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeletePlotPoint} className={buttonVariants({variant: "destructive"})}>Delete</AlertDialogAction>
-          </UIAlertDialogFooter>
-        </UIAlertDialogContent>
-      </AlertDialog>
+      <UIAlertDialogContent open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
+        <UIAlertDialogHeader>
+          <UIAlertDialogTitle>Delete Plot Point?</UIAlertDialogTitle>
+          <UIAlertDialogDescription>
+            Are you sure you want to delete this plot point? This action cannot be undone.
+          </UIAlertDialogDescription>
+        </UIAlertDialogHeader>
+        <UIAlertDialogFooter>
+          <AlertDialogCancel onClick={() => setIsDeletePlotPointConfirmOpen(false)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmDeletePlotPoint} className={buttonVariants({variant: "destructive"})}>Delete</AlertDialogAction>
+        </UIAlertDialogFooter>
+      </UIAlertDialogContent>
 
       <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
         <UIAlertDialogContent>
