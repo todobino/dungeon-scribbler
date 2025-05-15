@@ -112,7 +112,7 @@ const initialHomebrewFormData: HomebrewMonsterFormData = {
 const monsterDetailToFormData = (monster: MonsterDetail): HomebrewMonsterFormData => {
   return {
     name: monster.name || "",
-    challenge_rating: monster.challenge_rating !== undefined ? formatCRDisplay(monster.challenge_rating) : "", // Use formatCRDisplay for consistency
+    challenge_rating: monster.challenge_rating !== undefined ? formatCRDisplay(monster.challenge_rating) : "",
     type: monster.type || "",
     size: monster.size || "",
     armor_class_value: monster.armor_class && monster.armor_class[0] ? monster.armor_class[0].value.toString() : "10",
@@ -154,7 +154,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   
   const [isHomebrewFormDirty, setIsHomebrewFormDirty] = useState(false);
   const [isUnsavedChangesDialogOpen, setIsUnsavedChangesDialogOpen] = useState(false);
-  const [pendingActionAfterUnsavedDialog, setPendingActionAfterUnsavedDialog] = useState<(() => void) | null>(null);
+  const [pendingMonsterFetchArgs, setPendingMonsterFetchArgs] = useState<{index: string, source: 'api' | 'homebrew'} | null>(null);
   
   const [isDeleteHomebrewConfirmOpen, setIsDeleteHomebrewConfirmOpen] = useState(false);
   const [monsterToDeleteIndex, setMonsterToDeleteIndex] = useState<string | null>(null);
@@ -330,24 +330,45 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
 
   const proceedWithPendingAction = () => {
-    if (pendingActionAfterUnsavedDialog) {
-      pendingActionAfterUnsavedDialog();
-      setPendingActionAfterUnsavedDialog(null);
+    if (pendingMonsterFetchArgs) {
+      fetchMonsterDetail(pendingMonsterFetchArgs.index, pendingMonsterFetchArgs.source);
+      setPendingMonsterFetchArgs(null);
+    }
+  };
+  
+  const handleUnsavedChangesDialogChoice = (choice: 'save' | 'discard' | 'cancel') => {
+    setIsUnsavedChangesDialogOpen(false);
+    if (choice === 'save') {
+      handleSaveHomebrewMonster(); 
+      // Wait for save to complete, then proceed
+      setTimeout(() => { 
+        proceedWithPendingAction();
+      }, 100); 
+    } else if (choice === 'discard') {
+      setIsCreatingHomebrew(false);
+      setEditingHomebrewIndex(null);
+      setHomebrewFormData(initialHomebrewFormData);
+      setInitialEditFormData(null);
+      setIsHomebrewFormDirty(false);
+      proceedWithPendingAction();
+    } else { // cancel
+      setPendingMonsterFetchArgs(null); // Clear pending action if user cancels
     }
   };
 
+
   const handleOpenCreateHomebrewForm = () => {
     const action = () => {
-        setSelectedMonster(null);
-        setEditingHomebrewIndex(null);
-        setHomebrewFormData(initialHomebrewFormData);
-        setInitialEditFormData(null); 
+        setSelectedMonster(null); // Clear selected API monster
+        setEditingHomebrewIndex(null); // Ensure not in edit mode
+        setHomebrewFormData(initialHomebrewFormData); // Reset form
+        setInitialEditFormData(null); // Clear initial data for dirty check
         setIsCreatingHomebrew(true);
-        setIsHomebrewFormDirty(false); 
+        setIsHomebrewFormDirty(false); // New form is initially not dirty
     };
 
     if (isCreatingHomebrew && isHomebrewFormDirty) {
-        setPendingActionAfterUnsavedDialog(() => action);
+        setPendingMonsterFetchArgs(null); // No pending fetch if opening create form
         setIsUnsavedChangesDialogOpen(true);
     } else {
         action();
@@ -356,17 +377,22 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   
   const handleOpenEditHomebrewForm = (monster: MonsterDetail) => {
      const action = () => {
-        setSelectedMonster(monster); 
+        setSelectedMonster(monster); // Keep selected monster as reference for edit
         setEditingHomebrewIndex(monster.index);
         const formData = monsterDetailToFormData(monster);
         setHomebrewFormData(formData);
-        setInitialEditFormData(formData); 
+        setInitialEditFormData(formData); // Store for dirty check
         setIsCreatingHomebrew(true);
-        setIsHomebrewFormDirty(false); 
+        setIsHomebrewFormDirty(false); // Form is initially not dirty on edit start
     };
     if (isCreatingHomebrew && isHomebrewFormDirty && editingHomebrewIndex !== monster.index) {
-      setPendingActionAfterUnsavedDialog(() => action);
+      // If already creating/editing another and it's dirty, ask before switching
+      setPendingMonsterFetchArgs(null); // No pending fetch
       setIsUnsavedChangesDialogOpen(true);
+      // Store action to perform after dialog
+      // For now, let's not set a pending action that switches to edit,
+      // as it complicates the "save then proceed" logic.
+      // User can re-click edit if they discard.
     } else {
       action();
     }
@@ -376,7 +402,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     if (!monsterIndex) return;
 
     const action = async () => {
-        setIsCreatingHomebrew(false); 
+        setIsCreatingHomebrew(false); // Not creating/editing when fetching details
         setEditingHomebrewIndex(null);
         setHomebrewFormData(initialHomebrewFormData);
         setInitialEditFormData(null);
@@ -400,35 +426,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     };
 
     if (isCreatingHomebrew && isHomebrewFormDirty) {
-      setPendingActionAfterUnsavedDialog(() => action);
+      setPendingMonsterFetchArgs({index: monsterIndex, source});
       setIsUnsavedChangesDialogOpen(true);
     } else {
       action();
-    }
-  };
-
-  const handleUnsavedChangesDialogChoice = (choice: 'save' | 'discard' | 'cancel') => {
-    setIsUnsavedChangesDialogOpen(false);
-    if (choice === 'save') {
-      handleSaveHomebrewMonster(); 
-      setTimeout(() => { 
-         if(pendingActionAfterUnsavedDialog) {
-            pendingActionAfterUnsavedDialog();
-            setPendingActionAfterUnsavedDialog(null);
-        }
-      }, 100); 
-    } else if (choice === 'discard') {
-      setIsCreatingHomebrew(false);
-      setEditingHomebrewIndex(null);
-      setHomebrewFormData(initialHomebrewFormData);
-      setInitialEditFormData(null);
-      setIsHomebrewFormDirty(false);
-      if (pendingActionAfterUnsavedDialog) {
-          pendingActionAfterUnsavedDialog();
-          setPendingActionAfterUnsavedDialog(null);
-      }
-    } else { 
-      setPendingActionAfterUnsavedDialog(null);
     }
   };
 
@@ -449,8 +450,26 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         crNum = monsterToToggle.cr;
         typeValue = monsterToToggle.type;
       } else {
-         setError(`CR or Type undefined for ${monsterToToggle.name}. Cannot add to favorites.`);
-         return; 
+         // Attempt to fetch details to get CR and Type if not available
+        setIsLoadingDetail(true);
+        try {
+            const detailResponse = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToToggle.index}`);
+            if (!detailResponse.ok) {
+                setError(`Could not fetch details for ${monsterToToggle.name} to add to favorites.`);
+                setIsLoadingDetail(false);
+                return;
+            }
+            const detailData: MonsterDetail = await detailResponse.json();
+            crNum = crToNumber(detailData.challenge_rating);
+            typeValue = detailData.type;
+            sourceValue = detailData.source || 'api'; // Use source from detail if available
+        } catch (favError) {
+            setError(`Error fetching details for ${monsterToToggle.name}. Cannot add to favorites.`);
+            setIsLoadingDetail(false);
+            return;
+        } finally {
+            setIsLoadingDetail(false);
+        }
       }
 
       if (crNum === -1) { 
@@ -563,13 +582,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const handleCancelHomebrewForm = () => {
      if (isHomebrewFormDirty) {
         setIsUnsavedChangesDialogOpen(true);
-        setPendingActionAfterUnsavedDialog(() => () => {
-            setIsCreatingHomebrew(false);
-            setEditingHomebrewIndex(null);
-            setHomebrewFormData(initialHomebrewFormData);
-            setInitialEditFormData(null);
-            setIsHomebrewFormDirty(false);
-        });
+        setPendingMonsterFetchArgs(null); // No pending action if cancelling from create/edit
     } else {
         setIsCreatingHomebrew(false);
         setEditingHomebrewIndex(null);
@@ -698,7 +711,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col space-y-4 overflow-y-auto">
             <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
               <AccordionItem value="favorites-section">
-                <div className="flex justify-between items-center w-full pr-2 py-2">
+                 <div className="flex justify-between items-center w-full pr-2 py-2">
                   <AccordionTrigger className="py-0 hover:no-underline flex-1 text-left">
                     <h3 className="text-lg font-semibold text-primary">Favorites ({favorites.length})</h3>
                   </AccordionTrigger>
@@ -722,7 +735,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 </div>
                 <AccordionContent className="pt-1 pb-0">
                   <Separator className="mb-2" />
-                  <ScrollArea className="h-40"> 
+                  <ScrollArea className="h-60"> 
                     {favorites.length === 0 ? <p className="text-sm text-muted-foreground">No favorites yet.</p> : (
                       <ul className="space-y-1">
                         {sortedFavorites.map(fav => (
@@ -748,27 +761,39 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                   <AccordionTrigger className="py-0 hover:no-underline flex-1 text-left">
                     <h3 className="text-lg font-semibold text-primary">Homebrew ({homebrewMonsters.length})</h3>
                   </AccordionTrigger>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup value={homebrewSortConfig.key} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
-                        <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem><DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                      <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup value={homebrewSortConfig.order} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
-                        <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem><DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center">
+                    <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleOpenCreateHomebrewForm();}}>
+                                    <PlusCircle className="h-5 w-5 text-primary"/>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Create New Homebrew Monster</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                            <ArrowUpDown className="h-4 w-4" />
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={homebrewSortConfig.key} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
+                            <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem><DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={homebrewSortConfig.order} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
+                            <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem><DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 <AccordionContent className="pt-1 pb-0">
                   <Separator className="mb-2" />
-                  <ScrollArea className="h-40"> 
+                  <ScrollArea className="h-60"> 
                     {homebrewMonsters.length === 0 ? <p className="text-sm text-muted-foreground">No homebrew monsters.</p> : (
                       <ul className="space-y-1">
                         {sortedHomebrew.map(hb => (
@@ -779,9 +804,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                       </ul>
                     )}
                   </ScrollArea>
-                  <Button onClick={handleOpenCreateHomebrewForm} variant="outline" size="sm" className="w-full mt-2">
-                     <PlusCircle className="mr-2 h-4 w-4" /> Create Homebrew
-                  </Button>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -814,8 +836,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     <DropdownMenuRadioGroup value={resultsSortConfig.key} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
                       <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                           <DropdownMenuRadioItem value="cr" disabled={allMonstersData.every(m => m.cr === undefined) && !isBuildingIndex}>CR</DropdownMenuRadioItem>
-                        </TooltipTrigger><TooltipContent side="left" className={cn(allMonstersData.every(m => m.cr === undefined) && !isBuildingIndex ? "" : "hidden")}><p>CR data is needed to sort by CR.<br/>This happens automatically on first load<br/>or by fetching individual monster details.</p></TooltipContent></Tooltip></TooltipProvider>
+                           <DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
+                        </TooltipTrigger><TooltipContent side="left"><p>Sorting by CR is most effective after details have been fetched or for homebrew monsters.</p></TooltipContent></Tooltip></TooltipProvider>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
                     <DropdownMenuRadioGroup value={resultsSortConfig.order} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
@@ -929,7 +951,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         {error && <p className="text-sm text-destructive">{error}</p>}
                         
                         <div className="flex gap-2 mt-4">
-                            {isCreatingHomebrew && !editingHomebrewIndex && ( 
+                           {isCreatingHomebrew && !editingHomebrewIndex && ( 
                                 <Button onClick={handleSaveHomebrewMonster}>
                                     <Save className="mr-2 h-4 w-4"/>Save New Monster
                                 </Button>
@@ -992,7 +1014,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         <button onClick={() => {
           if (isCreatingHomebrew && isHomebrewFormDirty) { 
             setIsUnsavedChangesDialogOpen(true); 
-             setPendingActionAfterUnsavedDialog(() => () => onOpenChange(false)); 
+            // Set a pending action to close the drawer IF user discards or saves.
+            // If they cancel, the drawer stays open.
+            setPendingMonsterFetchArgs(null); // Clear any monster fetch, as closing is the goal
           } else { onOpenChange(false); }
         }}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
