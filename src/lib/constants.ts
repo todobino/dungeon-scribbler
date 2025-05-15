@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -14,16 +14,33 @@ export interface NavItem {
 
 export const APP_NAME = "Adventure Architect";
 
+// Toolbar IDs - DEFINE THESE FIRST
+export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
+export const MONSTER_MASH_DRAWER_ID = "monster-mash";
+export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
+export const SPELLBOOK_DRAWER_ID = "spellbook";
+export const DICE_ROLLER_TAB_ID = "dice-roller";
+export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
+
+// Toolbar items
+export const TOOLBAR_ITEMS = [
+  { id: DICE_ROLLER_TAB_ID, label: 'Dice Roller', icon: Dice5 },
+  { id: COMBAT_TRACKER_TAB_ID, label: 'Combat Tracker', icon: Swords },
+  { id: MONSTER_MASH_DRAWER_ID, label: 'Monster Mash', icon: Skull },
+  { id: STATUS_CONDITIONS_DRAWER_ID, label: 'Status Conditions', icon: ShieldQuestion },
+  { id: SPELLBOOK_DRAWER_ID, label: 'Spellbook', icon: BookOpen },
+];
+
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
-  { label: 'Encounter Planner', href: '/encounter-planner', icon: Swords },
 ];
 
 export const STORY_NAV_ITEMS: NavItem[] = [
   { label: 'Adventure Recap', href: '/story-so-far-refactored', icon: History, isGenAI: true, disabled: false },
   { label: 'Next Session Goals', href: '/next-session-goals-refactored', icon: ClipboardList, isGenAI: true, disabled: false },
+  { label: 'Encounter Planner', href: '/encounter-planner', icon: Swords },
 ];
 
 export const WORLD_NAV_ITEMS: NavItem[] = [
@@ -44,15 +61,6 @@ export const ADVANCED_NAV_ITEMS: NavItem[] = [
 
 export const SETTINGS_NAV_ITEMS: NavItem[] = [
  { label: 'Settings', href: '/settings', icon: Cog, disabled: true },
-];
-
-// Toolbar items
-export const TOOLBAR_ITEMS = [
-  { id: 'dice-roller', label: 'Dice Roller', icon: Dice5 },
-  { id: 'combat-tracker', label: 'Combat Tracker', icon: Swords },
-  { id: 'status-conditions', label: 'Status Conditions', icon: ShieldQuestion },
-  { id: 'spellbook', label: 'Spellbook', icon: BookOpen },
-  { id: 'monster-mash', label: 'Monster Mash', icon: Skull },
 ];
 
 
@@ -188,7 +196,7 @@ export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
 
-// Adventure Recap Page Keys (Formerly Story So Far Refactored)
+// Adventure Recap Page Keys
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
 export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_CurrentSession_`;
 export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionSummaries_`;
@@ -207,13 +215,6 @@ export const MONSTER_MASH_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Ho
 // Spellbook Feature Key
 export const SPELLBOOK_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}Spellbook_Homebrew`;
 
-// Toolbar IDs for shared state management
-export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
-export const MONSTER_MASH_DRAWER_ID = "monster-mash";
-export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
-export const SPELLBOOK_DRAWER_ID = "spellbook";
-export const DICE_ROLLER_TAB_ID = "dice-roller";
-export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
 
 // Monster Mash Homebrew Form Options
 export const MONSTER_TYPES: string[] = [
