@@ -11,9 +11,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Swords, Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info } from "lucide-react";
+import { Swords, Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ArrowUpAZ, ArrowDownAZ, ShieldCheck, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
 
@@ -22,20 +24,32 @@ interface MonsterMashDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type SortKey = "name" | "cr";
+type SortOrder = "asc" | "desc";
+
+interface SortConfig {
+  key: SortKey;
+  order: SortOrder;
+}
+
 export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps) {
   const [allMonstersData, setAllMonstersData] = useState<MonsterSummary[]>([]);
   const [filteredMonsters, setFilteredMonsters] = useState<MonsterSummary[]>([]);
   const [selectedMonster, setSelectedMonster] = useState<MonsterDetail | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [minCrFilter, setMinCrFilter] = useState<string>("");
-  const [maxCrFilter, setMaxCrFilter] = useState<string>("");
+  // CR Min/Max filters removed due to API limitations for effective summary filtering.
+  // Sorting by CR will be available for Favorites.
 
   const [favorites, setFavorites] = useState<FavoriteMonster[]>([]);
   
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [resultsSortConfig, setResultsSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
+  const [favoritesSortConfig, setFavoritesSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
+
 
   useEffect(() => {
     if (open && allMonstersData.length === 0) {
@@ -49,7 +63,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         .then(data => {
           const monsters = data.results || [];
           setAllMonstersData(monsters);
-          setFilteredMonsters(monsters); // Apply initial filter if any
+          // Initial filter/sort call moved to searchTerm/allMonstersData useEffect
         })
         .catch(err => {
           console.error("Error fetching monster list:", err);
@@ -78,52 +92,46 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     }
   }, [favorites]);
 
-  const handleSearchAndFilter = useCallback(() => {
+  const handleFilterAndSortMonsters = useCallback(() => {
     let filtered = allMonstersData;
 
-    // Filter by search term
     if (searchTerm.trim() !== "") {
       filtered = filtered.filter(monster =>
         monster.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
-    // Filter by CR range
-    const minCr = parseFloat(minCrFilter);
-    const maxCr = parseFloat(maxCrFilter);
-
-    if (!isNaN(minCr) || !isNaN(maxCr)) {
-      // This requires monster details for CR, which summaries don't have.
-      // For now, we acknowledge this limitation. A proper CR filter on summary would require different API or data structure.
-      // To make this work, we'd need to fetch details for all monsters, or the API needs to provide CR in summary.
-      // The current dnd5eapi /api/monsters does NOT provide CR in the summary.
-      // So, this CR filter will not work correctly with the current summary-based `allMonstersData`.
-      // For a true CR range filter, we would need to fetch ALL monster details, which is very inefficient.
-      // The alternative (what was there before with single CR input) makes separate calls for specific CRs.
-      // Given the constraints, I'll leave the input fields but the client-side filtering on `allMonstersData` won't effectively filter by CR.
-      // A more robust solution would be to fetch all monster details initially or use a backend that pre-processes this.
-      // For this iteration, I will keep the logic for client-side filtering based on name only.
-      // The CR input fields are present but won't filter correctly without CR data in `allMonstersData`.
-      // This is a known limitation of the dnd5eapi for this kind of client-side range filtering.
-    }
     
+    // Sort results
+    if (resultsSortConfig.key === 'name') {
+      filtered.sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        let comparison = 0;
+        if (nameA > nameB) comparison = 1;
+        else if (nameA < nameB) comparison = -1;
+        return resultsSortConfig.order === 'asc' ? comparison : comparison * -1;
+      });
+    } 
+    // CR sorting for summary list is not effective as summaries lack CR data.
+    // This will be handled by user inspecting details.
+
     setFilteredMonsters(filtered);
     setError(null);
-  }, [searchTerm, minCrFilter, maxCrFilter, allMonstersData]);
+  }, [searchTerm, allMonstersData, resultsSortConfig]);
 
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-        handleSearchAndFilter();
+        handleFilterAndSortMonsters();
     }, 300);
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm, minCrFilter, maxCrFilter, handleSearchAndFilter]);
+  }, [searchTerm, resultsSortConfig, handleFilterAndSortMonsters]);
 
 
   const fetchMonsterDetail = async (monsterIndex: string) => {
     setIsLoadingDetail(true);
     setError(null);
-    setSelectedMonster(null); // Clear previous monster while loading
+    setSelectedMonster(null);
     try {
       const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterIndex}`);
       if (!response.ok) throw new Error(`Failed to fetch details for ${monsterIndex}: ${response.status}`);
@@ -144,10 +152,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setFavorites(favorites.filter(f => f.index !== monsterToIndex.index));
     } else {
       let monsterDetailToSave: MonsterDetail;
-      if ('challenge_rating' in monsterToIndex) { // It's already a MonsterDetail
+      if ('challenge_rating' in monsterToIndex) { 
         monsterDetailToSave = monsterToIndex;
-      } else { // It's a MonsterSummary, fetch details first
-        setIsLoadingDetail(true); // Show loading indicator while fetching for favorite
+      } else { 
+        setIsLoadingDetail(true); 
         try {
           const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToIndex.index}`);
           if (!response.ok) throw new Error(`Failed to fetch details for ${monsterToIndex.name} to favorite.`);
@@ -161,7 +169,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           setIsLoadingDetail(false);
         }
       }
-      setFavorites([...favorites, { 
+      setFavorites(prevFavs => [...prevFavs, { 
         index: monsterDetailToSave.index, 
         name: monsterDetailToSave.name, 
         cr: monsterDetailToSave.challenge_rating, 
@@ -198,6 +206,15 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     );
   };
 
+  const sortedFavorites = [...favorites].sort((a, b) => {
+    const valA = favoritesSortConfig.key === 'name' ? a.name.toLowerCase() : a.cr;
+    const valB = favoritesSortConfig.key === 'name' ? b.name.toLowerCase() : b.cr;
+    let comparison = 0;
+    if (valA > valB) comparison = 1;
+    else if (valA < valB) comparison = -1;
+    return favoritesSortConfig.order === 'asc' ? comparison : comparison * -1;
+  });
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden">
@@ -208,21 +225,34 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
         <div className="flex flex-1 min-h-0">
           {/* Favorites Sidebar */}
-          <div className="w-1/4 min-w-[200px] max-w-[300px] border-r bg-background p-3 flex flex-col">
-            <h3 className="text-lg font-semibold mb-2 text-primary">Favorites</h3>
+          <div className="w-1/4 min-w-[220px] max-w-[300px] border-r bg-background p-3 flex flex-col">
+            <div className="mb-2">
+              <h3 className="text-lg font-semibold mb-1 text-primary">Favorites ({favorites.length})</h3>
+              <div className="flex gap-1 text-xs items-center">
+                <span className="text-muted-foreground">Sort:</span>
+                <Button variant={favoritesSortConfig.key === 'name' ? 'secondary' : 'ghost'} size="xs" className="px-1.5 py-0.5 h-auto" onClick={() => setFavoritesSortConfig(prev => ({...prev, key: 'name'}))}>Name</Button>
+                <Button variant={favoritesSortConfig.key === 'cr' ? 'secondary' : 'ghost'} size="xs" className="px-1.5 py-0.5 h-auto" onClick={() => setFavoritesSortConfig(prev => ({...prev, key: 'cr'}))}>CR</Button>
+                <Button variant="ghost" size="xs" className="px-1 py-0.5 h-auto" onClick={() => setFavoritesSortConfig(prev => ({...prev, order: prev.order === 'asc' ? 'desc' : 'asc'}))}>
+                  {favoritesSortConfig.order === 'asc' ? <ArrowUpAZ className="h-3.5 w-3.5"/> : <ArrowDownAZ className="h-3.5 w-3.5"/>}
+                </Button>
+              </div>
+            </div>
             <ScrollArea className="flex-1">
-              {favorites.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No favorites yet. Click the star on a monster's card to add it here.</p>
+              {sortedFavorites.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No favorites yet.</p>
               ) : (
                 <ul className="space-y-1">
-                  {favorites.map(fav => (
+                  {sortedFavorites.map(fav => (
                     <li 
                       key={fav.index}
                       onClick={() => fetchMonsterDetail(fav.index)}
-                      className="p-2 rounded-md hover:bg-muted cursor-pointer text-sm flex justify-between items-center"
+                      className={cn(
+                        "p-2 rounded-md hover:bg-muted cursor-pointer text-sm flex justify-between items-center",
+                        selectedMonster?.index === fav.index && "bg-primary/10"
+                      )}
                     >
                       <span>{fav.name} <span className="text-xs text-muted-foreground">(CR {fav.cr})</span></span>
-                      <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                       {/* Favorite star here is redundant if we load details on click */}
                     </li>
                   ))}
                 </ul>
@@ -231,9 +261,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
 
           {/* Main Content Area */}
+          <TooltipProvider>
           <div className="flex-1 flex flex-col p-4 overflow-hidden">
             {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-4 pb-3 border-b">
+            <div className="flex flex-col sm:flex-row gap-3 mb-2 pb-3 border-b items-end">
               <div className="flex-grow">
                 <Label htmlFor="monster-search">Search by Name</Label>
                 <div className="relative">
@@ -247,24 +278,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                   {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
                 </div>
               </div>
-              <div className="w-full sm:w-32">
-                <Label htmlFor="min-cr-filter">Min CR</Label>
-                 <Input 
-                    id="min-cr-filter" 
-                    placeholder="e.g., 1/4" 
-                    value={minCrFilter}
-                    onChange={(e) => setMinCrFilter(e.target.value)}
-                  />
-              </div>
-              <div className="w-full sm:w-32">
-                <Label htmlFor="max-cr-filter">Max CR</Label>
-                 <Input 
-                    id="max-cr-filter" 
-                    placeholder="e.g., 5" 
-                    value={maxCrFilter}
-                    onChange={(e) => setMaxCrFilter(e.target.value)}
-                  />
-              </div>
+               {/* CR Filter Inputs Removed */}
             </div>
             
             {error && <p className="text-destructive text-center mb-2 p-2 bg-destructive/10 rounded-md">{error}</p>}
@@ -272,16 +286,34 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
               {/* Results List */}
               <div className="flex flex-col border rounded-lg overflow-hidden">
-                <h3 className="text-md font-semibold p-3 bg-muted border-b">
-                  Results ({isLoadingList ? "..." : filteredMonsters.length})
-                </h3>
+                <div className="p-3 bg-muted border-b">
+                  <h3 className="text-md font-semibold">
+                    Results ({isLoadingList ? "..." : filteredMonsters.length})
+                  </h3>
+                  <div className="flex gap-1 text-xs items-center mt-1">
+                    <span className="text-muted-foreground">Sort:</span>
+                    <Button variant={resultsSortConfig.key === 'name' ? 'secondary' : 'ghost'} size="xs" className="px-1.5 py-0.5 h-auto" onClick={() => setResultsSortConfig(prev => ({...prev, key: 'name'}))}>Name</Button>
+                    <Tooltip delayDuration={100}>
+                      <TooltipTrigger asChild>
+                        <Button variant={resultsSortConfig.key === 'cr' ? 'secondary' : 'ghost'} size="xs" className="px-1.5 py-0.5 h-auto" onClick={() => { /* No-op for now, CR sort on summary list is not effective */ }}>CR</Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs p-1">
+                        <p>CR sorting on this initial list is not effective.<br/>View monster details to see CR. Favorites can be CR sorted.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Button variant="ghost" size="xs" className="px-1 py-0.5 h-auto" onClick={() => setResultsSortConfig(prev => ({...prev, order: prev.order === 'asc' ? 'desc' : 'asc'}))}>
+                      {resultsSortConfig.order === 'asc' ? <ArrowUpAZ className="h-3.5 w-3.5"/> : <ArrowDownAZ className="h-3.5 w-3.5"/>}
+                    </Button>
+                  </div>
+                </div>
+
                 {isLoadingList ? (
                    <div className="flex-1 flex items-center justify-center p-4">
                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
                    </div>
                 ) : filteredMonsters.length === 0 && !isLoadingList ? (
                   <p className="p-4 text-sm text-muted-foreground text-center">
-                    {allMonstersData.length > 0 ? "No monsters match your criteria." : "Loading initial monster list or API error."}
+                    {allMonstersData.length > 0 ? "No monsters match your search." : "Loading initial monster list or API error."}
                   </p>
                 ) : (
                   <ScrollArea className="flex-1">
@@ -330,8 +362,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                            <Button variant="ghost" size="icon" onClick={() => toggleFavorite(selectedMonster)} className="h-8 w-8" aria-label={isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}>
                               <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400")}/>
                            </Button>
-                           <Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button>
-                           <Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button>
+                           <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldCheck className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Initiative (TBD)</TooltipContent></Tooltip>
+                           <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip>
                         </div>
                       </CardHeader>
                       <CardContent className="p-0 space-y-3 text-sm bg-transparent">
@@ -379,18 +411,21 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                   </ScrollArea>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-                     <Info className="h-12 w-12 text-muted-foreground mb-2"/>
-                    <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search/CR filter.</p>
-                     <p className="text-xs text-muted-foreground mt-2">Note: CR range filter currently only filters by name due to API limitations with direct range queries on summaries. Accurate CR filtering is applied after fetching initial list if data were available in summaries or if all details were pre-fetched.</p>
+                     <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/>
+                    <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search.</p>
+                     <p className="text-xs text-muted-foreground mt-2">Note: CR filtering is not available for the main search list due to API limitations. Favorites can be sorted by CR.</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
+          </TooltipProvider>
         </div>
       </SheetContent>
     </Sheet>
   );
 }
+
+    
 
     
