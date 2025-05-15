@@ -9,7 +9,7 @@ import { InitiativeTrackerDrawer } from "@/components/features/initiative-tracke
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { TOOLBAR_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { Dice5, Swords, VenetianMask } from "lucide-react"; // Explicitly import icons
+import { Dice5, Swords, Skull, ChevronRight } from "lucide-react"; // Explicitly import icons
 
 export function RightDockedToolbar() {
   const [openDrawer, setOpenDrawer] = useState<string | null>(null);

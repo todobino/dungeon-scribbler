@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, VenetianMask } from 'lucide-react';
+import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, Skull, VenetianMask } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -50,7 +50,7 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
 export const TOOLBAR_ITEMS = [
   { id: 'dice-roller', label: 'Dice Roller', icon: Dice5 },
   { id: 'initiative-tracker', label: 'Combat Tracker', icon: Swords },
-  { id: 'monster-mash', label: 'Monster Mash', icon: VenetianMask },
+  { id: 'monster-mash', label: 'Monster Mash', icon: Skull },
 ];
 
 
@@ -186,7 +186,7 @@ export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
 
-// Adventure Recap Page Keys (Refactored Story So Far)
+// Adventure Recap Page Keys
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
 export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_CurrentSession_`;
 export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionSummaries_`;

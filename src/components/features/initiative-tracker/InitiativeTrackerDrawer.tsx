@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5, Heart, Shield, ChevronsRightIcon, Skull } from "lucide-react";
+import { ListOrdered, PlusCircle, Trash2, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Dice5, Heart, Shield, ChevronsRightIcon, Skull, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { rollDie } from "@/lib/dice-utils";
 
@@ -225,7 +225,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
     }
     
     setCombatants(prev => [...prev, ...newEnemies]);
-     if (currentTurnIndex === null && (combatants.length > 0 || (combatants.length === 0 && newEnemies.length > 0 ))) {
+     if (currentTurnIndex === null && (combatants.length === 0 || (combatants.length === 0 && newEnemies.length > 0 ))) {
        setCurrentTurnIndex(0);
     }
     
@@ -334,126 +334,135 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col">
-          <SheetHeader>
-            <SheetTitle className="flex items-center"><ListOrdered className="mr-2 h-6 w-6 text-primary"/>Initiative Tracker</SheetTitle>
-          </SheetHeader>
-          
-          <div className="py-2 flex flex-col gap-2">
-            <div className="flex gap-2">
-                <Button onClick={() => setIsAddFriendlyDialogOpen(true)} variant="outline" className="flex-1">
-                {isAllyMode ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
-                {addPlayerButtonLabel}
-                </Button>
-                <Button onClick={() => setIsAddEnemyDialogOpen(true)} variant="outline" className="flex-1">
-                <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
-                </Button>
+        <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
+          <div className="flex flex-col h-full pr-8"> {/* Main content wrapper with padding for close bar */}
+            <SheetHeader className="p-4 border-b">
+              <SheetTitle className="flex items-center"><ListOrdered className="mr-2 h-6 w-6 text-primary"/>Combat Tracker</SheetTitle>
+            </SheetHeader>
+            
+            <div className="p-4 flex flex-col gap-2 border-b">
+              <div className="flex gap-2">
+                  <Button onClick={() => setIsAddFriendlyDialogOpen(true)} variant="outline" className="flex-1">
+                  {isAllyMode ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
+                  {addPlayerButtonLabel}
+                  </Button>
+                  <Button onClick={() => setIsAddEnemyDialogOpen(true)} variant="outline" className="flex-1">
+                  <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
+                  </Button>
+              </div>
+              {availablePartyMembers.length > 0 && (
+                  <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full">
+                      <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
+                  </Button>
+              )}
             </div>
-            {availablePartyMembers.length > 0 && (
-                <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full">
-                    <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
-                </Button>
-            )}
-          </div>
 
-          <div className="flex-grow flex flex-col min-h-0 mt-2">
-            <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
-            <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
-              {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet. Add players or enemies to start.</p>}
-              <ul className="space-y-1.5">
-                {combatants.map((c, index) => (
-                  <li 
-                    key={c.id}
-                    ref={(el) => combatantRefs.current.set(c.id, el)}
-                    className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
-                    style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center">
-                        <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
-                        <div>
-                          <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {c.type === 'player' ? (isAllyMode && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
-                            {c.type === 'player' && c.playerId && (() => {
-                              const player = activeCampaignParty.find(p => p.id === c.playerId);
-                              return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null;
-                            })()}
-                          </p>
+            <div className="flex-grow flex flex-col min-h-0 p-4">
+              <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
+              <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
+                {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet. Add players or enemies to start.</p>}
+                <ul className="space-y-1.5">
+                  {combatants.map((c, index) => (
+                    <li 
+                      key={c.id}
+                      ref={(el) => combatantRefs.current.set(c.id, el)}
+                      className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
+                      style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center">
+                          <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
+                          <div>
+                            <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {c.type === 'player' ? (isAllyMode && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
+                              {c.type === 'player' && c.playerId && (() => {
+                                const player = activeCampaignParty.find(p => p.id === c.playerId);
+                                return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null;
+                              })()}
+                            </p>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeCombatant(c.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeCombatant(c.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
 
-                    {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground border-t border-border pt-1.5 mt-1">
-                        {c.ac !== undefined && <div className="flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> AC: {c.ac}</div>}
-                        {c.hp !== undefined && <div className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> HP: {c.currentHp ?? c.hp}/{c.hp}</div>}
-                      </div>
-                    )}
-
-                    {c.type === 'enemy' && c.hp !== undefined && (
-                        <>
-                          {c.currentHp !== undefined && c.currentHp === 0 ? (
-                            <Button
-                              variant="destructive"
-                              className="w-full mt-1.5 py-1 h-auto text-sm"
-                              onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}
-                            >
-                              <Skull className="mr-2 h-4 w-4" /> Dead (Remove)
-                            </Button>
-                          ) : (
-                            <div className="flex items-center gap-1.5 pt-1">
-                              <Input
-                                type="number"
-                                placeholder="Amt"
-                                className="h-8 text-sm w-20 px-2 py-1"
-                                value={damageInputs[c.id] || ""}
-                                onChange={(e) => handleDamageInputChange(c.id, e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                min="1"
-                              />
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="px-2 py-1 h-8 text-xs"
-                                onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}
-                              >
-                                Hit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700"
-                                onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}
-                              >
-                                Heal
-                              </Button>
-                            </div>
-                          )}
-                        </>
+                      {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground border-t border-border pt-1.5 mt-1">
+                          {c.ac !== undefined && <div className="flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> AC: {c.ac}</div>}
+                          {c.hp !== undefined && <div className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> HP: {c.currentHp ?? c.hp}/{c.hp}</div>}
+                        </div>
                       )}
-                  </li>
-                ))}
-              </ul>
-            </ScrollArea>
-          </div>
-          
-          {combatants.length > 0 && (
-            <div className="pt-4 space-y-2">
-                <div className="flex gap-2">
-                    <Button onClick={prevTurn} variant="outline" className="flex-1"><ArrowLeft className="mr-2 h-4 w-4"/>Prev</Button>
-                    <Button onClick={nextTurn} className="flex-1 bg-primary hover:bg-primary/90"><ArrowRight className="mr-2 h-4 w-4"/>Next Turn</Button>
-                </div>
-                 <Button onClick={endCombat} variant="destructive" className="w-full"><XCircle className="mr-2 h-4 w-4"/>End Combat</Button>
-            </div>
-          )}
 
-          <SheetFooter className="mt-auto pt-4">
-            {/* Close Tracker button removed here */}
-          </SheetFooter>
+                      {c.type === 'enemy' && c.hp !== undefined && (
+                          <>
+                            {c.currentHp !== undefined && c.currentHp === 0 ? (
+                              <Button
+                                variant="destructive"
+                                className="w-full mt-1.5 py-1 h-auto text-sm"
+                                onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}
+                              >
+                                <Skull className="mr-2 h-4 w-4" /> Dead (Remove)
+                              </Button>
+                            ) : (
+                              <div className="flex items-center gap-1.5 pt-1">
+                                <Input
+                                  type="number"
+                                  placeholder="Amt"
+                                  className="h-8 text-sm w-20 px-2 py-1"
+                                  value={damageInputs[c.id] || ""}
+                                  onChange={(e) => handleDamageInputChange(c.id, e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  min="1"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="px-2 py-1 h-8 text-xs"
+                                  onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}
+                                >
+                                  Hit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700"
+                                  onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}
+                                >
+                                  Heal
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                    </li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            </div>
+            
+            {combatants.length > 0 && (
+              <div className="p-4 space-y-2 border-t">
+                  <div className="flex gap-2">
+                      <Button onClick={prevTurn} variant="outline" className="flex-1"><ArrowLeft className="mr-2 h-4 w-4"/>Prev</Button>
+                      <Button onClick={nextTurn} className="flex-1 bg-primary hover:bg-primary/90"><ArrowRight className="mr-2 h-4 w-4"/>Next Turn</Button>
+                  </div>
+                   <Button onClick={endCombat} variant="destructive" className="w-full"><XCircle className="mr-2 h-4 w-4"/>End Combat</Button>
+              </div>
+            )}
+
+            <SheetFooter className="mt-auto p-4 border-t">
+              {/* Footer content can go here if needed */}
+            </SheetFooter>
+          </div>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
+            aria-label="Close Combat Tracker"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
         </SheetContent>
       </Sheet>
 
@@ -484,7 +493,7 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
                   >
                     <option value="" disabled>Select a player</option>
                     {availablePartyMembers.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (Lvl {p.level} {p.race} {p.class} - AC: {p.armorClass} / Init Mod: {p.initiativeModifier ?? 0})</option>
+                      <option key={p.id} value={p.id}>{p.name} - {p.race} {p.class}</option>
                     ))}
                   </select>
                 ) : (
@@ -590,11 +599,10 @@ export function InitiativeTrackerDrawer({ open, onOpenChange }: InitiativeTracke
               setEnemyAC("");
               setEnemyHP("");
             }}>Cancel</Button>
-            <Button onClick={handleAddEnemy}>Add Enemy</Button>
+            <Button onClick={handleAddEnemy} disabled={!enemyName.trim()}>Add Enemy</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
   );
 }
-
