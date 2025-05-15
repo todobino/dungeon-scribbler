@@ -438,7 +438,7 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
                   placeholder="Search spells..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10"
+                  className="pr-10 border-primary focus-visible:ring-primary"
                 />
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
