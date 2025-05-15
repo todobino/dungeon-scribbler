@@ -265,20 +265,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
         </SheetHeader>
 
-        {/* Search Bar - Moved up */}
-        <div className="p-4 border-b">
-          <div className="relative">
-            <Input 
-              id="monster-search" 
-              placeholder="Search by Name..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-8"
-            />
-            {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
-          </div>
-        </div>
-
+        {/* Main container for columns - directly after header */}
         <div className="flex flex-1 min-h-0"> {/* Main container for columns */}
           
           {/* Favorites Sidebar (Column 1) */}
@@ -328,8 +315,26 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             </ScrollArea>
           </div>
 
-          {/* Middle Column: Results List (Column 2) */}
+          {/* Middle Column: Search/Filters & Results (Column 2) */}
           <div className="w-2/5 flex flex-col p-4 border-r bg-background overflow-y-auto">
+            {/* Search Bar - Moved into this column */}
+            <div className="sticky top-0 bg-background z-10 py-3 mb-3">
+              <div className="relative">
+                <Input 
+                  id="monster-search" 
+                  placeholder="Search by Name..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pr-8" 
+                />
+                {searchTerm && (
+                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}>
+                    <X className="h-4 w-4"/>
+                  </Button>
+                )}
+              </div>
+            </div>
+            
             {/* Results List Panel */}
             <div className="flex flex-col border rounded-lg overflow-hidden flex-1 bg-card">
               <div className="p-3 bg-muted border-b flex justify-between items-center">
@@ -403,6 +408,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
           {/* Right Column: Monster Details (Column 3) */}
           <div className="flex-1 flex flex-col bg-card border-l">
+            {/* Sticky Header for Details Panel */}
             <div className="p-3 border-b flex justify-between items-center sticky top-0 bg-card z-10">
                 <h3 className="text-md font-semibold truncate pr-2 text-foreground">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
                 {selectedMonster && (
