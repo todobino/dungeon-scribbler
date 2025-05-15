@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; // Removed SheetDescription
+import { CardDescription } from "@/components/ui/card"; // Keep for monster details
 import { Badge } from "@/components/ui/badge";
 import { 
     DropdownMenu, 
@@ -21,7 +21,7 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Swords, Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown } from "lucide-react";
+import { Swords, Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -61,8 +61,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [selectedMonster, setSelectedMonster] = useState<MonsterDetail | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [minCRInput, setMinCRInput] = useState<string>("");
-  const [maxCRInput, setMaxCRInput] = useState<string>("");
+  // Removed minCRInput and maxCRInput states
 
   const [favorites, setFavorites] = useState<FavoriteMonster[]>([]);
   
@@ -85,7 +84,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         .then(data => {
           const monsters = data.results || [];
           setAllMonstersData(monsters);
-          setFilteredMonsters(monsters);
+          setFilteredMonsters(monsters); // Initialize filtered list
         })
         .catch(err => {
           console.error("Error fetching monster list:", err);
@@ -120,34 +119,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
     let monstersToProcess = [...allMonstersData];
     
-    // Client-side CR filtering
-    if (minCRInput.trim() !== "" || maxCRInput.trim() !== "") {
-        const minCRVal = minCRInput.trim() === "" ? -Infinity : crToNumber(minCRInput);
-        const maxCRVal = maxCRInput.trim() === "" ? Infinity : crToNumber(maxCRInput);
-
-        if (isNaN(minCRVal) || isNaN(maxCRVal)) {
-            setError("Invalid CR value. Please use numbers or fractions (e.g., 1/4, 0.5, 2).");
-            setFilteredMonsters([]);
-            setIsLoadingList(false);
-            return;
-        }
-        
-        // To filter by CR on the summary list, we'd ideally need CR on the summary objects.
-        // The DND5e API summary `/api/monsters` does NOT include CR.
-        // So, for now, client-side CR filtering on the summary list is not feasible without fetching all details.
-        // We will show a message or disable this if allMonstersData doesn't have CR.
-        // For this iteration, we'll assume CR filtering is for when details are loaded or for favorites.
-        // If we were to implement CR filtering on the summary list, we'd need to fetch many monster details first.
-        // OR we can fetch by CR using `/api/monsters?challenge_rating=X` like before, but not for a range.
-        // Given the input fields are Min/Max, let's stick to client-side search for name for now and revisit precise CR range summary filtering.
-        // The current implementation will effectively just search by name if CR is not present on summary.
-        // If you *had* CR on allMonstersData summaries, it would be:
-        // monstersToProcess = monstersToProcess.filter(m => {
-        //   const monsterCR = crToNumber(m.challenge_rating); // Assuming m.challenge_rating exists
-        //   return monsterCR >= minCRVal && monsterCR <= maxCRVal;
-        // });
-    }
-
+    // Removed CR filtering logic
 
     if (searchTerm.trim() !== "") {
       monstersToProcess = monstersToProcess.filter(monster =>
@@ -165,10 +137,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             return resultsSortConfig.order === 'asc' ? comparison : comparison * -1;
         });
     }
+    // CR sorting for results list is effectively disabled via UI due to API limitations
     
     setFilteredMonsters(monstersToProcess);
     setIsLoadingList(false);
-  }, [searchTerm, minCRInput, maxCRInput, allMonstersData, resultsSortConfig]);
+  }, [searchTerm, allMonstersData, resultsSortConfig]);
 
 
   useEffect(() => {
@@ -178,7 +151,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         }
     }, 300); 
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm, minCRInput, maxCRInput, resultsSortConfig, open, handleFilterAndSortMonsters]);
+  }, [searchTerm, resultsSortConfig, open, handleFilterAndSortMonsters]);
 
 
   const fetchMonsterDetail = async (monsterIndex: string) => {
@@ -205,9 +178,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setFavorites(favorites.filter(f => f.index !== monsterToIndex.index));
     } else {
       let monsterDetailToSave: MonsterDetail;
-      if ('challenge_rating' in monsterToIndex) { // It's already a MonsterDetail
+      if ('challenge_rating' in monsterToIndex) { 
         monsterDetailToSave = monsterToIndex;
-      } else { // It's a MonsterSummary, fetch details
+      } else { 
         setIsLoadingDetail(true); 
         try {
           const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToIndex.index}`);
@@ -277,9 +250,22 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden">
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle className="flex items-center text-2xl"><Swords className="mr-3 h-7 w-7 text-primary"/>Monster Mash</SheetTitle>
-          <SheetDescription>Search the D&D 5e bestiary and manage your favorite creatures.</SheetDescription>
+        <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
+          <SheetTitle className="flex items-center text-2xl">
+            <Swords className="mr-3 h-7 w-7 text-primary"/>Monster Mash
+          </SheetTitle>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p>Search the D&D 5e bestiary and manage your favorite creatures.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </SheetHeader>
 
         <div className="flex flex-1 min-h-0 border-t"> {/* Main container for columns */}
@@ -331,46 +317,21 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             </ScrollArea>
           </div>
 
-          {/* Middle Column: Search/Filters + Results List (Column 2) */}
+          {/* Middle Column: Search & Results List (Column 2) */}
           <div className="w-2/5 flex flex-col p-4 border-r bg-background overflow-y-auto">
             {/* Search and Filters */}
             <div className="mb-4 pb-3 border-b space-y-3 sticky top-0 bg-background z-10 py-3">
-              <div>
-                <Label htmlFor="monster-search">Search by Name</Label>
-                <div className="relative mt-1">
-                  <Input 
-                    id="monster-search" 
-                    placeholder="e.g., Goblin, Dragon..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-8"
-                  />
-                  {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
-                </div>
+              <div className="relative">
+                <Input 
+                  id="monster-search" 
+                  placeholder="Search by Name..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pr-8"
+                />
+                {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
               </div>
-              <div className="flex gap-3 items-end">
-                <div>
-                  <Label htmlFor="min-cr">Min CR</Label>
-                  <Input 
-                    id="min-cr" 
-                    placeholder="e.g., 1/4" 
-                    value={minCRInput}
-                    onChange={(e) => setMinCRInput(e.target.value)}
-                    className="w-28"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="max-cr">Max CR</Label>
-                  <Input 
-                    id="max-cr" 
-                    placeholder="e.g., 5" 
-                    value={maxCRInput}
-                    onChange={(e) => setMaxCRInput(e.target.value)}
-                    className="w-28"
-                  />
-                </div>
-              </div>
-               <p className="text-xs text-muted-foreground">CR filtering applies after name search. For broad CR searches, clear name.</p>
+              {/* CR Filter Removed */}
             </div>
             
             {/* Results List Panel */}
@@ -411,7 +372,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                  <p className="p-4 text-destructive text-center">{error}</p>
               ) : filteredMonsters.length === 0 && !isLoadingList ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">
-                  {allMonstersData.length > 0 ? "No monsters match your search or CR filter." : "Loading initial monster list or API error."}
+                  {allMonstersData.length > 0 ? "No monsters match your search." : "Loading initial monster list or API error."}
                 </p>
               ) : (
                 <ScrollArea className="flex-1">
@@ -445,83 +406,78 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
 
           {/* Right Column: Monster Details (Column 3) */}
-          <TooltipProvider>
-          <div className="flex-1 flex flex-col p-4 bg-background overflow-y-auto">
-            <div className="flex flex-col border rounded-lg overflow-hidden bg-card flex-1 h-full">
-               <div className="p-3 bg-muted border-b flex justify-between items-center">
-                  <h3 className="text-md font-semibold truncate pr-2 text-foreground">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
-                  {selectedMonster && (
-                      <div className="flex gap-1">
-                         <Tooltip><TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => toggleFavorite(selectedMonster)} className="h-8 w-8" aria-label={isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}>
-                              <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400", !isFavorite(selectedMonster.index) && "text-muted-foreground/70")}/>
-                              </Button>
-                         </TooltipTrigger><TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent></Tooltip>
-                         <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Initiative (TBD)</TooltipContent></Tooltip>
-                         <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip>
-                      </div>
-                  )}
-               </div>
-              {isLoadingDetail ? (
-                <div className="flex-1 flex items-center justify-center p-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-              ) : selectedMonster ? (
-                <ScrollArea className="flex-1 p-4">
-                  <Card className="shadow-none border-none bg-transparent">
-                    <CardHeader className="p-0 pb-3">
-                        <CardDescription>{selectedMonster.size} {selectedMonster.type} ({selectedMonster.subtype || 'no subtype'}), {selectedMonster.alignment}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0 space-y-3 text-sm bg-transparent">
-                      <div className="grid grid-cols-3 gap-2 text-xs border p-2 rounded-md bg-background">
-                        <div><strong>AC:</strong> {formatArmorClass(selectedMonster.armor_class)}</div>
-                        <div><strong>HP:</strong> {selectedMonster.hit_points} ({selectedMonster.hit_points_roll})</div>
-                        <div><strong>CR:</strong> {selectedMonster.challenge_rating} ({selectedMonster.xp} XP)</div>
-                      </div>
-                      <div><strong>Speed:</strong> {Object.entries(selectedMonster.speed).map(([key, val]) => `${key} ${val}`).join(', ')}</div>
-                      <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-background">
-                        <div className="text-center"><strong>STR</strong><br/>{selectedMonster.strength} ({Math.floor((selectedMonster.strength - 10) / 2)})</div>
-                        <div className="text-center"><strong>DEX</strong><br/>{selectedMonster.dexterity} ({Math.floor((selectedMonster.dexterity - 10) / 2)})</div>
-                        <div className="text-center"><strong>CON</strong><br/>{selectedMonster.constitution} ({Math.floor((selectedMonster.constitution - 10) / 2)})</div>
-                        <div className="text-center"><strong>INT</strong><br/>{selectedMonster.intelligence} ({Math.floor((selectedMonster.intelligence - 10) / 2)})</div>
-                        <div className="text-center"><strong>WIS</strong><br/>{selectedMonster.wisdom} ({Math.floor((selectedMonster.wisdom - 10) / 2)})</div>
-                        <div className="text-center"><strong>CHA</strong><br/>{selectedMonster.charisma} ({Math.floor((selectedMonster.charisma - 10) / 2)})</div>
-                      </div>
-                      
-                      {selectedMonster.proficiencies.length > 0 && (
-                        <div><strong>Saving Throws & Skills:</strong> {selectedMonster.proficiencies.map(p => `${p.proficiency.name.replace("Saving Throw: ", "").replace("Skill: ", "")} +${p.value}`).join(', ')}</div>
-                      )}
-                      {selectedMonster.damage_vulnerabilities.length > 0 && <div><strong>Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities.join(', ')}</div>}
-                      {selectedMonster.damage_resistances.length > 0 && <div><strong>Resistances:</strong> {selectedMonster.damage_resistances.join(', ')}</div>}
-                      {selectedMonster.damage_immunities.length > 0 && <div><strong>Immunities:</strong> {selectedMonster.damage_immunities.join(', ')}</div>}
-                      {selectedMonster.condition_immunities.length > 0 && <div><strong>Condition Immunities:</strong> {selectedMonster.condition_immunities.map(ci => ci.name).join(', ')}</div>}
-                      <div><strong>Senses:</strong> {Object.entries(selectedMonster.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ')}</div>
-                      <div><strong>Languages:</strong> {selectedMonster.languages || "None"}</div>
-
-                      {selectedMonster.special_abilities && selectedMonster.special_abilities.length > 0 && (
-                        <div><h4 className="font-semibold mt-2 mb-1 text-primary">Special Abilities</h4>{renderMonsterActions(selectedMonster.special_abilities)}</div>
-                      )}
-                      {selectedMonster.actions && selectedMonster.actions.length > 0 && (
-                        <div><h4 className="font-semibold mt-2 mb-1 text-primary">Actions</h4>{renderMonsterActions(selectedMonster.actions)}</div>
-                      )}
-                      {selectedMonster.legendary_actions && selectedMonster.legendary_actions.length > 0 && (
-                         <div><h4 className="font-semibold mt-2 mb-1 text-primary">Legendary Actions</h4>{renderMonsterActions(selectedMonster.legendary_actions)}</div>
-                      )}
-                       {selectedMonster.image && (
-                          <div className="mt-2">
-                              <Image src={`${DND5E_API_BASE_URL}${selectedMonster.image}`} alt={selectedMonster.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${selectedMonster.type} monster`} />
-                          </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </ScrollArea>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-                   <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/>
-                  <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search and CR filters.</p>
-                </div>
-              )}
+          <div className="flex-1 flex flex-col bg-card border-l"> {/* Removed p-4, bg-background, overflow-y-auto. Added bg-card and border-l */}
+            <div className="p-3 border-b flex justify-between items-center sticky top-0 bg-card z-10"> {/* This is the details header */}
+                <h3 className="text-md font-semibold truncate pr-2 text-foreground">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
+                {selectedMonster && (
+                    <div className="flex gap-1">
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => toggleFavorite(selectedMonster)} className="h-8 w-8" aria-label={isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}>
+                            <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400", !isFavorite(selectedMonster.index) && "text-muted-foreground/70")}/>
+                            </Button>
+                        </TooltipTrigger><TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent></Tooltip></TooltipProvider>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Initiative (TBD)</TooltipContent></Tooltip></TooltipProvider>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip></TooltipProvider>
+                    </div>
+                )}
             </div>
+            
+            {isLoadingDetail ? (
+              <div className="flex-1 flex items-center justify-center p-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : selectedMonster ? (
+              <ScrollArea className="flex-1"> {/* ScrollArea now takes remaining space */}
+                <div className="p-4 space-y-3 text-sm"> {/* Padding applied to this inner div */}
+                    <CardDescription>{selectedMonster.size} {selectedMonster.type} ({selectedMonster.subtype || 'no subtype'}), {selectedMonster.alignment}</CardDescription>
+                    <div className="grid grid-cols-3 gap-2 text-xs border p-2 rounded-md bg-background">
+                      <div><strong>AC:</strong> {formatArmorClass(selectedMonster.armor_class)}</div>
+                      <div><strong>HP:</strong> {selectedMonster.hit_points} ({selectedMonster.hit_points_roll})</div>
+                      <div><strong>CR:</strong> {selectedMonster.challenge_rating} ({selectedMonster.xp} XP)</div>
+                    </div>
+                    <div><strong>Speed:</strong> {Object.entries(selectedMonster.speed).map(([key, val]) => `${key} ${val}`).join(', ')}</div>
+                    <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-background">
+                      <div className="text-center"><strong>STR</strong><br/>{selectedMonster.strength} ({Math.floor((selectedMonster.strength - 10) / 2)})</div>
+                      <div className="text-center"><strong>DEX</strong><br/>{selectedMonster.dexterity} ({Math.floor((selectedMonster.dexterity - 10) / 2)})</div>
+                      <div className="text-center"><strong>CON</strong><br/>{selectedMonster.constitution} ({Math.floor((selectedMonster.constitution - 10) / 2)})</div>
+                      <div className="text-center"><strong>INT</strong><br/>{selectedMonster.intelligence} ({Math.floor((selectedMonster.intelligence - 10) / 2)})</div>
+                      <div className="text-center"><strong>WIS</strong><br/>{selectedMonster.wisdom} ({Math.floor((selectedMonster.wisdom - 10) / 2)})</div>
+                      <div className="text-center"><strong>CHA</strong><br/>{selectedMonster.charisma} ({Math.floor((selectedMonster.charisma - 10) / 2)})</div>
+                    </div>
+                    
+                    {selectedMonster.proficiencies.length > 0 && (
+                      <div><strong>Saving Throws & Skills:</strong> {selectedMonster.proficiencies.map(p => `${p.proficiency.name.replace("Saving Throw: ", "").replace("Skill: ", "")} +${p.value}`).join(', ')}</div>
+                    )}
+                    {selectedMonster.damage_vulnerabilities.length > 0 && <div><strong>Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities.join(', ')}</div>}
+                    {selectedMonster.damage_resistances.length > 0 && <div><strong>Resistances:</strong> {selectedMonster.damage_resistances.join(', ')}</div>}
+                    {selectedMonster.damage_immunities.length > 0 && <div><strong>Immunities:</strong> {selectedMonster.damage_immunities.join(', ')}</div>}
+                    {selectedMonster.condition_immunities.length > 0 && <div><strong>Condition Immunities:</strong> {selectedMonster.condition_immunities.map(ci => ci.name).join(', ')}</div>}
+                    <div><strong>Senses:</strong> {Object.entries(selectedMonster.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ')}</div>
+                    <div><strong>Languages:</strong> {selectedMonster.languages || "None"}</div>
+
+                    {selectedMonster.special_abilities && selectedMonster.special_abilities.length > 0 && (
+                      <div><h4 className="font-semibold mt-2 mb-1 text-primary">Special Abilities</h4>{renderMonsterActions(selectedMonster.special_abilities)}</div>
+                    )}
+                    {selectedMonster.actions && selectedMonster.actions.length > 0 && (
+                      <div><h4 className="font-semibold mt-2 mb-1 text-primary">Actions</h4>{renderMonsterActions(selectedMonster.actions)}</div>
+                    )}
+                    {selectedMonster.legendary_actions && selectedMonster.legendary_actions.length > 0 && (
+                        <div><h4 className="font-semibold mt-2 mb-1 text-primary">Legendary Actions</h4>{renderMonsterActions(selectedMonster.legendary_actions)}</div>
+                    )}
+                    {selectedMonster.image && (
+                        <div className="mt-2">
+                            <Image src={`${DND5E_API_BASE_URL}${selectedMonster.image}`} alt={selectedMonster.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${selectedMonster.type} monster`} />
+                        </div>
+                    )}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+                <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/>
+                <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search.</p>
+              </div>
+            )}
           </div>
-          </TooltipProvider>
         </div>
       </SheetContent>
     </Sheet>
