@@ -212,7 +212,12 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
   };
   
   const handleAddEnemy = () => {
-    if (!enemyName.trim()) return;
+    if (!enemyName.trim()) {
+      // This console.error was causing a test failure as it's not a user-facing error.
+      // User is prevented from clicking by disabled state.
+      // console.error("Missing Information: Please enter enemy name.");
+      return;
+    }
     const quantity = parseInt(enemyQuantityInput) || 1; if (quantity <= 0) return;
     const acValue = enemyAC.trim() === "" ? undefined : parseInt(enemyAC);
     const hpValue = enemyHP.trim() === "" ? undefined : parseInt(enemyHP);
@@ -285,114 +290,128 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        <div className="flex flex-col h-full pr-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-            <SheetHeader className="p-4 border-b">
-               <TabsList className="grid w-full grid-cols-2">
+        {/* This div wrapper makes space for the vertical close bar */}
+        <div className="flex flex-col h-full pr-8"> 
+          <SheetHeader className="p-4 border-b shrink-0">
+            <SheetTitle>DM Tools</SheetTitle>
+          </SheetHeader>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
+            <div className="p-4 border-b shrink-0">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value={DICE_ROLLER_TAB_ID} className="flex items-center gap-2"><Dice5 className="h-4 w-4"/>Dice Roller</TabsTrigger>
                 <TabsTrigger value={COMBAT_TRACKER_TAB_ID} className="flex items-center gap-2"><ListOrdered className="h-4 w-4"/>Combat Tracker</TabsTrigger>
               </TabsList>
-            </SheetHeader>
+            </div>
 
-            <TabsContent value={DICE_ROLLER_TAB_ID} className="flex-grow flex flex-col min-h-0 data-[state=inactive]:hidden">
-              <div className="p-4 space-y-4 flex-grow flex flex-col">
-                <div>
-                  <Label htmlFor="dice-notation">Dice Notation (e.g., 2d6+3, d20)</Label>
-                  <Input id="dice-notation" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="e.g., 2d6+3, d20" />
-                </div>
-                <div>
-                  <Label>Roll Mode</Label>
-                  <RadioGroup defaultValue="normal" value={rollMode} onValueChange={(value: string) => setRollMode(value as RollMode)} className="flex space-x-2 pt-1">
-                    <div className="flex items-center space-x-1"><RadioGroupItem value="normal" id="mode-normal" /><Label htmlFor="mode-normal" className="font-normal cursor-pointer">Normal</Label></div>
-                    <div className="flex items-center space-x-1"><RadioGroupItem value="advantage" id="mode-advantage" /><Label htmlFor="mode-advantage" className="font-normal cursor-pointer">Advantage</Label></div>
-                    <div className="flex items-center space-x-1"><RadioGroupItem value="disadvantage" id="mode-disadvantage" /><Label htmlFor="mode-disadvantage" className="font-normal cursor-pointer">Disadvantage</Label></div>
-                  </RadioGroup>
-                </div>
-                <Button onClick={handleDiceRoll} className={cn("w-full", rollMode === "advantage" && "border-2 border-green-500 hover:border-green-600", rollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600")}>
-                  <Zap className="mr-2 h-5 w-5" /> {inputValue.trim() === "" ? "Roll d20" : "Roll"}
-                </Button>
-                <div className="flex-grow flex flex-col min-h-0">
-                  <div className="flex justify-between items-center mb-1"><Label>Roll Log</Label><Button variant="ghost" size="sm" onClick={() => setRollLog([])} className="text-xs text-muted-foreground hover:text-foreground"><Trash2 className="mr-1 h-3 w-3" /> Clear Log</Button></div>
-                  <ScrollArea className="border rounded-md p-2 flex-grow bg-muted/30 h-full">
-                    {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
-                    <div className="space-y-3">
-                      {rollLog.map(entry => (
-                        <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm transition-all", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
-                          <p className="text-2xl font-bold text-primary">{entry.resultText}</p>
-                          <p className="text-xs text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: entry.detailText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value={COMBAT_TRACKER_TAB_ID} className="flex-grow flex flex-col min-h-0 data-[state=inactive]:hidden">
-                <div className="p-4 flex flex-col gap-2 border-b">
-                    <div className="flex gap-2">
-                        <Button onClick={() => setIsAddFriendlyDialogOpen(true)} variant="outline" className="flex-1">
-                            {isAllyMode ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
-                            {addPlayerButtonLabel}
-                        </Button>
-                        <Button onClick={() => setIsAddEnemyDialogOpen(true)} variant="outline" className="flex-1">
-                            <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
-                        </Button>
-                    </div>
-                    {availablePartyMembers.length > 0 && (
-                        <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full">
-                            <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
-                        </Button>
-                    )}
-                </div>
-                <div className="flex-grow flex flex-col min-h-0 p-4">
-                    <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
-                    <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
-                        {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
-                        <ul className="space-y-1.5">
-                        {combatants.map((c, index) => (
-                            <li key={c.id} ref={(el) => combatantRefs.current.set(c.id, el)} className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`} style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}>
-                            <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center">
-                                <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
-                                <div>
-                                    <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                    {c.type === 'player' ? (isAllyMode && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
-                                    {c.type === 'player' && c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null; })()}
-                                    </p>
-                                </div>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeCombatant(c.id)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
-                            {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground border-t border-border pt-1.5 mt-1">
-                                {c.ac !== undefined && <div className="flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> AC: {c.ac}</div>}
-                                {c.hp !== undefined && <div className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> HP: {c.currentHp ?? c.hp}/{c.hp}</div>}
-                                </div>
-                            )}
-                            {c.type === 'enemy' && c.hp !== undefined && ( <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </> )}
-                            </li>
+            {/* This div will contain the scrollable content of the active tab */}
+            <div className="flex-grow overflow-auto">
+              <TabsContent value={DICE_ROLLER_TAB_ID} className="data-[state=active]:flex flex-col h-full">
+                <div className="p-4 space-y-4 flex-grow flex flex-col">
+                  <div>
+                    <Label htmlFor="dice-notation">Dice Notation (e.g., 2d6+3, d20)</Label>
+                    <Input id="dice-notation" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="e.g., 2d6+3, d20" />
+                  </div>
+                  <div>
+                    <Label>Roll Mode</Label>
+                    <RadioGroup defaultValue="normal" value={rollMode} onValueChange={(value: string) => setRollMode(value as RollMode)} className="flex space-x-2 pt-1">
+                      <div className="flex items-center space-x-1"><RadioGroupItem value="normal" id="mode-normal" /><Label htmlFor="mode-normal" className="font-normal cursor-pointer">Normal</Label></div>
+                      <div className="flex items-center space-x-1"><RadioGroupItem value="advantage" id="mode-advantage" /><Label htmlFor="mode-advantage" className="font-normal cursor-pointer">Advantage</Label></div>
+                      <div className="flex items-center space-x-1"><RadioGroupItem value="disadvantage" id="mode-disadvantage" /><Label htmlFor="mode-disadvantage" className="font-normal cursor-pointer">Disadvantage</Label></div>
+                    </RadioGroup>
+                  </div>
+                  <Button onClick={handleDiceRoll} className={cn("w-full", rollMode === "advantage" && "border-2 border-green-500 hover:border-green-600", rollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600")}>
+                    <Zap className="mr-2 h-5 w-5" /> {inputValue.trim() === "" ? "Roll d20" : "Roll"}
+                  </Button>
+                  <div className="flex-grow flex flex-col min-h-0">
+                    <div className="flex justify-between items-center mb-1"><Label>Roll Log</Label><Button variant="ghost" size="sm" onClick={() => setRollLog([])} className="text-xs text-muted-foreground hover:text-foreground"><Trash2 className="mr-1 h-3 w-3" /> Clear Log</Button></div>
+                    <ScrollArea className="border rounded-md p-2 flex-grow bg-muted/30 h-full">
+                      {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
+                      <div className="space-y-3">
+                        {rollLog.map(entry => (
+                          <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm transition-all", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
+                            <p className="text-2xl font-bold text-primary">{entry.resultText}</p>
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: entry.detailText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+                          </div>
                         ))}
-                        </ul>
+                      </div>
                     </ScrollArea>
+                  </div>
                 </div>
-                 {combatants.length > 0 && (
-                    <div className="p-4 space-y-2 border-t">
-                        <div className="flex gap-2">
-                            <Button onClick={prevTurn} variant="outline" className="flex-1"><ArrowLeft className="mr-2 h-4 w-4"/>Prev</Button>
-                            <Button onClick={nextTurn} className="flex-1 bg-primary hover:bg-primary/90"><ArrowRight className="mr-2 h-4 w-4"/>Next Turn</Button>
-                        </div>
-                        <Button onClick={endCombat} variant="destructive" className="w-full"><XCircle className="mr-2 h-4 w-4"/>End Combat</Button>
-                    </div>
-                )}
-            </TabsContent>
-            <SheetFooter className="mt-auto p-4 border-t">
+              </TabsContent>
+
+              <TabsContent value={COMBAT_TRACKER_TAB_ID} className="data-[state=active]:flex flex-col h-full">
+                  <div className="p-4 flex flex-col gap-2 border-b shrink-0">
+                      <div className="flex gap-2">
+                          <Button onClick={() => setIsAddFriendlyDialogOpen(true)} variant="outline" className="flex-1">
+                              {isAllyMode ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
+                              {addPlayerButtonLabel}
+                          </Button>
+                          <Button onClick={() => setIsAddEnemyDialogOpen(true)} variant="outline" className="flex-1">
+                              <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
+                          </Button>
+                      </div>
+                      {availablePartyMembers.length > 0 && (
+                          <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full">
+                              <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
+                          </Button>
+                      )}
+                  </div>
+                  <div className="flex-grow flex flex-col min-h-0 p-4">
+                      <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
+                      <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
+                          {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
+                          <ul className="space-y-1.5">
+                          {combatants.map((c, index) => (
+                              <li key={c.id} ref={(el) => combatantRefs.current.set(c.id, el)} className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`} style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}>
+                              <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center">
+                                  <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
+                                  <div>
+                                      <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                      {c.type === 'player' ? (isAllyMode && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
+                                      {c.type === 'player' && c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null; })()}
+                                      </p>
+                                  </div>
+                                  </div>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeCombatant(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                              </div>
+                              {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground border-t border-border pt-1.5 mt-1">
+                                  {c.ac !== undefined && <div className="flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> AC: {c.ac}</div>}
+                                  {c.hp !== undefined && <div className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> HP: {c.currentHp ?? c.hp}/{c.hp}</div>}
+                                  </div>
+                              )}
+                              {c.type === 'enemy' && c.hp !== undefined && ( <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </> )}
+                              </li>
+                          ))}
+                          </ul>
+                      </ScrollArea>
+                  </div>
+                   {combatants.length > 0 && (
+                      <div className="p-4 space-y-2 border-t shrink-0">
+                          <div className="flex gap-2">
+                              <Button onClick={prevTurn} variant="outline" className="flex-1"><ArrowLeft className="mr-2 h-4 w-4"/>Prev</Button>
+                              <Button onClick={nextTurn} className="flex-1 bg-primary hover:bg-primary/90"><ArrowRight className="mr-2 h-4 w-4"/>Next Turn</Button>
+                          </div>
+                          <Button onClick={endCombat} variant="destructive" className="w-full"><XCircle className="mr-2 h-4 w-4"/>End Combat</Button>
+                      </div>
+                  )}
+              </TabsContent>
+            </div>
+            
+            <SheetFooter className="p-4 border-t shrink-0">
                 {/* Shared footer for combined drawer if needed */}
             </SheetFooter>
           </Tabs>
         </div>
-        <button onClick={() => onOpenChange(false)} className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]" aria-label="Close Tools Drawer">
+        
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
+          aria-label="Close Tools Drawer"
+        >
           <ChevronRight className="h-6 w-6" />
         </button>
       </SheetContent>
@@ -426,4 +445,3 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
     </>
   );
 }
-
