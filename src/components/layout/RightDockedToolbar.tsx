@@ -9,7 +9,7 @@ import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDra
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon, ListOrdered } from "lucide-react";
+import { Dice5, Swords, Skull, Hexagon, ListOrdered, ChevronRight } from "lucide-react"; // Added Hexagon
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
@@ -19,12 +19,17 @@ export function RightDockedToolbar() {
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
 
+  // New state for the "landed" die
+  const [landedDie, setLandedDie] = useState<{ x: number; y: number; id: string } | null>(null);
+  const [landedDieTimeoutId, setLandedDieTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+
   const handleToggleDrawer = (itemId: string) => {
     if (justFinishedDrag) {
-      setJustFinishedDrag(false);
+      setJustFinishedDrag(false); // Reset flag after one check
       return;
     }
-    if (isDraggingDie) return;
+    if (isDraggingDie) return; // Don't open drawer if a drag is in progress
 
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
       const newTab = itemId === DICE_ROLLER_TAB_ID ? DICE_ROLLER_TAB_ID : COMBAT_TRACKER_TAB_ID;
@@ -46,40 +51,101 @@ export function RightDockedToolbar() {
   };
 
   const handleDragStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0) return; // Only act on left mouse button
+
+    // Clear any existing landed die and its timeout
+    if (landedDie) {
+        setLandedDie(null);
+    }
+    if (landedDieTimeoutId) {
+        clearTimeout(landedDieTimeoutId);
+        setLandedDieTimeoutId(null);
+    }
+
     setIsDraggingDie(true);
-    setDragPosition({ x: event.clientX, y: event.clientY });
+    // Initialize dragPosition, though mousemove will update it
+    setDragPosition({ x: event.clientX, y: event.clientY }); 
+    document.body.style.cursor = 'grabbing';
     event.preventDefault();
-  }, []);
+  }, [landedDie, landedDieTimeoutId]);
+
+
+  const handleMouseUp = useCallback((event: MouseEvent) => {
+    if (isDraggingDie) {
+        setIsDraggingDie(false); // Stop dragging state
+        document.body.style.cursor = 'default';
+
+        // Calculate random offset for the "landed" die
+        const releaseX = event.clientX;
+        const releaseY = event.clientY;
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = Math.random() * 50; // Settle within 50px radius
+        const offsetX = Math.cos(angle) * radius;
+        const offsetY = Math.sin(angle) * radius;
+
+        const newLandedDie = {
+            x: releaseX + offsetX,
+            y: releaseY + offsetY,
+            id: Date.now().toString(), // Unique ID for this landed die instance
+        };
+
+        // Clear any existing timeout for a previous landed die visualization
+        if (landedDieTimeoutId) {
+            clearTimeout(landedDieTimeoutId);
+        }
+
+        setLandedDie(newLandedDie); // Show the landed die
+
+        const newTimeoutId = setTimeout(() => {
+            setLandedDie(prevLandedDie => {
+                // Only clear if it's the same die that timed out
+                if (prevLandedDie && prevLandedDie.id === newLandedDie.id) {
+                    return null;
+                }
+                return prevLandedDie; // Otherwise, keep the current (potentially newer) landed die
+            });
+            // No need to setLandedDieTimeoutId(null) here, as this specific timeout has fired.
+            // It will be nullified if a new drag starts or on unmount.
+        }, 5000); // Die disappears after 5 seconds
+        setLandedDieTimeoutId(newTimeoutId);
+
+        setJustFinishedDrag(true); // Prevent drawer from opening immediately
+        // Short timeout to reset the flag, allowing normal clicks after drag
+        setTimeout(() => setJustFinishedDrag(false), 50); 
+    }
+  }, [isDraggingDie, landedDieTimeoutId]);
+
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
-      setDragPosition({ x: event.clientX, y: event.clientY });
-    };
-
-    const handleMouseUp = (event: MouseEvent) => {
-      setIsDraggingDie(false);
-      setJustFinishedDrag(true);
-      // Future: Trigger quick roll logic here
-      event.preventDefault();
-      setTimeout(() => setJustFinishedDrag(false), 0); // Reset after click event cycle
+      if (isDraggingDie) { // Only update if actively dragging
+        setDragPosition({ x: event.clientX, y: event.clientY });
+      }
     };
 
     if (isDraggingDie) {
-      document.body.style.cursor = 'grabbing';
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     } else {
+      // Ensure cursor is reset if drag ends unexpectedly (e.g., focus loss)
       document.body.style.cursor = 'default';
     }
 
     return () => {
-      document.body.style.cursor = 'default';
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default'; // Cleanup cursor on component unmount or effect re-run
     };
-  }, [isDraggingDie]);
+  }, [isDraggingDie, handleMouseUp]); // handleMouseUp is stable due to useCallback
 
+  // Cleanup timeout on component unmount
+  useEffect(() => {
+    return () => {
+        if (landedDieTimeoutId) {
+            clearTimeout(landedDieTimeoutId);
+        }
+    };
+  }, [landedDieTimeoutId]);
 
   return (
     <>
@@ -95,7 +161,7 @@ export function RightDockedToolbar() {
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "h-12 w-12 rounded-md", // Button size remains consistent
+                        "h-12 w-12 rounded-md",
                         (isCombinedToolActive(item.id) || (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID)) &&
                         "bg-primary/20 text-primary ring-2 ring-primary",
                         isDiceRollerButton && "cursor-grab"
@@ -118,6 +184,7 @@ export function RightDockedToolbar() {
         </div>
       </TooltipProvider>
 
+      {/* Render the dragged icon if dragging */}
       {isDraggingDie && (
         <div
           style={{
@@ -129,14 +196,34 @@ export function RightDockedToolbar() {
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <div className="relative h-14 w-14 flex items-center justify-center"> {/* Container for icon + text */}
+          <div className="relative h-14 w-14 flex items-center justify-center">
             <Hexagon className="h-14 w-14 text-primary animate-spin" fill="hsl(var(--primary-foreground))" />
             <span
-              className="absolute -top-1 -right-2 text-primary font-bold text-sm" // Positioned top-right of the hexagon
+              className="absolute -top-1 -right-2 text-primary font-bold text-sm"
               style={{ userSelect: 'none' }}
             >
               20
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Render the landed die if it exists and not currently dragging a new one */}
+      {landedDie && !isDraggingDie && (
+        <div
+          style={{
+            position: 'fixed',
+            left: landedDie.x,
+            top: landedDie.y,
+            pointerEvents: 'none', // Allow clicks to pass through to elements underneath if needed
+            zIndex: 1999, 
+            transform: 'translate(-50%, -50%)',
+          }}
+          className="animate-in fade-in duration-300" 
+        >
+          <div className="relative h-14 w-14 flex items-center justify-center">
+            {/* Stationary Hexagon, no "20", slightly transparent */}
+            <Hexagon className="h-14 w-14 text-primary" fill="hsl(var(--primary)/ 0.3)" />
           </div>
         </div>
       )}
