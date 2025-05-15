@@ -43,14 +43,17 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
   }, []);
 
   useEffect(() => {
-    if (open && conditions.length === 0) {
+    if (open && conditions.length === 0 && !isLoadingList) {
       fetchConditionsList();
     }
-  }, [open, conditions.length, fetchConditionsList]);
+  }, [open, conditions.length, fetchConditionsList, isLoadingList]);
 
   const fetchConditionDetail = async (conditionIndex: string) => {
     if (conditionDetails[conditionIndex]) {
-      setOpenAccordionItem(conditionIndex); // Already fetched
+      // Already fetched, ensure it's the open item
+      if (openAccordionItem !== conditionIndex) {
+         setOpenAccordionItem(conditionIndex);
+      }
       return;
     }
     setIsLoadingDetail(prev => ({ ...prev, [conditionIndex]: true }));
@@ -62,7 +65,7 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
       }
       const data: ConditionDetail = await response.json();
       setConditionDetails(prev => ({ ...prev, [conditionIndex]: data }));
-      setOpenAccordionItem(conditionIndex);
+      // No need to setOpenAccordionItem here, onValueChange handles it
     } catch (err: any) {
       setError(err.message || `Could not load details for ${conditionIndex}.`);
     } finally {
@@ -70,14 +73,11 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
     }
   };
 
-  const handleAccordionChange = (value: string | string[]) => {
-    const newOpenItem = Array.isArray(value) ? value[0] : value;
-    if (newOpenItem && !conditionDetails[newOpenItem]) {
-      fetchConditionDetail(newOpenItem);
-    } else if (newOpenItem) {
-      setOpenAccordionItem(newOpenItem);
-    } else {
-      setOpenAccordionItem(null);
+  const handleAccordionChange = (value: string) => {
+    // value is the index of the item being opened, or empty string if all are closed/current one is closed
+    setOpenAccordionItem(value || null);
+    if (value && !conditionDetails[value] && !isLoadingDetail[value]) {
+      fetchConditionDetail(value);
     }
   };
 
@@ -90,7 +90,7 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
       >
         <div className="flex flex-col h-full pr-8">
           <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex-shrink-0">
-            <SheetTitle className="flex items-center text-xl">
+            <SheetTitle className="flex items-center text-xl text-primary-foreground">
               <ShieldQuestion className="mr-2 h-6 w-6" /> Status Conditions
             </SheetTitle>
           </SheetHeader>
@@ -117,7 +117,7 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
                   type="single"
                   collapsible
                   className="w-full p-2"
-                  value={openAccordionItem || undefined}
+                  value={openAccordionItem || ""} // Ensure value is always a string
                   onValueChange={handleAccordionChange}
                 >
                   {conditions.map((condition) => (
@@ -134,7 +134,7 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
                         ) : conditionDetails[condition.index] ? (
                           <ul className="space-y-1 list-disc list-outside pl-4">
                             {conditionDetails[condition.index].desc.map((descLine, idx) => (
-                              <li key={idx}>{descLine}</li>
+                              <li key={idx}>{descLine.replace(/^- /, '')}</li>
                             ))}
                           </ul>
                         ) : (
