@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Swords, Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle } from "lucide-react";
+import { Swords, Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -42,7 +42,7 @@ interface SortConfig {
 }
 
 const crToNumber = (cr: string | number | undefined): number => {
-  if (cr === undefined) return -1; // Treat undefined CR as unfilterable or sortable last.
+  if (cr === undefined) return -1; 
   if (typeof cr === 'number') return cr;
   if (typeof cr === 'string') {
     if (cr.includes('/')) {
@@ -53,6 +53,20 @@ const crToNumber = (cr: string | number | undefined): number => {
   }
   return -1; 
 };
+
+const formatCRDisplay = (crValue: string | number | undefined): string => {
+    if (crValue === undefined) return "N/A";
+    const numCR = crToNumber(crValue);
+
+    if (numCR === -1) return "N/A";
+    if (numCR === 0.125) return "1/8";
+    if (numCR === 0.25) return "1/4";
+    if (numCR === 0.5) return "1/2";
+    if (numCR >= 1 && Number.isInteger(numCR)) return numCR.toString();
+    if (numCR >= 1) return numCR.toFixed(1); // For rare cases like CR 1.5 etc.
+    return numCR.toString(); // Fallback for other fractional CRs if any
+};
+
 
 const CR_SLIDER_MIN = 0;
 const CR_SLIDER_MAX = 30;
@@ -83,35 +97,25 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   ) => {
     let tempFiltered = [...monstersToFilter];
 
-    // Filter by name
     if (currentSearchTerm.trim() !== "") {
       tempFiltered = tempFiltered.filter(monster =>
         monster.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
       );
     }
     
-    // Filter by CR range
     const [minCR, maxCR] = currentCrRange;
-    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) { // Only filter if CR range is not default
+    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) { 
         tempFiltered = tempFiltered.filter(monster => {
-            // Attempt to access CR. For summaries from /api/monsters, CR is NOT available.
-            // This filter primarily works on details or favorites where CR is known.
-            const monsterCRString = (monster as MonsterDetail).challenge_rating; 
-
-            if (monsterCRString === undefined) {
-                // If CR is unknown for this monster summary, and the slider is active (not full range),
-                // then exclude this monster.
-                return false; 
-            }
+            const monsterCRString = (monster as MonsterDetail).challenge_rating ?? (monster as FavoriteMonster).cr;
+            if (monsterCRString === undefined) return false; // Exclude if CR is unknown and filter is active
             
             const monsterCR = crToNumber(monsterCRString);
-            if (monsterCR === -1) return false; // Unparseable CR
+            if (monsterCR === -1) return false;
             
             return monsterCR >= minCR && monsterCR <= maxCR;
         });
     }
 
-    // Sort
     if (currentSortConfig.key === 'name') {
       tempFiltered.sort((a, b) => {
         const nameA = a.name.toLowerCase();
@@ -122,13 +126,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         return currentSortConfig.order === 'asc' ? comparison : comparison * -1;
       });
     } else if (currentSortConfig.key === 'cr') {
-        // CR sort on results list relies on CR being on summary, which is unlikely for the initial API fetch.
-        // This sort is more effective on the Favorites list.
         tempFiltered.sort((a, b) => {
-            const crA = crToNumber((a as MonsterDetail).challenge_rating);
-            const crB = crToNumber((b as MonsterDetail).challenge_rating);
+            const crA = crToNumber((a as MonsterDetail).challenge_rating ?? (a as FavoriteMonster).cr);
+            const crB = crToNumber((b as MonsterDetail).challenge_rating ?? (b as FavoriteMonster).cr);
             if (crA === -1 && crB === -1) return 0;
-            if (crA === -1) return currentSortConfig.order === 'asc' ? 1 : -1; // Monsters without CR go to end/start
+            if (crA === -1) return currentSortConfig.order === 'asc' ? 1 : -1;
             if (crB === -1) return currentSortConfig.order === 'asc' ? -1 : 1;
             return currentSortConfig.order === 'asc' ? crA - crB : crB - crA;
         });
@@ -173,7 +175,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         if (allMonstersData.length > 0) {
           applyFiltersAndSort(allMonstersData, searchTerm, crRange, resultsSortConfig);
         } else if (!isLoadingList) {
-           fetchAllMonsters(); // Fetch if still not loaded and drawer is open
+           fetchAllMonsters(); 
         }
       }
     }, 300);
@@ -189,14 +191,17 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       }
     } catch (e) {
       console.error("Error loading favorites from localStorage", e);
+      setFavorites([]);
     }
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(MONSTER_MASH_FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
-    } catch (e) {
-      console.error("Error saving favorites to localStorage", e);
+    if (favorites.length > 0 || localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY)) { // Only save if there are favorites or if there was something in LS
+      try {
+        localStorage.setItem(MONSTER_MASH_FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+      } catch (e) {
+        console.error("Error saving favorites to localStorage", e);
+      }
     }
   }, [favorites]);
 
@@ -225,14 +230,17 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setFavorites(favorites.filter(f => f.index !== monsterToIndex.index));
     } else {
       let monsterDetailToSave: MonsterDetail;
-      // Check if monsterToIndex is already a MonsterDetail (has challenge_rating)
       if ('challenge_rating' in monsterToIndex && monsterToIndex.challenge_rating !== undefined) {
         monsterDetailToSave = monsterToIndex as MonsterDetail;
-      } else { // It's a MonsterSummary, need to fetch details
+      } else { 
         setIsLoadingDetail(true);
         try {
           const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToIndex.index}`);
-          if (!response.ok) throw new Error(`Failed to fetch details for ${monsterToIndex.name} to favorite.`);
+          if (!response.ok) {
+            setError(`Could not fetch details for ${monsterToIndex.name} to add to favorites.`);
+            setIsLoadingDetail(false);
+            return;
+          }
           monsterDetailToSave = await response.json();
         } catch (err) {
           console.error("Error fetching details to favorite:", err);
@@ -245,15 +253,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       }
       
       if (monsterDetailToSave.challenge_rating === undefined) {
-          console.warn("Cannot add monster to favorites: CR is undefined after fetching details.", monsterDetailToSave.name);
-          setError(`Could not determine CR for ${monsterDetailToSave.name} to add to favorites.`);
+          setError(`CR undefined for ${monsterDetailToSave.name}. Cannot add to favorites.`);
           return;
       }
 
       const newFavorite: FavoriteMonster = {
         index: monsterDetailToSave.index,
         name: monsterDetailToSave.name,
-        cr: monsterDetailToSave.challenge_rating, // CR is a number here
+        cr: monsterDetailToSave.challenge_rating,
         type: monsterDetailToSave.type
       };
       setFavorites(prevFavs => [...prevFavs, newFavorite]);
@@ -293,7 +300,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     if (favoritesSortConfig.key === 'name') {
       valA = a.name.toLowerCase();
       valB = b.name.toLowerCase();
-    } else { // CR
+    } else { 
       valA = crToNumber(a.cr);
       valB = crToNumber(b.cr);
     }
@@ -303,12 +310,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     return favoritesSortConfig.order === 'asc' ? comparison : comparison * -1;
   });
 
-  const formatCRSliderLabel = (value: number): string => {
-    if (value === 0.125) return "1/8";
-    if (value === 0.25) return "1/4";
-    if (value === 0.5) return "1/2";
-    if (Number.isInteger(value)) return value.toString();
-    return value.toFixed(3).replace(/\.?0+$/, "");
+  const formatCRSliderRangeLabel = (): string => {
+    const minLabel = formatCRDisplay(crRange[0]);
+    const maxLabel = formatCRDisplay(crRange[1]);
+    if (crRange[0] === CR_SLIDER_MIN && crRange[1] === CR_SLIDER_MAX) return "All CRs";
+    return `CR: ${minLabel} - ${maxLabel}`;
   }
 
 
@@ -317,18 +323,18 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       <SheetContent 
         side="right" 
         className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden" 
-        hideCloseButton={true} // Hide default X
+        hideCloseButton={true}
       >
-        <SheetHeader className="p-4 border-b bg-muted flex flex-row items-center justify-between sticky top-0 z-20">
+        <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex flex-row items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-2">
-            <SheetTitle className="flex items-center text-2xl text-foreground">
-              <Swords className="mr-3 h-7 w-7 text-primary"/>Monster Mash
+            <SheetTitle className="flex items-center text-2xl">
+              <Swords className="mr-3 h-7 w-7"/>Monster Mash
             </SheetTitle>
             <TooltipProvider delayDuration={100}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80">
+                    <HelpCircle className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
@@ -339,7 +345,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
         </SheetHeader>
         
-        <div className="flex flex-1 min-h-0 border-t pr-8 relative"> {/* Main container with padding for close bar */}
+        <div className="flex flex-1 min-h-0 border-t pr-8 relative">
 
           {/* Favorites Sidebar (Column 1) */}
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col">
@@ -367,7 +373,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
               </DropdownMenu>
             </div>
             <ScrollArea className="flex-1">
-              {sortedFavorites.length === 0 ? (
+              {favorites.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No favorites yet.</p>
               ) : (
                 <ul className="space-y-1">
@@ -380,7 +386,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         selectedMonster?.index === fav.index && "bg-primary/10 text-primary font-medium"
                       )}
                     >
-                      <span>{fav.name} <span className="text-xs text-muted-foreground">(CR {fav.cr})</span></span>
+                      <span>{fav.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(fav.cr)})</span></span>
                     </li>
                   ))}
                 </ul>
@@ -407,7 +413,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 </div>
                  <div>
                     <Label htmlFor="cr-slider" className="text-sm mb-1 block">
-                      CR Range: {formatCRSliderLabel(crRange[0])} - {formatCRSliderLabel(crRange[1])}
+                      {formatCRSliderRangeLabel()}
                     </Label>
                     <Slider
                         id="cr-slider"
@@ -438,7 +444,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                       <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
                             <DropdownMenuRadioItem value="cr" disabled>Challenge Rating</DropdownMenuRadioItem>
-                       </TooltipTrigger><TooltipContent side="left"><p className="text-xs max-w-xs">CR sort on results only effective after details are loaded (e.g., for favorites or after individual selection).</p></TooltipContent></Tooltip></TooltipProvider>
+                       </TooltipTrigger><TooltipContent side="left"><p className="text-xs max-w-xs">CR sort on results requires CR data. Fetch details or favorite monsters first.</p></TooltipContent></Tooltip></TooltipProvider>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Order</DropdownMenuLabel>
@@ -454,7 +460,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                  <div className="flex-1 flex items-center justify-center p-4">
                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                  </div>
-              ) : error && !isLoadingList && filteredMonsters.length === 0 && searchTerm.trim() === "" && (crRange[0] === CR_SLIDER_MIN && crRange[1] === CR_SLIDER_MAX) ? ( // Show API error only if no filters active
+              ) : error && !isLoadingList && filteredMonsters.length === 0 && searchTerm.trim() === "" && (crRange[0] === CR_SLIDER_MIN && crRange[1] === CR_SLIDER_MAX) ? ( 
                  <p className="p-4 text-destructive text-center">{error}</p>
               ) : filteredMonsters.length === 0 && !isLoadingList ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">
@@ -519,7 +525,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     <div className="grid grid-cols-3 gap-2 text-xs border p-2 rounded-md bg-background">
                       <div><strong>AC:</strong> {formatArmorClass(selectedMonster.armor_class)}</div>
                       <div><strong>HP:</strong> {selectedMonster.hit_points} ({selectedMonster.hit_points_roll})</div>
-                      <div><strong>CR:</strong> {selectedMonster.challenge_rating} ({selectedMonster.xp} XP)</div>
+                      <div><strong>CR:</strong> {formatCRDisplay(selectedMonster.challenge_rating)} ({selectedMonster.xp} XP)</div>
                     </div>
                     <div><strong>Speed:</strong> {Object.entries(selectedMonster.speed).map(([key, val]) => `${key} ${val}`).join(', ')}</div>
                     <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-background">
@@ -560,7 +566,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             ) : error ? (
               <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
                 <AlertTriangle className="h-12 w-12 text-destructive mb-2"/>
-                <p className="text-destructive">{error}</p>
+                <p className="text-destructive text-center">{error}</p>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
@@ -570,15 +576,16 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             )}
           </div>
         </div>
-        {/* Vertical Close Bar */}
+        
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute top-0 right-0 h-full w-8 bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center cursor-pointer z-[60]"
+          className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
           aria-label="Close Monster Mash"
         >
-          <X className="h-6 w-6" />
+          <ChevronRight className="h-6 w-6" />
         </button>
       </SheetContent>
     </Sheet>
   );
 }
+
