@@ -4,12 +4,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDrawer";
+import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon, ListOrdered, ChevronRight, VenetianMask } from "lucide-react";
+import { Dice5, Swords, Skull, Hexagon, ListOrdered, ChevronRight, VenetianMask } from "lucide-react"; // Added VenetianMask
 
 interface LandedDieState {
   x: number;
@@ -17,7 +17,7 @@ interface LandedDieState {
   finalX: number;
   finalY: number;
   id: string;
-  isSettling: boolean; // True if it needs to animate to its finalX, finalY
+  isSettling: boolean; 
 }
 
 export function RightDockedToolbar() {
@@ -89,9 +89,9 @@ export function RightDockedToolbar() {
 
         const newLandedDieId = Date.now().toString();
         const newLandedDie: LandedDieState = {
-            x: releaseX, // Initial position is exact release point
+            x: releaseX, 
             y: releaseY,
-            finalX: releaseX + offsetX, // Store final target
+            finalX: releaseX + offsetX, 
             finalY: releaseY + offsetY,
             id: newLandedDieId,
             isSettling: true, 
@@ -106,7 +106,7 @@ export function RightDockedToolbar() {
                 }
                 return prevLandedDie;
             });
-        }, 5050); // 50ms for settle animation + 5000ms visibility
+        }, 5100); // 100ms for settle animation + 5000ms visibility
         setLandedDieTimeoutId(newVisibilityTimeoutId);
 
         setJustFinishedDrag(true);
@@ -137,27 +137,26 @@ export function RightDockedToolbar() {
 
   useEffect(() => {
     if (landedDie && landedDie.isSettling) {
-      if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId); // Clear previous settle timeout
+      if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId);
       const newSettleTimeoutId = setTimeout(() => {
         setLandedDie(prev => {
-          if (prev && prev.id === landedDie.id && prev.isSettling) { // Check if it's still the same die and needs settling
+          if (prev && prev.id === landedDie.id && prev.isSettling) {
             return { ...prev, x: prev.finalX, y: prev.finalY, isSettling: false };
           }
           return prev;
         });
-      }, 50); // Quick delay before "moving" to final spot
+      }, 100); // Increased delay to 100ms before "settle" animation starts
       setSettleDieTimeoutId(newSettleTimeoutId);
     }
-     // Cleanup for settleDieTimeoutId when landedDie becomes null or its ID changes
      return () => {
         if (settleDieTimeoutId) {
             clearTimeout(settleDieTimeoutId);
         }
     };
-  }, [landedDie]); // Only re-run if landedDie object itself changes
+  }, [landedDie]);
 
   useEffect(() => {
-    return () => { // Cleanup all timeouts on unmount
+    return () => { 
         if (landedDieTimeoutId) clearTimeout(landedDieTimeoutId);
         if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId);
     };
@@ -237,7 +236,7 @@ export function RightDockedToolbar() {
           }}
           className={cn(
             "animate-in fade-in", 
-            landedDie.isSettling ? "duration-50" : "duration-100" // Faster fade-in for initial land, slightly slower for final settle if needed, but move is main
+            landedDie.isSettling ? "duration-50" : "duration-100" 
           )}
         >
           <div className="relative h-14 w-14 flex items-center justify-center">
