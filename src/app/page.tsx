@@ -17,7 +17,7 @@ export default function HomePage() {
             {APP_NAME}
           </CardTitle>
           <CardDescription className="text-xl text-muted-foreground mt-2">
-            Your All-in-One Co-DM Tool
+            Your All-in-One Co-DM Tool!
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
