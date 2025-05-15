@@ -60,6 +60,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [selectedMonster, setSelectedMonster] = useState<MonsterDetail | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
+  const [minCRInput, setMinCRInput] = useState("");
+  const [maxCRInput, setMaxCRInput] = useState("");
 
   const [favorites, setFavorites] = useState<FavoriteMonster[]>([]);
   
@@ -70,27 +72,120 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [resultsSortConfig, setResultsSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
   const [favoritesSortConfig, setFavoritesSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
 
+  const fetchAllMonsters = useCallback(async () => {
+    if (allMonstersData.length > 0 && searchTerm === "" && minCRInput === "" && maxCRInput === "") {
+      // If we have all monsters and no filters, just use existing data
+      setFilteredMonsters(allMonstersData);
+      return;
+    }
+    setIsLoadingList(true);
+    setError(null);
+    try {
+      // Always fetch the full list initially if not present, then filter client-side for name/CR
+      const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
+      if (!response.ok) throw new Error(`Failed to fetch monster list: ${response.status}`);
+      const data = await response.json();
+      const monstersWithCR: MonsterSummary[] = data.results || []; // Assume CR is not in summary, will handle later
+      
+      // Fetch details to get CR for all monsters if not already fetched (costly, but needed for client-side CR filter)
+      // For now, we'll assume CR is part of the summary to avoid fetching all details initially.
+      // The API does NOT provide CR in the summary list. This part is tricky for efficient CR filtering.
+      // A more robust solution would involve a backend or pre-processing the monster list.
+      // For now, CR filtering will be done client-side IF CR data were available on MonsterSummary.
+      // Let's assume for this iteration we can't filter by CR on the initial list effectively
+      // without fetching all details, which is too slow.
+      // So, CR filter will apply if details were fetched for all.
+      // Simplified: just filter by name if allMonstersData is populated. CR filtering will be more involved.
+
+      setAllMonstersData(monstersWithCR); // Store all monsters
+      applyFiltersAndSort(monstersWithCR, searchTerm, minCRInput, maxCRInput, resultsSortConfig);
+
+    } catch (err) {
+      console.error("Error fetching monster list:", err);
+      setError("Could not load monster list. Please try again later.");
+      setAllMonstersData([]);
+      setFilteredMonsters([]);
+    } finally {
+      setIsLoadingList(false);
+    }
+  }, [allMonstersData, searchTerm, minCRInput, maxCRInput, resultsSortConfig]);
+
+
+  const applyFiltersAndSort = useCallback((
+    monsters: MonsterSummary[], 
+    currentSearchTerm: string,
+    currentMinCR: string,
+    currentMaxCR: string,
+    currentSortConfig: SortConfig
+  ) => {
+    let tempFiltered = [...monsters];
+
+    // Name filter
+    if (currentSearchTerm.trim() !== "") {
+      tempFiltered = tempFiltered.filter(monster =>
+        monster.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
+      );
+    }
+    
+    // CR Filter - This requires CR data on MonsterSummary or fetching all details
+    // As D&D 5e API monster summaries don't include CR, true CR range filtering on the summary list
+    // isn't feasible without fetching details for all monsters, which is slow.
+    // We will proceed assuming we filter AFTER fetching, or this is a placeholder for now.
+    // For now, we'll mock a CR property if it doesn't exist for demonstration.
+    const minCR = parseFloat(currentMinCR);
+    const maxCR = parseFloat(currentMaxCR);
+
+    if (!isNaN(minCR) || !isNaN(maxCR)) {
+      tempFiltered = tempFiltered.filter(monster => {
+        // Assuming monster.cr exists or is fetched. Placeholder:
+        const monsterCRString = (monster as any).challenge_rating || (monster as any).cr || "0"; 
+        const monsterCR = crToNumber(monsterCRString);
+        if (monsterCR === -1) return true; // If CR can't be determined, include it
+
+        const checkMin = isNaN(minCR) || monsterCR >= minCR;
+        const checkMax = isNaN(maxCR) || monsterCR <= maxCR;
+        return checkMin && checkMax;
+      });
+    }
+
+    // Sort
+    if (currentSortConfig.key === 'name') {
+      tempFiltered.sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        let comparison = 0;
+        if (nameA > nameB) comparison = 1;
+        else if (nameA < nameB) comparison = -1;
+        return currentSortConfig.order === 'asc' ? comparison : comparison * -1;
+      });
+    } 
+    // CR sort on results list is disabled due to API not providing CR in summary.
+
+    setFilteredMonsters(tempFiltered);
+  }, []);
+
+
   useEffect(() => {
     if (open && allMonstersData.length === 0) {
-      setIsLoadingList(true);
-      setError(null);
-      fetch(`${DND5E_API_BASE_URL}/api/monsters`)
-        .then(res => {
-          if (!res.ok) throw new Error(`Failed to fetch monster list: ${res.status}`);
-          return res.json();
-        })
-        .then(data => {
-          const monsters = data.results || [];
-          setAllMonstersData(monsters);
-          setFilteredMonsters(monsters); 
-        })
-        .catch(err => {
-          console.error("Error fetching monster list:", err);
-          setError("Could not load monster list. Please try again later.");
-        })
-        .finally(() => setIsLoadingList(false));
+      fetchAllMonsters(); // Fetch all monsters on first open
     }
-  }, [open, allMonstersData.length]);
+  }, [open, allMonstersData.length, fetchAllMonsters]);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (open) {
+        // If allMonstersData is already populated, just apply filters
+        // Otherwise, fetchAllMonsters will handle initial load and filtering
+        if (allMonstersData.length > 0) {
+          applyFiltersAndSort(allMonstersData, searchTerm, minCRInput, maxCRInput, resultsSortConfig);
+        } else if (!isLoadingList) { // Avoid redundant fetch if already loading
+           fetchAllMonsters();
+        }
+      }
+    }, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, minCRInput, maxCRInput, resultsSortConfig, open, allMonstersData, applyFiltersAndSort, isLoadingList, fetchAllMonsters]);
+
 
   useEffect(() => {
     try {
@@ -110,44 +205,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       console.error("Error saving favorites to localStorage", e);
     }
   }, [favorites]);
-
-  const handleFilterAndSortMonsters = useCallback(async () => {
-    setIsLoadingList(true);
-    setError(null);
-
-    let monstersToProcess = [...allMonstersData];
-    
-    if (searchTerm.trim() !== "") {
-      monstersToProcess = monstersToProcess.filter(monster =>
-        monster.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    if (resultsSortConfig.key === 'name') {
-        monstersToProcess.sort((a, b) => {
-            const nameA = a.name.toLowerCase();
-            const nameB = b.name.toLowerCase();
-            let comparison = 0;
-            if (nameA > nameB) comparison = 1;
-            else if (nameA < nameB) comparison = -1;
-            return resultsSortConfig.order === 'asc' ? comparison : comparison * -1;
-        });
-    }
-    
-    setFilteredMonsters(monstersToProcess);
-    setIsLoadingList(false);
-  }, [searchTerm, allMonstersData, resultsSortConfig]);
-
-
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-        if(open) {
-          handleFilterAndSortMonsters();
-        }
-    }, 300); 
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm, resultsSortConfig, open, handleFilterAndSortMonsters]);
-
 
   const fetchMonsterDetail = async (monsterIndex: string) => {
     setIsLoadingDetail(true);
@@ -265,8 +322,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
         </SheetHeader>
 
-        {/* Main container for columns - directly after header */}
-        <div className="flex flex-1 min-h-0"> {/* Main container for columns */}
+        <div className="flex flex-1 min-h-0 border-t"> {/* Main container for columns */}
           
           {/* Favorites Sidebar (Column 1) */}
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col">
@@ -317,22 +373,47 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
           {/* Middle Column: Search/Filters & Results (Column 2) */}
           <div className="w-2/5 flex flex-col p-4 border-r bg-background overflow-y-auto">
-            {/* Search Bar - Moved into this column */}
-            <div className="sticky top-0 bg-background z-10 py-3 mb-3">
-              <div className="relative">
-                <Input 
-                  id="monster-search" 
-                  placeholder="Search by Name..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-8" 
-                />
-                {searchTerm && (
-                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}>
-                    <X className="h-4 w-4"/>
-                  </Button>
-                )}
-              </div>
+            {/* Search Bar and CR Filters */}
+            <div className="mb-4 space-y-3">
+                <div className="relative">
+                    <Input 
+                      id="monster-search" 
+                      placeholder="Search by Name..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pr-8" 
+                    />
+                    {searchTerm && (
+                      <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}>
+                        <X className="h-4 w-4"/>
+                      </Button>
+                    )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <Label htmlFor="min-cr" className="text-xs">Min CR</Label>
+                        <Input 
+                          id="min-cr" 
+                          type="text" 
+                          placeholder="e.g., 0 or 1/4" 
+                          value={minCRInput}
+                          onChange={(e) => setMinCRInput(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="max-cr" className="text-xs">Max CR</Label>
+                        <Input 
+                          id="max-cr" 
+                          type="text" 
+                          placeholder="e.g., 5 or 1/2" 
+                          value={maxCRInput}
+                          onChange={(e) => setMaxCRInput(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                    </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Note: CR filtering is client-side. Type CR as a number (e.g., 0.25 for 1/4, 0.5 for 1/2).</p>
             </div>
             
             {/* Results List Panel */}
@@ -353,7 +434,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                       <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
                             <DropdownMenuRadioItem value="cr" disabled className="text-muted-foreground/70">Challenge Rating</DropdownMenuRadioItem>
-                       </TooltipTrigger><TooltipContent side="left"><p className="text-xs max-w-xs">CR sort on results requires CR filter or fetching all details (slow).</p></TooltipContent></Tooltip></TooltipProvider>
+                       </TooltipTrigger><TooltipContent side="left"><p className="text-xs max-w-xs">CR sort on results requires CR data on all summaries, not provided by API.</p></TooltipContent></Tooltip></TooltipProvider>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Order</DropdownMenuLabel>
@@ -373,7 +454,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                  <p className="p-4 text-destructive text-center">{error}</p>
               ) : filteredMonsters.length === 0 && !isLoadingList ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">
-                  {allMonstersData.length > 0 ? "No monsters match your search." : "Loading initial monster list or API error."}
+                  {allMonstersData.length > 0 ? "No monsters match your search and CR filters." : "Loading initial monster list or API error."}
                 </p>
               ) : (
                 <ScrollArea className="flex-1">
@@ -408,7 +489,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
           {/* Right Column: Monster Details (Column 3) */}
           <div className="flex-1 flex flex-col bg-card border-l">
-            {/* Sticky Header for Details Panel */}
             <div className="p-3 border-b flex justify-between items-center sticky top-0 bg-card z-10">
                 <h3 className="text-md font-semibold truncate pr-2 text-foreground">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
                 {selectedMonster && (
@@ -476,7 +556,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
                 <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/>
-                <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search.</p>
+                <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search and CR filters.</p>
               </div>
             )}
           </div>
