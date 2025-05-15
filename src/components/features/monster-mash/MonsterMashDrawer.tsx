@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Removed CardFooter
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
     DropdownMenu, 
@@ -42,14 +42,28 @@ interface SortConfig {
   order: SortOrder;
 }
 
+// Helper to convert CR string to a sortable number
+const crToNumber = (cr: string | number): number => {
+  if (typeof cr === 'number') return cr;
+  if (typeof cr === 'string') {
+    if (cr.includes('/')) {
+      const parts = cr.split('/');
+      return parseFloat(parts[0]) / parseFloat(parts[1]);
+    }
+    return parseFloat(cr);
+  }
+  return -1; // Should not happen
+};
+
+
 export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps) {
   const [allMonstersData, setAllMonstersData] = useState<MonsterSummary[]>([]);
   const [filteredMonsters, setFilteredMonsters] = useState<MonsterSummary[]>([]);
   const [selectedMonster, setSelectedMonster] = useState<MonsterDetail | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [minCR, setMinCR] = useState<string>("");
-  const [maxCR, setMaxCR] = useState<string>("");
+  const [minCRInput, setMinCRInput] = useState<string>(""); // Renamed from minCR
+  const [maxCRInput, setMaxCRInput] = useState<string>(""); // Renamed from maxCR
 
   const [favorites, setFavorites] = useState<FavoriteMonster[]>([]);
   
@@ -60,7 +74,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [resultsSortConfig, setResultsSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
   const [favoritesSortConfig, setFavoritesSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
 
-
+  // Fetch initial full monster list
   useEffect(() => {
     if (open && allMonstersData.length === 0) {
       setIsLoadingList(true);
@@ -71,12 +85,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           return res.json();
         })
         .then(data => {
-          const monstersWithCR: MonsterSummary[] = (data.results || []).map((m: any) => ({
-            ...m,
-            // API list doesn't have CR, so we set it to a default or fetch details.
-            // For now, it's not directly available on summary.
-          }));
-          setAllMonstersData(monstersWithCR);
+          setAllMonstersData(data.results || []);
+          setFilteredMonsters(data.results || []); // Initially show all
         })
         .catch(err => {
           console.error("Error fetching monster list:", err);
@@ -106,23 +116,91 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   }, [favorites]);
 
   const handleFilterAndSortMonsters = useCallback(async () => {
-    let filtered = [...allMonstersData]; // Create a copy to sort
+    setIsLoadingList(true);
+    setError(null);
+
+    let monstersToFilter: MonsterSummary[] = [];
+
+    const minCRVal = crToNumber(minCRInput);
+    const maxCRVal = crToNumber(maxCRInput);
+    const hasCRFilter = minCRInput.trim() !== "" || maxCRInput.trim() !== "";
+
+    if (hasCRFilter) {
+        const crPromises: Promise<MonsterSummary[]>[] = [];
+        const crValuesToFetch: (number | string)[] = [];
+
+        // Define a list of common CR values, including fractions
+        const commonCRs = [0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
+        const crStrings: Record<number, string> = {0.125: "1/8", 0.25: "1/4", 0.5: "1/2"};
+
+        for (const cr of commonCRs) {
+            const lowerBound = minCRInput.trim() === "" ? -Infinity : minCRVal;
+            const upperBound = maxCRInput.trim() === "" ? Infinity : maxCRVal;
+            if (cr >= lowerBound && cr <= upperBound) {
+                crValuesToFetch.push(crStrings[cr] || cr.toString());
+            }
+        }
+        
+        if (crValuesToFetch.length > 0) {
+            for (const cr of crValuesToFetch) {
+                crPromises.push(
+                    fetch(`${DND5E_API_BASE_URL}/api/monsters?challenge_rating=${cr}`)
+                    .then(res => {
+                        if (!res.ok && res.status !== 404) throw new Error(`Failed for CR ${cr}`); // 404 is ok, means no monsters for that CR
+                        if (res.status === 404) return {results: []}; // handle no monsters for a CR
+                        return res.json();
+                    })
+                    .then(data => data.results || [])
+                    .catch(err => {
+                        console.warn(`Could not fetch monsters for CR ${cr}:`, err.message);
+                        return []; // Return empty array on error for specific CR
+                    })
+                );
+            }
+            try {
+                const resultsArray = await Promise.all(crPromises);
+                monstersToFilter = resultsArray.flat();
+                // Deduplicate in case a monster appears in multiple CR fetches (should not happen with this API)
+                const uniqueIndices = new Set<string>();
+                monstersToFilter = monstersToFilter.filter(m => {
+                    if (!uniqueIndices.has(m.index)) {
+                        uniqueIndices.add(m.index);
+                        return true;
+                    }
+                    return false;
+                });
+
+            } catch (overallError) {
+                console.error("Error fetching CR filtered monsters:", overallError);
+                setError("Failed to apply CR filter.");
+                setFilteredMonsters([]);
+                setIsLoadingList(false);
+                return;
+            }
+        } else if (minCRInput.trim() !== "" && maxCRInput.trim() !== "") {
+             // If specific non-standard CR range that didn't match commonCRs, means no results.
+             monstersToFilter = [];
+        } else {
+            // No valid CR range could be constructed for fetching
+            monstersToFilter = allMonstersData; // Fallback to all data if CR filter is problematic but not specific
+        }
+
+
+    } else {
+      monstersToFilter = allMonstersData;
+    }
+
+    let finalFiltered = [...monstersToFilter];
 
     if (searchTerm.trim() !== "") {
-      filtered = filtered.filter(monster =>
+      finalFiltered = finalFiltered.filter(monster =>
         monster.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
-    // For CR filtering on the main list, we must fetch details for ALL monsters first,
-    // or filter after they are displayed, which is not ideal for large lists.
-    // The D&D 5e API's /api/monsters endpoint doesn't support CR range filtering.
-    // So, CR filtering from minCR/maxCR state is effectively client-side AFTER fetching details if we were to implement it thoroughly.
-    // Given the performance implications, this step will be skipped for now for the main list.
-    // CR filtering will be truly effective when viewing details or managing favorites where CR is known.
-
+    // Sorting (only by name for the main list as CR is not available on summary)
     if (resultsSortConfig.key === 'name') {
-        filtered.sort((a, b) => {
+        finalFiltered.sort((a, b) => {
             const nameA = a.name.toLowerCase();
             const nameB = b.name.toLowerCase();
             let comparison = 0;
@@ -131,25 +209,26 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             return resultsSortConfig.order === 'asc' ? comparison : comparison * -1;
         });
     }
-    // CR Sorting on main list not directly feasible without fetching all details.
-
-    setFilteredMonsters(filtered);
-    setError(null); // Clear previous errors if filtering is successful
-  }, [searchTerm, allMonstersData, resultsSortConfig]);
+    
+    setFilteredMonsters(finalFiltered);
+    setIsLoadingList(false);
+  }, [searchTerm, minCRInput, maxCRInput, allMonstersData, resultsSortConfig]);
 
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-        handleFilterAndSortMonsters();
-    }, 300);
+        if(open) { // Only run if drawer is open
+          handleFilterAndSortMonsters();
+        }
+    }, 500); // Increased debounce for CR filtering
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm, resultsSortConfig, handleFilterAndSortMonsters]);
+  }, [searchTerm, minCRInput, maxCRInput, resultsSortConfig, open, handleFilterAndSortMonsters]);
 
 
   const fetchMonsterDetail = async (monsterIndex: string) => {
     setIsLoadingDetail(true);
     setError(null);
-    setSelectedMonster(null); // Clear previous selection
+    setSelectedMonster(null); 
     try {
       const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterIndex}`);
       if (!response.ok) throw new Error(`Failed to fetch details for ${monsterIndex}: ${response.status}`);
@@ -169,12 +248,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     if (existingFav) {
       setFavorites(favorites.filter(f => f.index !== monsterToIndex.index));
     } else {
-      // Ensure we have CR for the favorite. If current monster is summary, fetch details.
       let monsterDetailToSave: MonsterDetail;
-      if ('challenge_rating' in monsterToIndex) { // It's already a MonsterDetail
+      if ('challenge_rating' in monsterToIndex) {
         monsterDetailToSave = monsterToIndex;
-      } else { // It's a MonsterSummary, need to fetch details
-        setIsLoadingDetail(true); // Indicate loading for this specific action
+      } else {
+        setIsLoadingDetail(true); 
         try {
           const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToIndex.index}`);
           if (!response.ok) throw new Error(`Failed to fetch details for ${monsterToIndex.name} to favorite.`);
@@ -183,9 +261,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           console.error("Error fetching details to favorite:", err);
           setError(`Could not fetch details for ${monsterToIndex.name} to add to favorites.`);
           setIsLoadingDetail(false);
-          return; // Abort if fetch fails
+          return; 
         } finally {
-          setIsLoadingDetail(false); // Reset loading state
+          setIsLoadingDetail(false); 
         }
       }
       setFavorites(prevFavs => [...prevFavs, { 
@@ -226,8 +304,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   };
 
   const sortedFavorites = [...favorites].sort((a, b) => {
-    const valA = favoritesSortConfig.key === 'name' ? a.name.toLowerCase() : a.cr;
-    const valB = favoritesSortConfig.key === 'name' ? b.name.toLowerCase() : b.cr;
+    let valA, valB;
+    if (favoritesSortConfig.key === 'name') {
+      valA = a.name.toLowerCase();
+      valB = b.name.toLowerCase();
+    } else { // CR
+      valA = crToNumber(a.cr);
+      valB = crToNumber(b.cr);
+    }
     let comparison = 0;
     if (valA > valB) comparison = 1;
     else if (valA < valB) comparison = -1;
@@ -294,21 +378,42 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           <TooltipProvider>
           <div className="flex-1 flex flex-col p-4 overflow-hidden">
             {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-2 pb-3 border-b items-end">
-              <div className="flex-grow">
+            <div className="mb-3 pb-3 border-b space-y-2">
+              <div>
                 <Label htmlFor="monster-search">Search by Name</Label>
-                <div className="relative">
+                <div className="relative mt-1">
                   <Input 
                     id="monster-search" 
-                    placeholder="e.g., Goblin, Dragon, Aboleth..." 
+                    placeholder="e.g., Goblin, Dragon..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-8"
+                    className="pr-8 max-w-sm" // Shortened search bar
                   />
                   {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
                 </div>
               </div>
-              {/* Min/Max CR inputs removed as per previous iteration */}
+              <div className="flex gap-3 items-end">
+                <div>
+                  <Label htmlFor="min-cr">Min CR</Label>
+                  <Input 
+                    id="min-cr" 
+                    placeholder="e.g., 1/4 or 2" 
+                    value={minCRInput}
+                    onChange={(e) => setMinCRInput(e.target.value)}
+                    className="w-28"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="max-cr">Max CR</Label>
+                  <Input 
+                    id="max-cr" 
+                    placeholder="e.g., 5" 
+                    value={maxCRInput}
+                    onChange={(e) => setMaxCRInput(e.target.value)}
+                    className="w-28"
+                  />
+                </div>
+              </div>
             </div>
             
             {error && <p className="text-destructive text-center mb-2 p-2 bg-destructive/10 rounded-md">{error}</p>}
@@ -336,7 +441,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                                 <DropdownMenuRadioItem value="cr" disabled className="text-muted-foreground/70">Challenge Rating</DropdownMenuRadioItem>
                             </TooltipTrigger>
                             <TooltipContent side="left">
-                              <p className="text-xs">CR sorting on this list is not available.<br/>View monster details to see CR.<br/>Favorites can be CR sorted.</p>
+                              <p className="text-xs max-w-xs">CR sorting on this list applies only if CR filter is active, as CR isn't in the basic list. Favorites can always be CR sorted.</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -357,7 +462,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                    </div>
                 ) : filteredMonsters.length === 0 && !isLoadingList ? (
                   <p className="p-4 text-sm text-muted-foreground text-center">
-                    {allMonstersData.length > 0 ? "No monsters match your search." : "Loading initial monster list or API error."}
+                    {allMonstersData.length > 0 ? "No monsters match your search or CR filter." : "Loading initial monster list or API error."}
                   </p>
                 ) : (
                   <ScrollArea className="flex-1">
@@ -392,7 +497,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
               {/* Monster Detail View */}
               <div className="flex flex-col border rounded-lg overflow-hidden bg-card">
                  <div className="p-3 bg-muted border-b flex justify-between items-center">
-                    <h3 className="text-md font-semibold">Monster Details</h3>
+                    <h3 className="text-md font-semibold truncate pr-2">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
                     {selectedMonster && (
                         <div className="flex gap-1">
                            <Tooltip>
@@ -403,7 +508,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                                 </TooltipTrigger>
                                 <TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent>
                            </Tooltip>
-                           <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldCheck className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Initiative (TBD)</TooltipContent></Tooltip>
+                           <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Initiative (TBD)</TooltipContent></Tooltip>
                            <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip>
                         </div>
                     )}
@@ -414,7 +519,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                   <ScrollArea className="flex-1 p-4">
                     <Card className="shadow-none border-none bg-transparent">
                       <CardHeader className="p-0 pb-3">
-                          <CardTitle className="text-xl">{selectedMonster.name}</CardTitle>
+                          {/* Title now in the header bar above */}
                           <CardDescription>{selectedMonster.size} {selectedMonster.type} ({selectedMonster.subtype || 'no subtype'}), {selectedMonster.alignment}</CardDescription>
                       </CardHeader>
                       <CardContent className="p-0 space-y-3 text-sm bg-transparent">
@@ -424,7 +529,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                           <div><strong>CR:</strong> {selectedMonster.challenge_rating} ({selectedMonster.xp} XP)</div>
                         </div>
                         <div><strong>Speed:</strong> {Object.entries(selectedMonster.speed).map(([key, val]) => `${key} ${val}`).join(', ')}</div>
-                        <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-card">
+                        <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-background"> {/* Changed to bg-background */}
                           <div className="text-center"><strong>STR</strong><br/>{selectedMonster.strength} ({Math.floor((selectedMonster.strength - 10) / 2)})</div>
                           <div className="text-center"><strong>DEX</strong><br/>{selectedMonster.dexterity} ({Math.floor((selectedMonster.dexterity - 10) / 2)})</div>
                           <div className="text-center"><strong>CON</strong><br/>{selectedMonster.constitution} ({Math.floor((selectedMonster.constitution - 10) / 2)})</div>
@@ -463,8 +568,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
                      <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/>
-                    <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search.</p>
-                     <p className="text-xs text-muted-foreground mt-2">Note: CR filtering for the main search list is not available due to API limitations. Favorites can be sorted by CR.</p>
+                    <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search and CR filters.</p>
                   </div>
                 )}
               </div>
@@ -476,3 +580,4 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     </Sheet>
   );
 }
+
