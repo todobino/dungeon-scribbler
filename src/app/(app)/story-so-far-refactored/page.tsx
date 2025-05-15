@@ -11,7 +11,7 @@ import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, H
 import { useState, useEffect, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent as UIDialogContent, DialogDescription as UIDialogDescription, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogFooter as UIDialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -95,32 +95,32 @@ export default function StorySoFarRefactoredPage() {
     };
 
     try {
-      const storedPlotPoints = localStorage.getItem(keys.plotPoints!);
+      const storedPlotPoints = keys.plotPoints ? localStorage.getItem(keys.plotPoints) : null;
       setPlotPoints(storedPlotPoints ? JSON.parse(storedPlotPoints) : []);
     } catch (e) { console.error("Error loading plot points for " + activeCampaign.name, e); setPlotPoints([]); }
 
     try {
-      const storedSession = localStorage.getItem(keys.currentSession!);
+      const storedSession = keys.currentSession ? localStorage.getItem(keys.currentSession) : null;
       setCurrentSessionNumber(storedSession ? parseInt(storedSession, 10) : 1);
     } catch (e) { console.error("Error loading current session for " + activeCampaign.name, e); setCurrentSessionNumber(1); }
 
     try {
-      const storedSummaries = localStorage.getItem(keys.sessionSummaries!);
+      const storedSummaries = keys.sessionSummaries ? localStorage.getItem(keys.sessionSummaries) : null;
       setSessionSummaries(storedSummaries ? JSON.parse(storedSummaries) : {});
     } catch (e) { console.error("Error loading session summaries for " + activeCampaign.name, e); setSessionSummaries({}); }
 
     try {
-      const storedViewModes = localStorage.getItem(keys.sessionViewModes!);
+      const storedViewModes = keys.sessionViewModes ? localStorage.getItem(keys.sessionViewModes) : null;
       setSessionViewModes(storedViewModes ? JSON.parse(storedViewModes) : {});
     } catch (e) { console.error("Error loading session view modes for " + activeCampaign.name, e); setSessionViewModes({}); }
 
     try {
-      const storedFullSummary = localStorage.getItem(keys.fullCampaignSummary!);
+      const storedFullSummary = keys.fullCampaignSummary ? localStorage.getItem(keys.fullCampaignSummary) : null;
       setFullCampaignSummary(storedFullSummary ? JSON.parse(storedFullSummary) : null);
     } catch (e) { console.error("Error loading full campaign summary for " + activeCampaign.name, e); setFullCampaignSummary(null); }
 
     try {
-      const storedDetailLevel = localStorage.getItem(keys.summaryDetailLevel!);
+      const storedDetailLevel = keys.summaryDetailLevel ? localStorage.getItem(keys.summaryDetailLevel) : null;
       setSummaryDetailLevel((storedDetailLevel as SummaryDetailLevel) || "normal");
     } catch (e) { console.error("Error loading summary detail level for " + activeCampaign.name, e); setSummaryDetailLevel("normal"); }
 
@@ -173,7 +173,12 @@ export default function StorySoFarRefactoredPage() {
 
   const clearFullCampaignSummaryCache = useCallback(() => {
     setFullCampaignSummary(null);
-  }, []);
+    const fullSummaryKey = getCampaignSpecificKey(REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX);
+    if (fullSummaryKey) {
+        try { localStorage.removeItem(fullSummaryKey); }
+        catch (e) { console.error("Error clearing full campaign summary from cache for " + activeCampaign?.name, e); }
+    }
+  }, [activeCampaign, getCampaignSpecificKey]);
 
   const handleAddPlotPointToCurrentSession = () => {
     if (newPlotPointText.trim() && activeCampaign) {
@@ -229,33 +234,33 @@ export default function StorySoFarRefactoredPage() {
     if (!activeCampaign) return;
     const currentSessionPlotPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
 
-    if (currentSessionPlotPoints.length > 0) {
-      setIsGeneratingSessionSummary(prev => ({ ...prev, [currentSessionNumber]: true }));
-      try {
-        const summaryText = await generateSessionSummaryText(currentSessionNumber, summaryDetailLevel);
-        setSessionSummaries(prev => ({ ...prev, [currentSessionNumber]: summaryText }));
-        setSessionViewModes(prev => ({ ...prev, [currentSessionNumber]: 'summary' }));
-      } catch (error) {
-        console.error("Error generating summary for session:", currentSessionNumber, error);
-      } finally {
-        setIsGeneratingSessionSummary(prev => ({ ...prev, [currentSessionNumber]: false }));
-      }
-      setCurrentSessionNumber(prev => prev + 1);
-      clearFullCampaignSummaryCache();
-    } else {
-      // Now simply do nothing or show a toast if advancing an empty session is disallowed.
-      toast({
-        title: "Cannot Advance Session",
-        description: "Please add at least one plot point to the current session before advancing.",
-        variant: "destructive",
-      });
+    if (currentSessionPlotPoints.length === 0) {
+        toast({
+            title: "Cannot Advance Empty Session",
+            description: "Please add at least one plot point to the current session before advancing, or use the clear log option if you wish to restart.",
+            variant: "destructive",
+        });
+        return;
     }
+
+    setIsGeneratingSessionSummary(prev => ({ ...prev, [currentSessionNumber]: true }));
+    try {
+      const summaryText = await generateSessionSummaryText(currentSessionNumber, summaryDetailLevel);
+      setSessionSummaries(prev => ({ ...prev, [currentSessionNumber]: summaryText }));
+      setSessionViewModes(prev => ({ ...prev, [currentSessionNumber]: 'summary' }));
+    } catch (error) {
+      console.error("Error generating summary for session:", currentSessionNumber, error);
+    } finally {
+      setIsGeneratingSessionSummary(prev => ({ ...prev, [currentSessionNumber]: false }));
+    }
+    setCurrentSessionNumber(prev => prev + 1);
+    clearFullCampaignSummaryCache();
   };
 
   const handleGenerateFullCampaignSummary = async () => {
     if (!activeCampaign || plotPoints.length === 0) return;
     setIsGeneratingGlobalSummary(true);
-    setFullCampaignSummary(null);
+    setFullCampaignSummary(null); // Clear previous summary before generating
     await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
     const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\\n');
     const newSummary = `AI Generated Full Story Summary (Campaign: ${activeCampaign.name}, Detail: ${summaryDetailLevel}): The grand saga, woven from ${plotPoints.length} total plot points, unfolds thusly: ${allPlotPointsText.substring(0, 150)}... An epic indeed!`;
@@ -295,7 +300,7 @@ export default function StorySoFarRefactoredPage() {
       setPlotPoints(prevPlotPoints =>
         prevPlotPoints.map(p =>
           p.id === editingPlotPoint.id ? { ...p, text: editedPlotPointText.trim(), timestamp: new Date().toISOString() } : p
-        )
+        ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       );
       clearFullCampaignSummaryCache();
       // If the edited point was in a past session, re-generate its summary
@@ -446,8 +451,7 @@ export default function StorySoFarRefactoredPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow min-h-0">
-        <div className="lg:col-span-2 flex flex-col h-full">
-          <Card className="flex flex-col flex-grow">
+        <Card className="lg:col-span-2 flex flex-col h-full"> {/* Campaign Log Card */}
             <CardHeader className="shrink-0">
               <CardTitle>Campaign Log</CardTitle>
             </CardHeader>
@@ -544,10 +548,9 @@ export default function StorySoFarRefactoredPage() {
               </ScrollArea>
             </CardContent>
           </Card>
-        </div>
 
-        <div className="lg:col-span-1 space-y-6 shrink-0">
-          <Card>
+        <div className="lg:col-span-1 space-y-6 shrink-0"> {/* Right Column */}
+          <Card> {/* Add Plot Point Card */}
             <CardHeader>
               <CardTitle>Add Plot Point to Current Session ({currentSessionNumber})</CardTitle>
             </CardHeader>
@@ -568,7 +571,7 @@ export default function StorySoFarRefactoredPage() {
             </CardFooter>
           </Card>
 
-          <Card>
+          <Card> {/* AI Story Tools Card */}
             <CardHeader>
               <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary" />AI Story Tools</CardTitle>
               <CardDescription>Generate a summary of the entire campaign or adjust detail level for new summaries.</CardDescription>
@@ -635,12 +638,12 @@ export default function StorySoFarRefactoredPage() {
         </div>
       </div>
 
-      <UIDialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
-        <UIDialogContent>
-          <UIDialogHeader>
-            <UIDialogTitle>Edit Plot Point</UIDialogTitle>
-            <UIDialogDescription>Modify the text for this plot point.</UIDialogDescription>
-          </UIDialogHeader>
+      <Dialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Plot Point</DialogTitle>
+            <DialogDescription>Modify the text for this plot point.</DialogDescription>
+          </DialogHeader>
           <div className="py-4">
             <Textarea
               value={editedPlotPointText}
@@ -648,26 +651,26 @@ export default function StorySoFarRefactoredPage() {
               rows={4}
             />
           </div>
-          <UIDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditPlotPointDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveEditedPlotPoint} disabled={!editedPlotPointText.trim()}>Save Changes</Button>
-          </UIDialogFooter>
-        </UIDialogContent>
-      </UIDialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
-        <UIDialogContent>
-          <UIDialogHeader>
-            <UIDialogTitle>Delete Plot Point?</UIDialogTitle>
-            <UIDialogDescription>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Plot Point?</DialogTitle>
+            <DialogDescription>
               Are you sure you want to delete this plot point? This action cannot be undone.
-            </UIDialogDescription>
-          </UIDialogHeader>
-          <UIDialogFooter>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
             <AlertDialogCancel onClick={() => setIsDeletePlotPointConfirmOpen(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeletePlotPoint} className={buttonVariants({variant: "destructive"})}>Delete</AlertDialogAction>
-          </UIDialogFooter>
-        </UIDialogContent>
+          </DialogFooter>
+        </DialogContent>
       </AlertDialog>
 
       <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
@@ -690,19 +693,19 @@ export default function StorySoFarRefactoredPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <UIDialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
+      <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
         if (!isOpen) {
           setDeleteConfirmInput("");
         }
         setIsClearLogConfirm2Open(isOpen);
       }}>
-        <UIDialogContent>
-          <UIDialogHeader>
-            <UIDialogTitle>Final Confirmation to Delete Log</UIDialogTitle>
-            <UIDialogDescription>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Final Confirmation to Delete Log</DialogTitle>
+            <DialogDescription>
               To permanently delete the entire Adventure Recap for "{activeCampaign?.name}", please type "DELETE" in the box below.
-            </UIDialogDescription>
-          </UIDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           <div className="py-4">
             <Input
               value={deleteConfirmInput}
@@ -711,7 +714,7 @@ export default function StorySoFarRefactoredPage() {
               className="border-destructive focus-visible:ring-destructive"
             />
           </div>
-          <UIDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => { setIsClearLogConfirm2Open(false); setDeleteConfirmInput(""); }}>Cancel</Button>
             <Button
               variant="destructive"
@@ -720,17 +723,17 @@ export default function StorySoFarRefactoredPage() {
             >
               Confirm Deletion
             </Button>
-          </UIDialogFooter>
-        </UIDialogContent>
-      </UIDialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
       <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-        <UIDialogContent className="max-w-lg">
-          <UIDialogHeader>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
             <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary" />How to Use: Adventure Recap</DialogTitle>
             <DialogDescription>Track your campaign's progress and generate summaries.</DialogDescription>
-          </UIDialogHeader>
+          </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-3">
             <div className="text-sm text-muted-foreground space-y-3 py-4">
               <p>1. Log key events as "Plot Points" for the <strong className="text-foreground">current session ({currentSessionNumber})</strong> using the input field on the right.</p>
@@ -753,12 +756,12 @@ export default function StorySoFarRefactoredPage() {
               <p>5. All data is saved per campaign to your browser's local storage.</p>
             </div>
           </ScrollArea>
-          <UIDialogFooter>
+          <DialogFooter>
             <DialogClose asChild>
               <Button>Close</Button>
             </DialogClose>
-          </UIDialogFooter>
-        </UIDialogContent>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
     </TooltipProvider>
