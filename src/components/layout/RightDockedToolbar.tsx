@@ -16,7 +16,6 @@ export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
 
-  // Roll log state is managed here and passed down
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
 
@@ -35,7 +34,7 @@ export function RightDockedToolbar() {
             ...rollData,
             isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
         };
-        return [newEntry, ...prevLog.slice(0, 49)]; // Keep log to 50 entries
+        return [newEntry, ...prevLog.slice(0, 49)]; 
       }
     });
   }, [getNewRollId]);
@@ -43,7 +42,6 @@ export function RightDockedToolbar() {
   const handleClearRollLog = useCallback(() => {
     setRollLog([]);
   }, []);
-
 
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
@@ -65,15 +63,14 @@ export function RightDockedToolbar() {
            activeCombinedTab === itemId;
   };
 
-
   return (
     <>
       <TooltipProvider delayDuration={100}>
         <div className="fixed top-1/2 -translate-y-1/2 right-0 flex flex-col gap-1 p-1.5 bg-card/80 backdrop-blur-sm shadow-lg rounded-l-lg z-50 border border-r-0">
           {TOOLBAR_ITEMS.map((item, index) => {
             let IconToRender = item.icon;
-            let iconCn = "h-6 w-6"; // Slimmer icon size
-            let buttonBaseCn = "h-10 w-10 rounded-md"; // Slimmer button size
+            let iconCn = "h-6 w-6"; 
+            let buttonBaseCn = "h-10 w-10 rounded-md"; 
             
             const isActiveTool = isCombinedToolActive(item.id) || (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID);
             
@@ -125,4 +122,3 @@ export function RightDockedToolbar() {
     </>
   );
 }
-```
