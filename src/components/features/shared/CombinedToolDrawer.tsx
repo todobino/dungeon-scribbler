@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, ChevronsRightIcon, Skull, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
-import type { PlayerCharacter, Combatant } from "@/lib/types";
+import type { PlayerCharacter, Combatant, RollLogEntry } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 
@@ -23,30 +23,28 @@ interface CombinedToolDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultTab: string;
+  rollLog: RollLogEntry[];
+  onInternalRoll: (rollData: Omit<RollLogEntry, 'id'>, idToUpdate?: string) => void;
+  getNewRollId: () => string;
+  onClearRollLog: () => void;
 }
 
-// Dice Roller specific types
 type RollMode = "normal" | "advantage" | "disadvantage";
-interface RollLogEntry {
-  id: string;
-  inputText: string;
-  resultText: string; 
-  detailText: string;  
-  isAdvantage?: boolean;
-  isDisadvantage?: boolean;
-  rolls?: number[];
-  chosenRoll?: number;
-  discardedRoll?: number;
-  modifier?: number;
-  sides?: number;
-  isRolling?: boolean;
-}
 
-export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedToolDrawerProps) {
+
+export function CombinedToolDrawer({ 
+  open, 
+  onOpenChange, 
+  defaultTab,
+  rollLog, // Received from parent
+  onInternalRoll, // Received from parent
+  getNewRollId, // Received from parent
+  onClearRollLog // Received from parent
+}: CombinedToolDrawerProps) {
   // Dice Roller State
   const [inputValue, setInputValue] = useState("");
   const [rollMode, setRollMode] = useState<RollMode>("normal");
-  const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
+  // RollLog state is now managed by RightDockedToolbar
   const diceUniqueId = useId();
 
   // Combat Tracker State
@@ -69,7 +67,6 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
   const [damageInputs, setDamageInputs] = useState<Record<string, string>>({});
   const combatantRefs = useRef<Map<string, HTMLLIElement | null>>(new Map());
 
-  // Effect to sync active tab with defaultTab prop
   const [activeTab, setActiveTab] = useState(defaultTab);
   useEffect(() => {
     setActiveTab(defaultTab);
@@ -80,28 +77,28 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
   const handleDiceRoll = () => {
     const notationToParse = inputValue.trim() === "" ? "1d20" : inputValue.trim();
     const parsed = parseDiceNotation(notationToParse);
-    const entryId = `${diceUniqueId}-${Date.now()}`;
+    const entryId = getNewRollId(); // Use parent-provided ID generator
 
     if (parsed.error) {
-      const errorEntry: RollLogEntry = {
-        id: entryId, inputText: notationToParse, resultText: "Error", detailText: parsed.error, isRolling: false,
+      const errorEntryData: Omit<RollLogEntry, 'id'> = {
+        inputText: notationToParse, resultText: "Error", detailText: parsed.error, isRolling: false,
       };
-      setRollLog(prevLog => [errorEntry, ...prevLog.slice(0, 49)]);
+      onInternalRoll(errorEntryData);
       return;
     }
     if (parsed.sides <= 0 || parsed.count <= 0) {
-      const errorEntry: RollLogEntry = {
-        id: entryId, inputText: notationToParse, resultText: "Error", detailText: "Dice sides and count must be positive.", isRolling: false,
+      const errorEntryData: Omit<RollLogEntry, 'id'> = {
+        inputText: notationToParse, resultText: "Error", detailText: "Dice sides and count must be positive.", isRolling: false,
       };
-      setRollLog(prevLog => [errorEntry, ...prevLog.slice(0, 49)]);
+      onInternalRoll(errorEntryData);
       return;
     }
     
-    const placeholderEntry: RollLogEntry = {
-      id: entryId, inputText: notationToParse, resultText: "...", detailText: "Rolling...",
+    const placeholderEntryData: Omit<RollLogEntry, 'id'> = {
+      inputText: notationToParse, resultText: "...", detailText: "Rolling...",
       isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage", isRolling: true,
     };
-    setRollLog(prevLog => [placeholderEntry, ...prevLog.slice(0,49)]);
+    onInternalRoll(placeholderEntryData, entryId); // Pass entryId to update this specific entry
 
     setTimeout(() => {
       let finalResult: number;
@@ -142,12 +139,12 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
           detailText += ` ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
         }
       }
-      const finalLogEntry: RollLogEntry = {
-        id: entryId, inputText: notationToParse, resultText: finalResult.toString(), detailText,
+      const finalLogEntryData: Omit<RollLogEntry, 'id' | 'isRolling'> = {
+        inputText: notationToParse, resultText: finalResult.toString(), detailText,
         isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage",
-        rolls: resultRolls, chosenRoll: chosen, discardedRoll: discarded, modifier: parsed.modifier, sides: parsed.sides, isRolling: false,
+        rolls: resultRolls, chosenRoll: chosen, discardedRoll: discarded, modifier: parsed.modifier, sides: parsed.sides,
       };
-      setRollLog(prevLog => prevLog.map(entry => entry.id === entryId ? finalLogEntry : entry));
+      onInternalRoll(finalLogEntryData, entryId); // Update the specific entry
     }, 500);
   };
 
@@ -315,7 +312,7 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
                     <Zap className="mr-2 h-5 w-5" /> {inputValue.trim() === "" ? "Roll d20" : "Roll"}
                   </Button>
                   <div className="flex-grow flex flex-col min-h-0">
-                    <div className="flex justify-between items-center mb-1"><Label>Roll Log</Label><Button variant="ghost" size="sm" onClick={() => setRollLog([])} className="text-xs text-muted-foreground hover:text-foreground"><Trash2 className="mr-1 h-3 w-3" /> Clear Log</Button></div>
+                    <div className="flex justify-between items-center mb-1"><Label>Roll Log</Label><Button variant="ghost" size="sm" onClick={onClearRollLog} className="text-xs text-muted-foreground hover:text-foreground"><Trash2 className="mr-1 h-3 w-3" /> Clear Log</Button></div>
                     <ScrollArea className="border rounded-md p-2 flex-grow bg-muted/30 h-full">
                       {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
                       <div className="space-y-3">
@@ -441,5 +438,3 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
     </>
   );
 }
-
-    

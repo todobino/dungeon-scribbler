@@ -126,13 +126,11 @@ export interface MonsterSummary {
   url: string;
 }
 
-// Enriched summary for local caching with CR
 export interface MonsterSummaryWithCR {
   index: string;
   name: string;
-  cr?: number;     // Challenge Rating
-  type?: string;   // Monster type (e.g., "aberration", "beast")
-  // url field is not strictly needed if we always fetch by index, but keeping it for now
+  cr?: number;     
+  type?: string;   
   url?: string; 
 }
 
@@ -154,7 +152,7 @@ export interface Speed {
 export interface Sense {
   darkvision?: string;
   passive_perception: number;
-  [key: string]: string | number | undefined; // For other senses like blindsight, tremorsense, etc.
+  [key: string]: string | number | undefined; 
 }
 
 export interface ProficiencyEntry {
@@ -239,7 +237,7 @@ export interface MonsterDetail extends MonsterSummary {
   condition_immunities: { index: string; name: string; url: string }[];
   senses: Sense;
   languages: string;
-  challenge_rating: number; // CR is a number here
+  challenge_rating: number; 
   xp: number;
   special_abilities?: SpecialAbility[];
   actions?: MonsterAction[];
@@ -250,6 +248,22 @@ export interface MonsterDetail extends MonsterSummary {
 export interface FavoriteMonster {
   index: string;
   name: string;
-  cr: number; // Store CR as a number
+  cr: number; 
   type: string;
+}
+
+// For Dice Roller Log in CombinedToolDrawer and RightDockedToolbar
+export interface RollLogEntry {
+  id: string;
+  inputText: string;
+  resultText: string;
+  detailText: string;
+  isAdvantage?: boolean;
+  isDisadvantage?: boolean;
+  rolls?: number[];
+  chosenRoll?: number;
+  discardedRoll?: number;
+  modifier?: number;
+  sides?: number;
+  isRolling?: boolean;
 }
