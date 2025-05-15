@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Swords, Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle, ChevronRight } from "lucide-react";
+import { Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle, ChevronRight, VenetianMask } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -56,15 +56,16 @@ const crToNumber = (cr: string | number | undefined): number => {
 
 const formatCRDisplay = (crValue: string | number | undefined): string => {
     if (crValue === undefined) return "N/A";
-    const numCR = crToNumber(crValue);
+    const numCR = typeof crValue === 'string' ? crToNumber(crValue) : crValue;
 
     if (numCR === -1) return "N/A";
+    if (numCR === 0) return "0";
     if (numCR === 0.125) return "1/8";
     if (numCR === 0.25) return "1/4";
     if (numCR === 0.5) return "1/2";
-    if (numCR >= 1 && Number.isInteger(numCR)) return numCR.toString();
-    if (numCR >= 1) return numCR.toFixed(1); 
-    return numCR.toString();
+    if (numCR === 0.75) return "3/4";
+    if (Number.isInteger(numCR)) return numCR.toString();
+    return numCR.toFixed(2); // For any other fractions like 0.33 if they ever occur
 };
 
 
@@ -72,8 +73,22 @@ const CR_SLIDER_MIN = 0;
 const CR_SLIDER_MAX = 30;
 const CR_SLIDER_STEP = 0.125; 
 
+// Snapping function for CR slider
+const snapCRValue = (rawValue: number): number => {
+  if (rawValue < 0) return 0;
+  if (rawValue >= 1) {
+    return Math.round(rawValue); // Round to nearest integer for 1 and above
+  } else { // rawValue is between 0 and < 1. User wants 0, 0.25, 0.5, 0.75
+    if (rawValue < (0 + 0.25) / 2) return 0;       // Closest to 0
+    if (rawValue < (0.25 + 0.5) / 2) return 0.25;  // Closest to 0.25
+    if (rawValue < (0.5 + 0.75) / 2) return 0.5;   // Closest to 0.5
+    return 0.75;                                 // Closest to 0.75
+  }
+};
+
+
 export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps) {
-  const [allMonstersData, setAllMonstersData] = useState<MonsterSummaryWithCR[]>([]); // Now uses enriched summary
+  const [allMonstersData, setAllMonstersData] = useState<MonsterSummaryWithCR[]>([]);
   const [filteredMonsters, setFilteredMonsters] = useState<MonsterSummaryWithCR[]>([]);
   const [selectedMonster, setSelectedMonster] = useState<MonsterDetail | null>(null);
 
@@ -100,14 +115,15 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     }
     
     const [minCR, maxCR] = crRange;
-    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) { 
+     // Only filter by CR if the range is not the default full range
+    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) {
         tempFiltered = tempFiltered.filter(monster => {
-            if (monster.cr === undefined) return false; // Exclude if CR is unknown and filter is active
-            const monsterCR = crToNumber(monster.cr);
-            if (monsterCR === -1) return false;
-            return monsterCR >= minCR && monsterCR <= maxCR;
+            if (monster.cr === undefined) return false; // Exclude if CR is unknown when filter is active
+            const monsterCRNum = monster.cr; // CR is already a number in MonsterSummaryWithCR
+            return monsterCRNum >= minCR && monsterCRNum <= maxCR;
         });
     }
+
 
     if (resultsSortConfig.key === 'name') {
       tempFiltered.sort((a, b) => {
@@ -120,11 +136,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       });
     } else if (resultsSortConfig.key === 'cr') {
         tempFiltered.sort((a, b) => {
-            const crA = crToNumber(a.cr);
-            const crB = crToNumber(b.cr);
+            const crA = a.cr === undefined ? -1 : a.cr;
+            const crB = b.cr === undefined ? -1 : b.cr;
             if (crA === -1 && crB === -1) return 0;
-            if (crA === -1) return resultsSortConfig.order === 'asc' ? 1 : -1; // Sort unknowns to the end
-            if (crB === -1) return resultsSortConfig.order === 'asc' ? -1 : 1; // Sort unknowns to the end
+            if (crA === -1) return resultsSortConfig.order === 'asc' ? 1 : -1; 
+            if (crB === -1) return resultsSortConfig.order === 'asc' ? -1 : 1; 
             return resultsSortConfig.order === 'asc' ? crA - crB : crB - crA;
         });
     }
@@ -144,52 +160,52 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       const enrichedMonsters: MonsterSummaryWithCR[] = [];
       for (const summary of summaries) {
         try {
-          // Consider adding a small delay here if rate limiting becomes an issue
-          // await new Promise(resolve => setTimeout(resolve, 50)); // e.g., 50ms delay
           const detailResponse = await fetch(`${DND5E_API_BASE_URL}${summary.url}`);
           if (detailResponse.ok) {
             const detailData: MonsterDetail = await detailResponse.json();
             enrichedMonsters.push({
               index: detailData.index,
               name: detailData.name,
-              cr: detailData.challenge_rating,
-              type: detailData.type, // Optionally store type if needed for future filters
+              cr: detailData.challenge_rating, 
+              type: detailData.type,
+              url: summary.url 
             });
           } else {
             console.warn(`Failed to fetch details for ${summary.name}: ${detailResponse.statusText}`);
-            enrichedMonsters.push({ index: summary.index, name: summary.name }); // Add without CR
+            enrichedMonsters.push({ index: summary.index, name: summary.name, url: summary.url }); 
           }
         } catch (detailError) {
             console.warn(`Error fetching details for ${summary.name}:`, detailError);
-            enrichedMonsters.push({ index: summary.index, name: summary.name }); // Add without CR
+            enrichedMonsters.push({ index: summary.index, name: summary.name, url: summary.url }); 
         }
       }
       
       localStorage.setItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY, JSON.stringify(enrichedMonsters));
       setAllMonstersData(enrichedMonsters);
-      applyFiltersAndSort(); // Apply initial filters/sort to the newly built index
+      applyFiltersAndSort();
 
     } catch (err: any) {
       console.error("Error building full monster index:", err);
       setError(err.message || "Could not build local monster index. Some features might be limited.");
-      // Fallback to basic list if full index build fails
       if (allMonstersData.length === 0) {
-         const summaryResponse = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
-         if (summaryResponse.ok) {
-            const summaryData = await summaryResponse.json();
-            setAllMonstersData((summaryData.results || []).map(m => ({index: m.index, name: m.name}))); // Store basic summaries
+         const summaryResponseFallback = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
+         if (summaryResponseFallback.ok) {
+            const summaryDataFallback = await summaryResponseFallback.json();
+            setAllMonstersData((summaryDataFallback.results || []).map(m => ({index: m.index, name: m.name, url: m.url})));
+         } else {
+            setError("Failed to load even basic monster list. Please try again later.");
          }
       }
     } finally {
       setIsBuildingIndex(false);
-      setIsLoadingList(false); // General list loading is done once index is attempted/loaded
+      setIsLoadingList(false); 
     }
   }, [applyFiltersAndSort, allMonstersData.length]);
 
 
   useEffect(() => {
     if (open && allMonstersData.length === 0 && !isLoadingList && !isBuildingIndex) {
-        setIsLoadingList(true); // Set loading list true before checking cache
+        setIsLoadingList(true); 
         try {
             const cachedIndex = localStorage.getItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY);
             if (cachedIndex) {
@@ -202,15 +218,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             }
         } catch (e) {
             console.error("Error loading cached monster index:", e);
-            fetchAndCacheFullMonsterIndex(); // Attempt to rebuild if cache is corrupted
+            fetchAndCacheFullMonsterIndex();
         }
     }
   }, [open, allMonstersData.length, isLoadingList, isBuildingIndex, fetchAndCacheFullMonsterIndex, applyFiltersAndSort]);
 
   useEffect(() => {
-    // Debounced filter application
     const debounceTimer = setTimeout(() => {
-      if (open && allMonstersData.length > 0) { // Only apply if data is present
+      if (open && allMonstersData.length > 0) {
         applyFiltersAndSort();
       }
     }, 300);
@@ -231,7 +246,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   }, []);
 
   useEffect(() => {
-    // Only save if there are favorites or if there was something in LS initially to avoid creating empty LS items.
     if (favorites.length > 0 || localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY)) { 
       try {
         localStorage.setItem(MONSTER_MASH_FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
@@ -249,7 +263,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     try {
       const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterIndex}`);
       if (!response.ok) throw new Error(`Failed to fetch details for ${monsterIndex}: ${response.statusText}`);
-      const data = await response.json();
+      const data: MonsterDetail = await response.json();
       setSelectedMonster(data);
     } catch (err: any) {
       console.error("Error fetching monster detail:", err);
@@ -268,19 +282,19 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       let crValue: number | undefined;
       let typeValue: string | undefined;
 
-      if ('challenge_rating' in monsterToToggle) { // It's a MonsterDetail
+      if ('challenge_rating' in monsterToToggle) { 
         crValue = monsterToToggle.challenge_rating;
         typeValue = monsterToToggle.type;
-      } else if ('cr' in monsterToToggle) { // It's a MonsterSummaryWithCR
+      } else if ('cr' in monsterToToggle) { 
         crValue = monsterToToggle.cr;
         typeValue = monsterToToggle.type;
       }
       
       if (crValue === undefined) {
-        // Attempt to fetch full details if CR is missing (should be rare now with pre-caching)
         setIsLoadingDetail(true);
         try {
-          const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToToggle.index}`);
+          const monsterUrl = (monsterToToggle as MonsterSummaryWithCR).url || `/api/monsters/${monsterToToggle.index}`;
+          const response = await fetch(`${DND5E_API_BASE_URL}${monsterUrl}`);
           if (!response.ok) {
             setError(`Could not fetch details for ${monsterToToggle.name} to add to favorites.`);
             setIsLoadingDetail(false);
@@ -364,6 +378,12 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     return `CR Range: ${minLabel} - ${maxLabel}`;
   }
 
+  const handleCRSliderChange = (newSliderRange: [number, number]) => {
+    const snappedMin = snapCRValue(newSliderRange[0]);
+    const snappedMax = snapCRValue(newSliderRange[1]);
+    setCrRange([snappedMin, Math.max(snappedMin, snappedMax)]);
+  };
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -374,8 +394,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       >
         <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex flex-row items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-2">
-            <SheetTitle className="flex items-center text-2xl">
-              <Swords className="mr-3 h-7 w-7"/>Monster Mash
+            <SheetTitle className="flex items-center text-2xl text-primary-foreground">
+              <VenetianMask className="mr-3 h-7 w-7"/>Monster Mash
             </SheetTitle>
             <TooltipProvider delayDuration={100}>
               <Tooltip>
@@ -392,7 +412,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
         </SheetHeader>
         
-        <div className="flex flex-1 min-h-0 border-t pr-8 relative"> {/* Added pr-8 for the close bar */}
+        <div className="flex flex-1 min-h-0 border-t pr-8 relative">
 
           {/* Favorites Sidebar (Column 1) */}
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col">
@@ -466,9 +486,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         id="cr-slider"
                         min={CR_SLIDER_MIN}
                         max={CR_SLIDER_MAX}
-                        step={CR_SLIDER_STEP}
+                        step={CR_SLIDER_STEP} // Use fine step for raw values
                         value={crRange}
-                        onValueChange={(newRange) => setCrRange(newRange as [number, number])}
+                        onValueChange={handleCRSliderChange} // Use handler for snapping
                         className="my-2"
                     />
                 </div>
@@ -536,9 +556,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                           onClick={() => toggleFavorite(monster)}
                           className="h-7 w-7"
                           aria-label={isFavorite(monster.index) ? "Unfavorite" : "Favorite"}
-                          disabled={monster.cr === undefined && !isFavorite(monster.index)} // Disable favoriting if CR is unknown (unless already favorite)
                         >
-                          <Star className={cn("h-4 w-4", isFavorite(monster.index) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground", monster.cr === undefined && !isFavorite(monster.index) ? "opacity-50" : "")}/>
+                          <Star className={cn("h-4 w-4", isFavorite(monster.index) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")}/>
                         </Button>
                       </li>
                     ))}
@@ -549,21 +568,21 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
 
           {/* Right Column: Monster Details (Column 3) */}
-          <div className="flex-1 flex flex-col bg-card border-l">
-            <div className="p-3 border-b flex justify-between items-center sticky top-0 bg-card z-10">
-                <h3 className="text-md font-semibold truncate pr-2 text-foreground">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
-                {selectedMonster && (
-                    <div className="flex gap-1">
-                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => toggleFavorite(selectedMonster)} className="h-8 w-8" aria-label={isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}>
-                            <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400", !isFavorite(selectedMonster.index) && "text-muted-foreground/70")}/>
-                            </Button>
-                        </TooltipTrigger><TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent></Tooltip></TooltipProvider>
-                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Initiative (TBD)</TooltipContent></Tooltip></TooltipProvider>
-                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip></TooltipProvider>
-                    </div>
-                )}
-            </div>
+            <div className="flex-1 flex flex-col bg-card border-l">
+                <div className="p-3 border-b flex justify-between items-center sticky top-0 bg-card z-10">
+                    <h3 className="text-md font-semibold truncate pr-2 text-foreground">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
+                    {selectedMonster && (
+                        <div className="flex gap-1">
+                            <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => toggleFavorite(selectedMonster)} className="h-8 w-8" aria-label={isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}>
+                                <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400", !isFavorite(selectedMonster.index) && "text-muted-foreground/70")}/>
+                                </Button>
+                            </TooltipTrigger><TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent></Tooltip></TooltipProvider>
+                            <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Combat Tracker (TBD)</TooltipContent></Tooltip></TooltipProvider>
+                            <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip></TooltipProvider>
+                        </div>
+                    )}
+                </div>
 
             {isLoadingDetail ? (
               <div className="flex-1 flex items-center justify-center p-4">
@@ -614,12 +633,12 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     )}
                 </div>
               </ScrollArea>
-            ) : error && !isBuildingIndex ? ( // Don't show general error if building index
+            ) : error && !isBuildingIndex ? ( 
               <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
                 <AlertTriangle className="h-12 w-12 text-destructive mb-2"/>
                 <p className="text-destructive text-center">{error}</p>
               </div>
-            ) : !isBuildingIndex && ( // Don't show empty state if building index
+            ) : !isBuildingIndex && (
               <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
                 <BookOpen className="h-12 w-12 text-muted-foreground mb-2"/>
                 <p className="text-sm text-muted-foreground">Select a monster from the list to view its details, or use search and CR filters.</p>

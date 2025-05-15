@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown } from 'lucide-react';
+import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, VenetianMask } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -18,7 +18,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Campaign Journal', href: '/campaign-journal', icon: BookText },
-  { label: 'Random Tables', href: '/random-tables', icon: Dice5 },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
 ];
 
@@ -50,8 +49,8 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
 // Toolbar items
 export const TOOLBAR_ITEMS = [
   { id: 'dice-roller', label: 'Dice Roller', icon: Dice5 },
-  { id: 'initiative-tracker', label: 'Initiative Tracker', icon: ListOrdered },
-  { id: 'monster-mash', label: 'Monster Mash', icon: Swords },
+  { id: 'initiative-tracker', label: 'Combat Tracker', icon: Swords },
+  { id: 'monster-mash', label: 'Monster Mash', icon: VenetianMask },
 ];
 
 
@@ -187,7 +186,7 @@ export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
 
-// Adventure Recap Page Keys
+// Adventure Recap Page Keys (Refactored Story So Far)
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
 export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_CurrentSession_`;
 export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionSummaries_`;
@@ -200,4 +199,4 @@ export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}NextSessionGoals_Ref
 
 // Monster Mash Feature Key
 export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Favorites`;
-export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_FullIndexWithCR`; // New key for cached full index
+export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_FullIndexWithCR`;
