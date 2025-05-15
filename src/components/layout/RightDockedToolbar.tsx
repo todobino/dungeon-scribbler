@@ -7,10 +7,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDrawer";
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
-import type { RollLogEntry } from "@/lib/types"; // Make sure RollLogEntry is defined and exported
+import type { RollLogEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon, ChevronRight, VenetianMask, ListOrdered } from "lucide-react";
+import { Dice5, Swords, Skull, Hexagon, ChevronRight, XCircle } from "lucide-react"; // Added XCircle
 import { rollMultipleDice } from "@/lib/dice-utils";
 
 interface LandedDieState {
@@ -27,7 +27,7 @@ const QUICK_ROLL_HOLD_TIME_MS = 200;
 const QUICK_ROLL_WOBBLE_RADIUS = 75;
 const QUICK_ROLL_ANIMATION_STEP_DURATION = 150;
 const QUICK_ROLL_RESULT_VISIBILITY_MS = 5000;
-const LANDED_DIE_SIZE_CLASS = "h-20 w-20"; // Made slightly larger
+const LANDED_DIE_SIZE_CLASS = "h-20 w-20";
 const LANDED_DIE_SHRINK_DURATION_MS = 300;
 
 export function RightDockedToolbar() {
@@ -36,9 +36,9 @@ export function RightDockedToolbar() {
 
   const [isDraggingDie, setIsDraggingDie] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  
   const [landedDie, setLandedDie] = useState<LandedDieState | null>(null);
-  
+  const [isDragOverCancelArea, setIsDragOverCancelArea] = useState(false);
+
   const diceRollerButtonRef = useRef<HTMLButtonElement>(null);
   const dragStartTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
   const isDragIntendedRef = useRef(false);
@@ -47,21 +47,29 @@ export function RightDockedToolbar() {
   const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shrinkClearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Lifted state for Dice Roller Log
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
 
-  const addRollToLog = useCallback((rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}) => {
-    const newEntry: RollLogEntry = {
-      id: `${rollData.inputText.replace(/\s/g, '')}-${Date.now()}`,
-      ...rollData,
-      isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
-    };
-    setRollLog(prevLog => [newEntry, ...prevLog.slice(0, 49)]);
-  }, []);
+  const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
 
-  const updateRollInLog = useCallback((id: string, updatedData: Partial<Omit<RollLogEntry, 'id'>>) => {
-    setRollLog(prevLog => prevLog.map(entry => entry.id === id ? {...entry, ...updatedData, isRolling: false } : entry));
-  }, []);
+  const addRollToLog = useCallback((rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, entryId?: string) => {
+    const idToUse = entryId || getNewRollId();
+    if (entryId && rollLog.find(entry => entry.id === entryId)) {
+        // Update existing entry
+        setRollLog(prevLog => prevLog.map(entry => 
+            entry.id === entryId 
+            ? {...entry, ...rollData, isRolling: false } 
+            : entry
+        ));
+    } else {
+        // Add new entry
+        const newEntry: RollLogEntry = {
+            id: idToUse,
+            ...rollData,
+            isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
+        };
+        setRollLog(prevLog => [newEntry, ...prevLog.slice(0, 49)]);
+    }
+  }, [rollLog, getNewRollId]);
 
 
   const handleToggleDrawer = (itemId: string) => {
@@ -99,7 +107,7 @@ export function RightDockedToolbar() {
     if (event.button !== 0) return;
     
     clearLandedDie();
-    isDragIntendedRef.current = false; // Reset intention
+    isDragIntendedRef.current = false;
 
     if (dragStartTimeoutIdRef.current) clearTimeout(dragStartTimeoutIdRef.current);
     dragStartTimeoutIdRef.current = setTimeout(() => {
@@ -115,13 +123,33 @@ export function RightDockedToolbar() {
       clearTimeout(dragStartTimeoutIdRef.current);
       dragStartTimeoutIdRef.current = null;
     }
-    if (!isDragIntendedRef.current && !isDraggingDie) { 
+    if (!isDragIntendedRef.current && !isDraggingDie) { // Ensure not already dragging
       handleToggleDrawer(DICE_ROLLER_TAB_ID);
     }
-    // If it was a drag, global mouseup handles the die landing
-    // isDragIntendedRef will be reset in handleMouseUpGlobal
-  }, [isDraggingDie, handleToggleDrawer]);
+    // If drag was intended (isDragIntendedRef.current is true), 
+    // handleMouseUpGlobal will manage the drop or cancellation.
+    // isDragIntendedRef will be reset by handleMouseUpGlobal.
+  }, [handleToggleDrawer, isDraggingDie]); // Added isDraggingDie to dependencies
 
+
+  const handleMouseMoveGlobal = useCallback((event: MouseEvent) => {
+      if (isDraggingDie) {
+        setDragPosition({ x: event.clientX, y: event.clientY });
+        if (diceRollerButtonRef.current) {
+          const buttonRect = diceRollerButtonRef.current.getBoundingClientRect();
+          if (
+            event.clientX >= buttonRect.left &&
+            event.clientX <= buttonRect.right &&
+            event.clientY >= buttonRect.top &&
+            event.clientY <= buttonRect.bottom
+          ) {
+            setIsDragOverCancelArea(true);
+          } else {
+            setIsDragOverCancelArea(false);
+          }
+        }
+      }
+    }, [isDraggingDie]);
 
   const handleMouseUpGlobal = useCallback((event: MouseEvent) => {
     if (dragStartTimeoutIdRef.current) { 
@@ -130,26 +158,32 @@ export function RightDockedToolbar() {
     }
 
     if (isDraggingDie) {
-      setIsDraggingDie(false);
       document.body.style.cursor = 'default';
+      setIsDraggingDie(false); // Stop dragging state first
+
+      if (isDragOverCancelArea) {
+        // Drag cancelled
+        setIsDragOverCancelArea(false);
+        clearLandedDie();
+        isDragIntendedRef.current = false; 
+        return; 
+      }
+      
+      // If not cancelled, proceed with Quick-Roll
+      setIsDragOverCancelArea(false); // Ensure this is reset
+      isDragIntendedRef.current = false; // Reset intention after drag completes successfully
 
       const releaseX = event.clientX;
       const releaseY = event.clientY;
       
       const newLandedDieId = `die-${Date.now()}`;
-      const points = [{ x: releaseX, y: releaseY }]; 
+      const points = [
+        { x: releaseX, y: releaseY }, 
+        { x: releaseX + (Math.random() - 0.5) * 2 * QUICK_ROLL_WOBBLE_RADIUS, y: releaseY + (Math.random() - 0.5) * 2 * QUICK_ROLL_WOBBLE_RADIUS }, 
+        { x: releaseX + (Math.random() - 0.5) * 2 * QUICK_ROLL_WOBBLE_RADIUS, y: releaseY + (Math.random() - 0.5) * 2 * QUICK_ROLL_WOBBLE_RADIUS }
+      ];
       
-      for (let i = 0; i < 2; i++) { // Two wobble points
-          const angle = Math.random() * 2 * Math.PI;
-          const radius = Math.random() * QUICK_ROLL_WOBBLE_RADIUS;
-          points.push({
-            x: releaseX + Math.cos(angle) * radius,
-            y: releaseY + Math.sin(angle) * radius,
-          });
-      }
-      // The last point in 'points' is the final resting spot after wobbles.
-      
-      clearLandedDieTimeouts(); // Clear any previous timeouts before setting a new die
+      clearLandedDieTimeouts();
       setLandedDie({
         id: newLandedDieId,
         points: points,
@@ -159,22 +193,22 @@ export function RightDockedToolbar() {
         opacity: 1,
         isShrinking: false,
       });
+    } else {
+        // If not dragging, reset drag intention flag if it was somehow set
+        isDragIntendedRef.current = false;
     }
-    isDragIntendedRef.current = false; 
-  }, [isDraggingDie, addRollToLog]); 
+  }, [isDraggingDie, isDragOverCancelArea, clearLandedDie, addRollToLog, getNewRollId]); 
   
   useEffect(() => {
-    const handleMouseMoveGlobal = (event: MouseEvent) => {
-      if (isDraggingDie) {
-        setDragPosition({ x: event.clientX, y: event.clientY });
-      }
-    };
-
-    if (isDraggingDie || dragStartTimeoutIdRef.current) {
+    // No change to listener logic, but ensure dependencies are correct
+    if (isDraggingDie) { // Only add listeners if actively dragging
       window.addEventListener('mousemove', handleMouseMoveGlobal);
       window.addEventListener('mouseup', handleMouseUpGlobal);
     } else {
-      document.body.style.cursor = 'default';
+      window.removeEventListener('mousemove', handleMouseMoveGlobal);
+      window.removeEventListener('mouseup', handleMouseUpGlobal);
+      document.body.style.cursor = 'default'; // Ensure cursor resets if drag ends unexpectedly
+      setIsDragOverCancelArea(false); // Reset cancel area state if drag ends
     }
 
     return () => {
@@ -185,13 +219,13 @@ export function RightDockedToolbar() {
         clearTimeout(dragStartTimeoutIdRef.current);
       }
     };
-  }, [isDraggingDie, handleMouseUpGlobal]);
+  }, [isDraggingDie, handleMouseMoveGlobal, handleMouseUpGlobal]);
 
 
   useEffect(() => {
     if (!landedDie || !landedDie.isVisible || landedDie.isShrinking) return;
 
-    clearLandedDieTimeouts(); // Clear previous timeouts relevant to animation steps or visibility
+    clearLandedDieTimeouts();
 
     const animateStep = () => {
       setLandedDie(prevDie => {
@@ -202,8 +236,8 @@ export function RightDockedToolbar() {
         if (nextPointIndex < prevDie.points.length) {
           animationStepTimeoutRef.current = setTimeout(animateStep, QUICK_ROLL_ANIMATION_STEP_DURATION);
           return { ...prevDie, currentPointIndex: nextPointIndex };
-        } else { // Reached final point (prevDie.points.length - 1)
-          if (prevDie.result === null) { // Roll and display result if not already done
+        } else { 
+          if (prevDie.result === null) {
             const d20Result = rollMultipleDice(1, 20).sum;
             
             addRollToLog({
@@ -213,11 +247,10 @@ export function RightDockedToolbar() {
               isRolling: false,
             });
             
-            // Set visibility timeout AFTER result is displayed
             visibilityTimeoutRef.current = setTimeout(() => {
               setLandedDie(d => d && d.id === prevDie.id ? { ...d, isShrinking: true, opacity: 0 } : null);
               shrinkClearTimeoutRef.current = setTimeout(() => {
-                 setLandedDie(d => d && d.id === prevDie.id ? null : d); // Fully remove if it's still this die
+                 setLandedDie(d => d && d.id === prevDie.id ? null : d); 
               }, LANDED_DIE_SHRINK_DURATION_MS);
             }, QUICK_ROLL_RESULT_VISIBILITY_MS);
             
@@ -228,11 +261,10 @@ export function RightDockedToolbar() {
       });
     };
     
-    // Initial placement or start of wobble sequence
     const initialDelay = landedDie.currentPointIndex === 0 ? 10 : QUICK_ROLL_ANIMATION_STEP_DURATION;
     animationStepTimeoutRef.current = setTimeout(animateStep, initialDelay);
 
-    return () => { // Cleanup for this effect instance
+    return () => { 
       clearLandedDieTimeouts();
     };
   }, [landedDie?.id, landedDie?.currentPointIndex, landedDie?.isVisible, landedDie?.isShrinking, addRollToLog]);
@@ -240,7 +272,7 @@ export function RightDockedToolbar() {
 
   useEffect(() => { 
     return () => {
-      clearLandedDie(); // Clear on unmount
+      clearLandedDie(); 
       if (dragStartTimeoutIdRef.current) clearTimeout(dragStartTimeoutIdRef.current);
     };
   }, [clearLandedDie]);
@@ -250,27 +282,53 @@ export function RightDockedToolbar() {
       <TooltipProvider delayDuration={100}>
         <div className="fixed top-1/2 -translate-y-1/2 right-0 flex flex-col gap-1 p-2 bg-card/80 backdrop-blur-sm shadow-lg rounded-l-lg z-50 border border-r-0">
           {TOOLBAR_ITEMS.map((item, index) => {
-            const isDiceRollerButton = item.id === DICE_ROLLER_TAB_ID;
+            const isDiceRollerItem = item.id === DICE_ROLLER_TAB_ID;
+            let IconToRender = item.icon;
+            let iconCn = "h-7 w-7";
+            let buttonBaseCn = "h-12 w-12 rounded-md";
+            let buttonVariant: "ghost" | "destructive" = "ghost";
+
+            const isActiveTool = isCombinedToolActive(item.id) || (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID);
+            
+            let finalButtonCn = cn(
+              buttonBaseCn,
+              isActiveTool && "bg-primary/20 text-primary ring-2 ring-primary"
+            );
+
+            if (isDiceRollerItem) {
+              finalButtonCn = cn(finalButtonCn, "cursor-grab");
+              if (isDraggingDie) {
+                IconToRender = XCircle;
+                if (isDragOverCancelArea) {
+                  buttonVariant = "destructive"; // Use destructive variant for red background
+                  // Re-apply active styles if it was active, otherwise it will be just red
+                  finalButtonCn = cn(
+                    buttonBaseCn,
+                    "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  );
+                  iconCn = cn(iconCn, "text-destructive-foreground"); 
+                } else if (isActiveTool) {
+                  // If dragging but not over cancel, and it was active, maintain active style for X
+                   finalButtonCn = cn(buttonBaseCn, "bg-primary/20 text-primary ring-2 ring-primary");
+                }
+              }
+            }
+            
             return (
               <React.Fragment key={item.id}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      ref={isDiceRollerButton ? diceRollerButtonRef : null}
-                      variant="ghost"
+                      ref={isDiceRollerItem ? diceRollerButtonRef : null}
+                      variant={buttonVariant}
                       size="icon"
-                      className={cn(
-                        "h-12 w-12 rounded-md", // Icon size set here
-                        (isCombinedToolActive(item.id) || (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID)) &&
-                        "bg-primary/20 text-primary ring-2 ring-primary",
-                        isDiceRollerButton && "cursor-grab"
-                      )}
-                      onClick={isDiceRollerButton ? undefined : () => handleToggleDrawer(item.id)}
-                      onMouseDown={isDiceRollerButton ? handleMouseDownDiceRoller : undefined}
-                      onMouseUp={isDiceRollerButton ? handleMouseUpDiceRoller : undefined}
+                      className={finalButtonCn}
+                      onClick={isDiceRollerItem ? undefined : () => handleToggleDrawer(item.id)}
+                      onMouseDown={isDiceRollerItem ? handleMouseDownDiceRoller : undefined}
+                      onMouseUp={isDiceRollerItem ? handleMouseUpDiceRoller : undefined}
                       aria-label={item.label}
                     >
-                      <item.icon className="h-7 w-7" /> {/* Icon visual size */}
+                      <IconToRender className={iconCn} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="left" align="center">
@@ -319,7 +377,7 @@ export function RightDockedToolbar() {
             transition: `left ${QUICK_ROLL_ANIMATION_STEP_DURATION}ms ease-out, top ${QUICK_ROLL_ANIMATION_STEP_DURATION}ms ease-out, opacity ${LANDED_DIE_SHRINK_DURATION_MS}ms ease-out, transform ${LANDED_DIE_SHRINK_DURATION_MS}ms ease-out`,
             opacity: landedDie.opacity,
           }}
-          className={cn("animate-in fade-in duration-100")} // Initial fade-in
+          className={cn("animate-in fade-in duration-100")}
         >
           <div className={cn("relative flex items-center justify-center", LANDED_DIE_SIZE_CLASS)}>
             <Hexagon className={cn("text-primary", LANDED_DIE_SIZE_CLASS)} fill="hsl(var(--primary)/ 0.3)" />
@@ -337,17 +395,13 @@ export function RightDockedToolbar() {
 
       <CombinedToolDrawer
         open={openDrawerId === COMBINED_TOOLS_DRAWER_ID}
-        onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
+        onOpenChange={(isOpen) => {
+            if(!isOpen) setOpenDrawerId(null);
+        }}
         defaultTab={activeCombinedTab}
         rollLog={rollLog}
-        onInternalRoll={(data, idToUpdate) => {
-          if (idToUpdate) {
-            updateRollInLog(idToUpdate, data);
-          } else {
-            addRollToLog(data);
-          }
-        }}
-        getNewRollId={() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`}
+        onInternalRoll={(data, entryIdToUpdate) => addRollToLog(data, entryIdToUpdate)}
+        getNewRollId={getNewRollId}
         onClearRollLog={() => setRollLog([])}
       />
       <MonsterMashDrawer
@@ -357,3 +411,4 @@ export function RightDockedToolbar() {
     </>
   );
 }
+
