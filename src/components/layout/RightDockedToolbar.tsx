@@ -9,7 +9,16 @@ import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDra
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon, ListOrdered, ChevronRight } from "lucide-react"; // Added Hexagon
+import { Dice5, Swords, Skull, Hexagon, ListOrdered, ChevronRight, VenetianMask } from "lucide-react";
+
+interface LandedDieState {
+  x: number;
+  y: number;
+  finalX: number;
+  finalY: number;
+  id: string;
+  isSettling: boolean; // True if it needs to animate to its finalX, finalY
+}
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
@@ -19,17 +28,17 @@ export function RightDockedToolbar() {
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
 
-  // New state for the "landed" die
-  const [landedDie, setLandedDie] = useState<{ x: number; y: number; id: string } | null>(null);
+  const [landedDie, setLandedDie] = useState<LandedDieState | null>(null);
   const [landedDieTimeoutId, setLandedDieTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [settleDieTimeoutId, setSettleDieTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
 
   const handleToggleDrawer = (itemId: string) => {
     if (justFinishedDrag) {
-      setJustFinishedDrag(false); // Reset flag after one check
+      setJustFinishedDrag(false); 
       return;
     }
-    if (isDraggingDie) return; // Don't open drawer if a drag is in progress
+    if (isDraggingDie) return; 
 
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
       const newTab = itemId === DICE_ROLLER_TAB_ID ? DICE_ROLLER_TAB_ID : COMBAT_TRACKER_TAB_ID;
@@ -51,101 +60,109 @@ export function RightDockedToolbar() {
   };
 
   const handleDragStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return; // Only act on left mouse button
+    if (event.button !== 0) return;
 
-    // Clear any existing landed die and its timeout
-    if (landedDie) {
-        setLandedDie(null);
-    }
-    if (landedDieTimeoutId) {
-        clearTimeout(landedDieTimeoutId);
-        setLandedDieTimeoutId(null);
-    }
+    if (landedDie) setLandedDie(null);
+    if (landedDieTimeoutId) clearTimeout(landedDieTimeoutId);
+    if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId);
+    
+    setLandedDieTimeoutId(null);
+    setSettleDieTimeoutId(null);
 
     setIsDraggingDie(true);
-    // Initialize dragPosition, though mousemove will update it
     setDragPosition({ x: event.clientX, y: event.clientY }); 
     document.body.style.cursor = 'grabbing';
     event.preventDefault();
-  }, [landedDie, landedDieTimeoutId]);
+  }, [landedDie, landedDieTimeoutId, settleDieTimeoutId]);
 
-
-  const handleMouseUp = useCallback((event: MouseEvent) => {
+  const handleMouseUpGlobal = useCallback((event: MouseEvent) => {
     if (isDraggingDie) {
-        setIsDraggingDie(false); // Stop dragging state
+        setIsDraggingDie(false);
         document.body.style.cursor = 'default';
 
-        // Calculate random offset for the "landed" die
         const releaseX = event.clientX;
         const releaseY = event.clientY;
         const angle = Math.random() * 2 * Math.PI;
-        const radius = Math.random() * 50; // Settle within 50px radius
+        const radius = Math.random() * 50; 
         const offsetX = Math.cos(angle) * radius;
         const offsetY = Math.sin(angle) * radius;
 
-        const newLandedDie = {
-            x: releaseX + offsetX,
-            y: releaseY + offsetY,
-            id: Date.now().toString(), // Unique ID for this landed die instance
+        const newLandedDieId = Date.now().toString();
+        const newLandedDie: LandedDieState = {
+            x: releaseX, // Initial position is exact release point
+            y: releaseY,
+            finalX: releaseX + offsetX, // Store final target
+            finalY: releaseY + offsetY,
+            id: newLandedDieId,
+            isSettling: true, 
         };
-
-        // Clear any existing timeout for a previous landed die visualization
-        if (landedDieTimeoutId) {
-            clearTimeout(landedDieTimeoutId);
-        }
-
-        setLandedDie(newLandedDie); // Show the landed die
-
-        const newTimeoutId = setTimeout(() => {
+        setLandedDie(newLandedDie);
+        
+        if (landedDieTimeoutId) clearTimeout(landedDieTimeoutId);
+        const newVisibilityTimeoutId = setTimeout(() => {
             setLandedDie(prevLandedDie => {
-                // Only clear if it's the same die that timed out
-                if (prevLandedDie && prevLandedDie.id === newLandedDie.id) {
+                if (prevLandedDie && prevLandedDie.id === newLandedDieId) {
                     return null;
                 }
-                return prevLandedDie; // Otherwise, keep the current (potentially newer) landed die
+                return prevLandedDie;
             });
-            // No need to setLandedDieTimeoutId(null) here, as this specific timeout has fired.
-            // It will be nullified if a new drag starts or on unmount.
-        }, 5000); // Die disappears after 5 seconds
-        setLandedDieTimeoutId(newTimeoutId);
+        }, 5050); // 50ms for settle animation + 5000ms visibility
+        setLandedDieTimeoutId(newVisibilityTimeoutId);
 
-        setJustFinishedDrag(true); // Prevent drawer from opening immediately
-        // Short timeout to reset the flag, allowing normal clicks after drag
+        setJustFinishedDrag(true);
         setTimeout(() => setJustFinishedDrag(false), 50); 
     }
   }, [isDraggingDie, landedDieTimeoutId]);
 
-
   useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (isDraggingDie) { // Only update if actively dragging
+    const handleMouseMoveGlobal = (event: MouseEvent) => {
+      if (isDraggingDie) {
         setDragPosition({ x: event.clientX, y: event.clientY });
       }
     };
 
     if (isDraggingDie) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handleMouseMoveGlobal);
+      window.addEventListener('mouseup', handleMouseUpGlobal);
     } else {
-      // Ensure cursor is reset if drag ends unexpectedly (e.g., focus loss)
       document.body.style.cursor = 'default';
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'default'; // Cleanup cursor on component unmount or effect re-run
+      window.removeEventListener('mousemove', handleMouseMoveGlobal);
+      window.removeEventListener('mouseup', handleMouseUpGlobal);
+      document.body.style.cursor = 'default';
     };
-  }, [isDraggingDie, handleMouseUp]); // handleMouseUp is stable due to useCallback
+  }, [isDraggingDie, handleMouseUpGlobal]);
 
-  // Cleanup timeout on component unmount
   useEffect(() => {
-    return () => {
-        if (landedDieTimeoutId) {
-            clearTimeout(landedDieTimeoutId);
+    if (landedDie && landedDie.isSettling) {
+      if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId); // Clear previous settle timeout
+      const newSettleTimeoutId = setTimeout(() => {
+        setLandedDie(prev => {
+          if (prev && prev.id === landedDie.id && prev.isSettling) { // Check if it's still the same die and needs settling
+            return { ...prev, x: prev.finalX, y: prev.finalY, isSettling: false };
+          }
+          return prev;
+        });
+      }, 50); // Quick delay before "moving" to final spot
+      setSettleDieTimeoutId(newSettleTimeoutId);
+    }
+     // Cleanup for settleDieTimeoutId when landedDie becomes null or its ID changes
+     return () => {
+        if (settleDieTimeoutId) {
+            clearTimeout(settleDieTimeoutId);
         }
     };
-  }, [landedDieTimeoutId]);
+  }, [landedDie]); // Only re-run if landedDie object itself changes
+
+  useEffect(() => {
+    return () => { // Cleanup all timeouts on unmount
+        if (landedDieTimeoutId) clearTimeout(landedDieTimeoutId);
+        if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId);
+    };
+  }, [landedDieTimeoutId, settleDieTimeoutId]);
+
 
   return (
     <>
@@ -184,7 +201,6 @@ export function RightDockedToolbar() {
         </div>
       </TooltipProvider>
 
-      {/* Render the dragged icon if dragging */}
       {isDraggingDie && (
         <div
           style={{
@@ -208,21 +224,23 @@ export function RightDockedToolbar() {
         </div>
       )}
 
-      {/* Render the landed die if it exists and not currently dragging a new one */}
       {landedDie && !isDraggingDie && (
         <div
           style={{
             position: 'fixed',
             left: landedDie.x,
             top: landedDie.y,
-            pointerEvents: 'none', // Allow clicks to pass through to elements underneath if needed
+            pointerEvents: 'none', 
             zIndex: 1999, 
             transform: 'translate(-50%, -50%)',
+            transition: landedDie.isSettling ? 'none' : 'left 0.1s ease-out, top 0.1s ease-out',
           }}
-          className="animate-in fade-in duration-300" 
+          className={cn(
+            "animate-in fade-in", 
+            landedDie.isSettling ? "duration-50" : "duration-100" // Faster fade-in for initial land, slightly slower for final settle if needed, but move is main
+          )}
         >
           <div className="relative h-14 w-14 flex items-center justify-center">
-            {/* Stationary Hexagon, no "20", slightly transparent */}
             <Hexagon className="h-14 w-14 text-primary" fill="hsl(var(--primary)/ 0.3)" />
           </div>
         </div>
