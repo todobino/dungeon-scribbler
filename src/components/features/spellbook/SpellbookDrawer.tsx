@@ -101,5 +101,3 @@ export function SpellbookDrawer({ open, onOpenChange }: SpellbookDrawerProps) {
     </Sheet>
   );
 }
-
-```
