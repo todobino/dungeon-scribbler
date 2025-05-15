@@ -22,7 +22,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { useCampaign } from "@/contexts/campaign-context";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Users, Edit3 } from "lucide-react"; 
+import { Users, Edit3, DraftingCompass } from "lucide-react"; 
 import React, { useState } from "react";
 import { CharacterDetailsDialog } from "@/components/features/party-manager/character-details-dialog";
 
@@ -84,9 +84,9 @@ export function SidebarNav() {
   return (
     <>
     <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
+      <SidebarHeader className="p-3 border-b border-sidebar-border"> {/* Reduced padding from p-4 to p-3 */}
         <Link href="/campaign-management" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-            <Image src="https://picsum.photos/seed/dungeonsidebar/40/40" alt="Logo" width={32} height={32} className="rounded-md" data-ai-hint="fantasy scroll"/>
+            <DraftingCompass className="h-7 w-7 text-sidebar-primary shrink-0 group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6" /> {/* Changed icon and adjusted size */}
           <SidebarMenuLabel>
             <h1 className="text-xl font-semibold text-sidebar-foreground whitespace-nowrap">
               {APP_NAME}
@@ -195,3 +195,4 @@ export function MobileSidebarTrigger() {
     return <SidebarTrigger className="md:hidden fixed top-4 left-4 z-50 bg-background/80 backdrop-blur-sm" />;
 }
 
+    
