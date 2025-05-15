@@ -12,7 +12,7 @@ import {
   MONSTER_AC_TYPES,
   MONSTER_ALIGNMENTS
 } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -666,8 +666,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     })
   , [homebrewMonsters, homebrewSortConfig]);
 
-
-  // END OF JS/TS LOGIC
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
@@ -700,9 +698,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col space-y-4 overflow-y-auto">
             <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
               <AccordionItem value="favorites-section">
-                <AccordionTrigger className="py-2 hover:no-underline">
-                  <div className="flex justify-between items-center w-full pr-2">
-                    <h3 className="text-lg font-semibold text-primary">Favorites ({favorites.length})</h3>
+                <div className="flex justify-between items-center w-full pr-2 py-2">
+                    <AccordionTrigger className="py-0 hover:no-underline flex-1 text-left">
+                        <h3 className="text-lg font-semibold text-primary">Favorites ({favorites.length})</h3>
+                    </AccordionTrigger>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
@@ -721,7 +720,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                </AccordionTrigger>
                 <AccordionContent className="pt-1 pb-0">
                   <Separator className="mb-2" />
                   <ScrollArea className="h-40"> 
@@ -746,9 +744,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
               </AccordionItem>
 
               <AccordionItem value="homebrew-section">
-                <AccordionTrigger className="py-2 hover:no-underline">
-                  <div className="flex justify-between items-center w-full pr-2">
-                    <h3 className="text-lg font-semibold text-primary">Homebrew ({homebrewMonsters.length})</h3>
+                 <div className="flex justify-between items-center w-full pr-2 py-2">
+                    <AccordionTrigger className="py-0 hover:no-underline flex-1 text-left">
+                        <h3 className="text-lg font-semibold text-primary">Homebrew ({homebrewMonsters.length})</h3>
+                    </AccordionTrigger>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
@@ -767,7 +766,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                </AccordionTrigger>
                 <AccordionContent className="pt-1 pb-0">
                   <Separator className="mb-2" />
                   <ScrollArea className="h-40"> 
@@ -819,7 +817,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
                     <DropdownMenuRadioGroup value={resultsSortConfig.key} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
                       <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="cr" disabled={isBuildingIndex || allMonstersData.every(m => m.cr === undefined)}>CR</DropdownMenuRadioItem>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                           <DropdownMenuRadioItem value="cr" disabled={isBuildingIndex && allMonstersData.every(m => m.cr === undefined)}>CR</DropdownMenuRadioItem>
+                        </TooltipTrigger><TooltipContent side="left" className={cn(isBuildingIndex && allMonstersData.every(m => m.cr === undefined) ? "" : "hidden")}><p>CR data is needed to sort by CR.<br/>This happens automatically on first load<br/>or by fetching individual monster details.</p></TooltipContent></Tooltip></TooltipProvider>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
                     <DropdownMenuRadioGroup value={resultsSortConfig.order} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
@@ -859,7 +859,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     {isCreatingHomebrew ? (editingHomebrewIndex ? "Edit Homebrew Monster" : "Create Homebrew Monster") 
                         : (selectedMonster ? <> {selectedMonster.name} {selectedMonster.isHomebrew && <Badge variant="outline" className="ml-1 align-middle">Homebrew</Badge>} </> : "Monster Details")}
                 </h3>
-                {isCreatingHomebrew && editingHomebrewIndex && (
+                 {isCreatingHomebrew && editingHomebrewIndex && (
                   <Button onClick={handleSaveHomebrewMonster} disabled={!isHomebrewFormDirty} size="sm">
                       <Save className="mr-2 h-4 w-4" /> Update Changes
                   </Button>
@@ -1038,31 +1038,3 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     </Sheet>
   );
 }
-
-// Helper for buttonVariants - needed if cn(buttonVariants(...)) is used locally
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
-
