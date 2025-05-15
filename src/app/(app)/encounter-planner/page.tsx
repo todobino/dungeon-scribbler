@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; // Assuming this is exported
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
 
 
 interface CurrentEncounterData {
@@ -473,3 +473,4 @@ export default function EncounterPlannerPage() {
     </div>
   );
 }
+
