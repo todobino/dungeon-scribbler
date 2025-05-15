@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, Skull, VenetianMask } from 'lucide-react';
+import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, Skull, VenetianMask, PlusCircle } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -62,31 +62,31 @@ export const DND_CLASSES = [
 export type DndClass = typeof DND_CLASSES[number];
 
 export const PREDEFINED_COLORS = [
-  { name: 'Red', value: '#ef4444' }, 
-  { name: 'Orange', value: '#f97316' }, 
-  { name: 'Amber', value: '#f59e0b' }, 
-  { name: 'Yellow', value: '#eab308' }, 
-  { name: 'Lime', value: '#84cc16' }, 
-  { name: 'Green', value: '#22c55e' }, 
-  { name: 'Emerald', value: '#10b981' }, 
-  { name: 'Teal', value: '#14b8a6' }, 
-  { name: 'Cyan', value: '#06b6d4' }, 
-  { name: 'Sky', value: '#0ea5e9' }, 
-  { name: 'Blue', value: '#3b82f6' }, 
-  { name: 'Indigo', value: '#6366f1' }, 
-  { name: 'Violet', value: '#8b5cf6' }, 
-  { name: 'Purple', value: '#a855f7' }, 
-  { name: 'Fuchsia', value: '#d946ef' }, 
-  { name: 'Pink', value: '#ec4899' }, 
-  { name: 'Rose', value: '#f43f5e' }, 
-  { name: 'Slate', value: '#64748b' }, 
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Amber', value: '#f59e0b' },
+  { name: 'Yellow', value: '#eab308' },
+  { name: 'Lime', value: '#84cc16' },
+  { name: 'Green', value: '#22c55e' },
+  { name: 'Emerald', value: '#10b981' },
+  { name: 'Teal', value: '#14b8a6' },
+  { name: 'Cyan', value: '#06b6d4' },
+  { name: 'Sky', value: '#0ea5e9' },
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Indigo', value: '#6366f1' },
+  { name: 'Violet', value: '#8b5cf6' },
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'Fuchsia', value: '#d946ef' },
+  { name: 'Pink', value: '#ec4899' },
+  { name: 'Rose', value: '#f43f5e' },
+  { name: 'Slate', value: '#64748b' },
 ] as const;
 
 export type PredefinedColor = typeof PREDEFINED_COLORS[number];
 
 export const FACTION_REPUTATION_SCALE = {
-  MIN: -5, 
-  MAX: 5,  
+  MIN: -5,
+  MAX: 5,
   STEP: 1,
   LABELS: {
     "-5": "Sworn Enemy",
@@ -109,10 +109,10 @@ export const getFactionReputationLabel = (reputation: number): string => {
 
 export const getFactionReputationColorClass = (reputation: number): string => {
   if (reputation <= -3) return "text-destructive";
-  if (reputation < 0) return "text-orange-500"; 
+  if (reputation < 0) return "text-orange-500";
   if (reputation === 0) return "text-muted-foreground";
-  if (reputation < 3) return "text-blue-500"; 
-  return "text-green-500"; 
+  if (reputation < 3) return "text-blue-500";
+  return "text-green-500";
 };
 
 export interface CampaignOption {
@@ -174,14 +174,14 @@ export const POWER_BALANCE_OPTIONS: CampaignOption[] = [
   { value: "Power Vacuum", description: "A recent collapse of authority has left a void, with various groups scrambling to fill it." }
 ];
 
-const SHARED_PREFIX = "adventureArchitect_"; 
+const SHARED_PREFIX = "adventureArchitect_";
 
 export const CAMPAIGNS_STORAGE_KEY = `${SHARED_PREFIX}Campaigns`;
 export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = `${SHARED_PREFIX}ActiveCampaignId`;
 export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Party_`;
 export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Factions_`;
 export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Locations_`;
-export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`; 
+export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`;
 export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
@@ -200,6 +200,8 @@ export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}NextSessionGoals_Ref
 // Monster Mash Feature Key
 export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Favorites`;
 export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_FullIndexWithCR`;
+export const MONSTER_MASH_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Homebrew`;
+
 
 // Toolbar IDs for shared state management
 export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
