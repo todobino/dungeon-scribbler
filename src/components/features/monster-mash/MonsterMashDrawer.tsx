@@ -3,13 +3,24 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { MonsterSummary, MonsterDetail, FavoriteMonster, ArmorClass, MonsterAction, SpecialAbility, LegendaryAction, HomebrewMonsterFormData, MonsterSummaryWithCR } from "@/lib/types";
-import { MONSTER_MASH_FAVORITES_STORAGE_KEY, MONSTER_MASH_FULL_INDEX_STORAGE_KEY, MONSTER_MASH_HOMEBREW_STORAGE_KEY } from "@/lib/constants";
+import { 
+  MONSTER_MASH_FAVORITES_STORAGE_KEY, 
+  MONSTER_MASH_FULL_INDEX_STORAGE_KEY, 
+  MONSTER_MASH_HOMEBREW_STORAGE_KEY,
+  MONSTER_TYPES,
+  MONSTER_SIZES,
+  MONSTER_AC_TYPES,
+  MONSTER_ALIGNMENTS
+} from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +34,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle, ChevronRight, Skull, PlusCircle, Save, VenetianMask } from "lucide-react";
+import { Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle, ChevronRight, Skull, PlusCircle, Save, VenetianMask, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -68,6 +79,7 @@ const formatCRDisplay = (crValue: string | number | undefined): string => {
     if (numCR === 0.5) return "1/2";
     if (numCR === 0.75) return "3/4";
     if (Number.isInteger(numCR)) return numCR.toString();
+    // For other fractions or decimals, might need more logic or just show as is
     return numCR.toString(); 
 };
 
@@ -76,27 +88,24 @@ const CR_SLIDER_MAX = 30;
 
 const snapCRValue = (rawValue: number): number => {
   if (rawValue <= 0) return 0;
-  if (rawValue < 0.125) return 0; // Snap to 0 if less than 1/8
-  if (rawValue < (0.125 + 0.25) / 2) return 0.125; // Snap to 1/8
-  if (rawValue < (0.25 + 0.5) / 2) return 0.25; // Snap to 1/4
-  if (rawValue < (0.5 + 0.75) / 2) return 0.5; // Snap to 1/2
-  if (rawValue < (0.75 + 1) / 2) return 0.75; // Snap to 3/4
-  // For values >= 1, snap to the nearest whole integer
+  if (rawValue < 0.125) return 0; 
+  if (rawValue < (0.125 + 0.25) / 2) return 0.125; 
+  if (rawValue < (0.25 + 0.5) / 2) return 0.25; 
+  if (rawValue < (0.5 + 0.75) / 2) return 0.5;
+  if (rawValue < (0.75 + 1) / 2) return 0.75;
   return Math.round(rawValue);
 };
 
-
 const initialHomebrewFormData: HomebrewMonsterFormData = {
-  name: "", challenge_rating: "0", type: "", size: "Medium",
-  armor_class_value: "10", armor_class_type: "Natural Armor",
-  hit_points_value: "10", hit_points_dice: "2d8+1", speed: "30 ft.",
+  name: "", challenge_rating: "", type: "", size: "",
+  armor_class_value: "10", armor_class_type: "",
+  hit_points_value: "10", hit_points_dice: "", speed: "30 ft.",
   str: "10", dex: "10", con: "10", int: "10", wis: "10", cha: "10",
   special_abilities_text: "", actions_text: "", legendary_actions_text: "",
-  image_url: "", alignment: "Unaligned", languages: "Common", senses_text: "Passive Perception 10",
+  image_url: "", alignment: "", languages: "", senses_text: "",
   damage_vulnerabilities_text: "", damage_resistances_text: "", damage_immunities_text: "",
   condition_immunities_text: ""
 };
-
 
 export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps) {
   const [allMonstersData, setAllMonstersData] = useState<MonsterSummaryWithCR[]>([]);
@@ -105,6 +114,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [homebrewMonsters, setHomebrewMonsters] = useState<MonsterDetail[]>([]);
   const [isCreatingHomebrew, setIsCreatingHomebrew] = useState(false);
   const [homebrewFormData, setHomebrewFormData] = useState<HomebrewMonsterFormData>(initialHomebrewFormData);
+  
+  const [isHomebrewFormDirty, setIsHomebrewFormDirty] = useState(false);
+  const [isUnsavedChangesDialogOpen, setIsUnsavedChangesDialogOpen] = useState(false);
+  const [pendingMonsterFetchArgs, setPendingMonsterFetchArgs] = useState<{ index: string; source: 'api' | 'homebrew' } | null>(null);
+
 
   const [searchTerm, setSearchTerm] = useState("");
   const [crRange, setCrRange] = useState<[number, number]>([CR_SLIDER_MIN, CR_SLIDER_MAX]);
@@ -120,16 +134,24 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [favoritesSortConfig, setFavoritesSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
   const [homebrewSortConfig, setHomebrewSortConfig] = useState<SortConfig>({ key: 'name', order: 'asc' });
 
+  useEffect(() => {
+    if (isCreatingHomebrew) {
+      const isDirty = JSON.stringify(homebrewFormData) !== JSON.stringify(initialHomebrewFormData);
+      setIsHomebrewFormDirty(isDirty);
+    } else {
+      setIsHomebrewFormDirty(false);
+    }
+  }, [homebrewFormData, isCreatingHomebrew]);
 
   const applyFiltersAndSort = useCallback(() => {
     let combinedData: MonsterSummaryWithCR[] = [
-        ...allMonstersData.filter(m => m.source !== 'homebrew'),
-        ...homebrewMonsters.map(hb => ({
+        ...allMonstersData.filter(m => m.source !== 'homebrew'), // API monsters
+        ...homebrewMonsters.map(hb => ({ // Homebrew monsters
             index: hb.index,
             name: hb.name,
-            cr: hb.challenge_rating,
+            cr: hb.challenge_rating, 
             type: hb.type,
-            url: hb.url,
+            url: hb.url, // may be empty for homebrew
             source: 'homebrew' as 'homebrew'
         }))
     ];
@@ -143,14 +165,13 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     }
     
     const [minCRSlider, maxCRSlider] = crRange;
-    if (minCRSlider !== CR_SLIDER_MIN || maxCRSlider !== CR_SLIDER_MAX) { // Only filter if slider is not full range
+    if (minCRSlider !== CR_SLIDER_MIN || maxCRSlider !== CR_SLIDER_MAX) {
         tempFiltered = tempFiltered.filter(monster => {
             const monsterCRNum = monster.cr;
             if (monsterCRNum === undefined) return false; // Exclude monsters with undefined CR if filter is active
             return monsterCRNum >= minCRSlider && monsterCRNum <= maxCRSlider;
         });
     }
-
 
     const sortKey = resultsSortConfig.key;
     const sortOrder = resultsSortConfig.order;
@@ -184,23 +205,21 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
       const enrichedMonstersPromises = summaries.map(async (summary) => {
         try {
-          // Small delay to avoid overwhelming the API, though Promise.all still runs them concurrently
-          await new Promise(resolve => setTimeout(resolve, 20)); 
+          await new Promise(resolve => setTimeout(resolve, 50)); 
           const detailResponse = await fetch(`${DND5E_API_BASE_URL}${summary.url}`);
           if (detailResponse.ok) {
             const detailData: MonsterDetail = await detailResponse.json();
             return {
               index: detailData.index,
               name: detailData.name,
-              cr: detailData.challenge_rating, // CR from detail
-              type: detailData.type,         // Type from detail
+              cr: detailData.challenge_rating,
+              type: detailData.type,
               url: summary.url,
               source: 'api' as 'api'
             };
-          } else {
-            console.warn(`Failed to fetch details for ${summary.name}: ${detailResponse.statusText}`);
-            return { index: summary.index, name: summary.name, url: summary.url, source: 'api' as 'api', cr: undefined, type: undefined };
           }
+          console.warn(`Failed to fetch details for ${summary.name}: ${detailResponse.statusText}`);
+          return { index: summary.index, name: summary.name, url: summary.url, source: 'api' as 'api', cr: undefined, type: undefined };
         } catch (detailError) {
             console.warn(`Error fetching details for ${summary.name}:`, detailError);
             return { index: summary.index, name: summary.name, url: summary.url, source: 'api' as 'api', cr: undefined, type: undefined };
@@ -320,6 +339,13 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   const fetchMonsterDetail = async (monsterIndex: string, source: 'api' | 'homebrew' = 'api') => {
     if (!monsterIndex) return;
+
+    if (isCreatingHomebrew && isHomebrewFormDirty) {
+      setPendingMonsterFetchArgs({ index: monsterIndex, source });
+      setIsUnsavedChangesDialogOpen(true);
+      return;
+    }
+
     setIsCreatingHomebrew(false); 
     setHomebrewFormData(initialHomebrewFormData); 
     setIsLoadingDetail(true);
@@ -330,13 +356,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         const homebrewDetail = homebrewMonsters.find(m => m.index === monsterIndex);
         if (homebrewDetail) {
             setSelectedMonster(homebrewDetail);
-            setIsLoadingDetail(false);
-            return;
         } else {
             setError(`Could not find homebrew monster ${monsterIndex}.`); 
-            setIsLoadingDetail(false);
-            return;
         }
+        setIsLoadingDetail(false);
+        return;
     }
 
     try {
@@ -368,11 +392,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       } else if ('cr' in monsterToToggle && monsterToToggle.cr !== undefined) { 
         crValue = monsterToToggle.cr;
         typeValue = monsterToToggle.type;
-      } else if (monsterToToggle.source === 'api' && !('challenge_rating' in monsterToToggle) && !('cr' in monsterToToggle)) {
+      } else {
+        if (monsterToToggle.source === 'api' && monsterToToggle.url) {
             setIsLoadingDetail(true);
             try {
-                const monsterUrl = (monsterToToggle as MonsterSummaryWithCR).url || `/api/monsters/${monsterToToggle.index}`;
-                const response = await fetch(`${DND5E_API_BASE_URL}${monsterUrl}`);
+                const response = await fetch(`${DND5E_API_BASE_URL}${monsterToToggle.url}`);
                 if (!response.ok) {
                     setError(`Could not fetch details for ${monsterToToggle.name} to add to favorites.`);
                     setIsLoadingDetail(false);
@@ -394,12 +418,13 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             } finally {
                 setIsLoadingDetail(false);
             }
-      } else if (monsterToToggle.source === 'homebrew') {
-         crValue = (monsterToToggle as MonsterDetail).challenge_rating;
-         typeValue = (monsterToToggle as MonsterDetail).type;
-      } else {
-            setError(`CR or Type undefined for ${monsterToToggle.name}. Cannot add to favorites.`);
-            return;
+        } else if (monsterToToggle.source === 'homebrew') {
+           crValue = (monsterToToggle as MonsterDetail).challenge_rating; // Assume it's MonsterDetail if homebrew
+           typeValue = (monsterToToggle as MonsterDetail).type;
+        } else {
+              setError(`CR or Type undefined for ${monsterToToggle.name}. Cannot add to favorites.`);
+              return;
+        }
       }
       
       if (crValue === undefined) { 
@@ -424,6 +449,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     const { name, value } = e.target;
     setHomebrewFormData(prev => ({ ...prev, [name]: value }));
   };
+  
+  const handleHomebrewSelectChange = (name: keyof HomebrewMonsterFormData, value: string) => {
+    setHomebrewFormData(prev => ({ ...prev, [name]: value }));
+  };
+
 
   const handleSaveHomebrewMonster = () => {
     if (!homebrewFormData.name.trim()) {
@@ -431,7 +461,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         return;
     }
     
-    const crNum = crToNumber(homebrewFormData.challenge_rating);
+    const crNum = homebrewFormData.challenge_rating ? crToNumber(homebrewFormData.challenge_rating) : 0;
     const acVal = parseInt(homebrewFormData.armor_class_value || "10") || 10;
     const hpVal = parseInt(homebrewFormData.hit_points_value || "10") || 10;
 
@@ -441,7 +471,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         challenge_rating: crNum, 
         type: homebrewFormData.type?.trim() || "Unknown",
         size: homebrewFormData.size?.trim() || "Medium",
-        armor_class: [{ type: homebrewFormData.armor_class_type?.trim() || "Natural", value: acVal }],
+        armor_class: [{ type: homebrewFormData.armor_class_type?.trim() || "Natural Armor", value: acVal }],
         hit_points: hpVal,
         hit_dice: homebrewFormData.hit_points_dice?.trim(),
         speed: homebrewFormData.speed?.trim() || "30 ft.",
@@ -473,7 +503,25 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     setIsCreatingHomebrew(false); 
     setHomebrewFormData(initialHomebrewFormData); 
     setError(null);
+    setIsHomebrewFormDirty(false);
   };
+
+  const handleUnsavedChangesDialog = (action: 'save' | 'discard' | 'cancel') => {
+    if (action === 'save') {
+      handleSaveHomebrewMonster(); 
+    } else if (action === 'discard') {
+      setHomebrewFormData(initialHomebrewFormData);
+      setIsCreatingHomebrew(false);
+      setIsHomebrewFormDirty(false);
+    }
+    
+    setIsUnsavedChangesDialogOpen(false);
+    if (pendingMonsterFetchArgs && action !== 'cancel') {
+      fetchMonsterDetail(pendingMonsterFetchArgs.index, pendingMonsterFetchArgs.source);
+    }
+    setPendingMonsterFetchArgs(null);
+  };
+
 
   const formatArmorClass = (acArray: ArmorClass[] | { value: number; type: string; desc?: string }[] | undefined): string => {
     if (!acArray || acArray.length === 0) return "N/A";
@@ -557,7 +605,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     return homebrewSortConfig.order === 'asc' ? comparison : comparison * -1;
   });
 
-  // END OF JS/TS LOGIC
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
@@ -586,77 +633,83 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         </SheetHeader>
 
         <div className="flex flex-1 min-h-0 border-t pr-8 relative"> {/* Main 3-column container */}
-
           {/* Left Sidebar: Favorites & Homebrew (Column 1) */}
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col space-y-4 overflow-y-auto">
-            {/* Favorites Section */}
-            <div>
-              <div className="mb-1 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-primary">Favorites ({favorites.length})</h3>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><ArrowUpDown className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={favoritesSortConfig.key} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
-                      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem><DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={favoritesSortConfig.order} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
-                      <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem><DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <Separator className="mb-2" />
-              <ScrollArea className="h-40"> 
-                {favorites.length === 0 ? <p className="text-sm text-muted-foreground">No favorites yet.</p> : (
-                  <ul className="space-y-1">
-                    {sortedFavorites.map(fav => (
-                      <li key={fav.index} onClick={() => fetchMonsterDetail(fav.index, fav.source)}
-                        className={cn("p-2 rounded-md hover:bg-muted cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === fav.index && "bg-primary/10 text-primary font-medium")}>
-                        <span>{fav.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(fav.cr)})</span></span>
-                      </li>))}
-                  </ul>
-                )}
-              </ScrollArea>
-            </div>
+            <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
+              <AccordionItem value="favorites-section">
+                <AccordionTrigger className="py-2 hover:no-underline">
+                  <div className="flex justify-between items-center w-full pr-2">
+                    <h3 className="text-lg font-semibold text-primary">Favorites ({favorites.length})</h3>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><ArrowUpDown className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={favoritesSortConfig.key} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
+                          <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem><DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={favoritesSortConfig.order} onValueChange={(value) => setFavoritesSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
+                          <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem><DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-1 pb-0">
+                  <Separator className="mb-2" />
+                  <ScrollArea className="h-40"> 
+                    {favorites.length === 0 ? <p className="text-sm text-muted-foreground">No favorites yet.</p> : (
+                      <ul className="space-y-1">
+                        {sortedFavorites.map(fav => (
+                          <li key={fav.index} onClick={() => fetchMonsterDetail(fav.index, fav.source)}
+                            className={cn("p-2 rounded-md hover:bg-muted cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === fav.index && "bg-primary/10 text-primary font-medium")}>
+                            <span>{fav.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(fav.cr)})</span></span>
+                          </li>))}
+                      </ul>
+                    )}
+                  </ScrollArea>
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* Homebrew Section */}
-            <div>
-              <div className="mb-1 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-primary">Homebrew ({homebrewMonsters.length})</h3>
-                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><ArrowUpDown className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={homebrewSortConfig.key} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
-                      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem><DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={homebrewSortConfig.order} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
-                      <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem><DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <Separator className="mb-2" />
-              <ScrollArea className="h-40"> 
-                {homebrewMonsters.length === 0 ? <p className="text-sm text-muted-foreground">No homebrew monsters.</p> : (
-                  <ul className="space-y-1">
-                    {sortedHomebrew.map(hb => (
-                      <li key={hb.index} onClick={() => fetchMonsterDetail(hb.index, 'homebrew')}
-                        className={cn("p-2 rounded-md hover:bg-muted cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === hb.index && "bg-primary/10 text-primary font-medium")}>
-                        <span>{hb.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(hb.challenge_rating)})</span></span>
-                      </li>))}
-                  </ul>
-                )}
-              </ScrollArea>
-            </div>
+              <AccordionItem value="homebrew-section">
+                <AccordionTrigger className="py-2 hover:no-underline">
+                  <div className="flex justify-between items-center w-full pr-2">
+                    <h3 className="text-lg font-semibold text-primary">Homebrew ({homebrewMonsters.length})</h3>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><ArrowUpDown className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={homebrewSortConfig.key} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
+                          <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem><DropdownMenuRadioItem value="cr">CR</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator /><DropdownMenuLabel>Order</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={homebrewSortConfig.order} onValueChange={(value) => setHomebrewSortConfig(prev => ({ ...prev, order: value as SortOrder }))}>
+                          <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem><DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-1 pb-0">
+                  <Separator className="mb-2" />
+                  <ScrollArea className="h-40"> 
+                    {homebrewMonsters.length === 0 ? <p className="text-sm text-muted-foreground">No homebrew monsters.</p> : (
+                      <ul className="space-y-1">
+                        {sortedHomebrew.map(hb => (
+                          <li key={hb.index} onClick={() => fetchMonsterDetail(hb.index, 'homebrew')}
+                            className={cn("p-2 rounded-md hover:bg-muted cursor-pointer text-sm flex justify-between items-center", selectedMonster?.index === hb.index && "bg-primary/10 text-primary font-medium")}>
+                            <span>{hb.name} <span className="text-xs text-muted-foreground">(CR {formatCRDisplay(hb.challenge_rating)})</span></span>
+                          </li>))}
+                      </ul>
+                    )}
+                  </ScrollArea>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
           {/* Middle Column: Search/Filters & Results (Column 2) */}
           <div className="w-2/5 flex flex-col p-4 border-r bg-background overflow-y-auto">
-            {/* Sticky Search and Filter Area */}
             <div className="sticky top-0 bg-background z-10 py-3 space-y-3">
                 <div className="flex items-center gap-2">
                     <div className="relative flex-grow">
@@ -664,7 +717,13 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
                     </div>
                     <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setIsCreatingHomebrew(true); setSelectedMonster(null); setHomebrewFormData(initialHomebrewFormData); }}>
+                        <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { 
+                          if (isCreatingHomebrew && isHomebrewFormDirty) {
+                            setIsUnsavedChangesDialogOpen(true);
+                          } else {
+                            setIsCreatingHomebrew(true); setSelectedMonster(null); setHomebrewFormData(initialHomebrewFormData); 
+                          }
+                        }}>
                             <PlusCircle className="h-5 w-5"/>
                         </Button>
                     </TooltipTrigger><TooltipContent><p>Create Custom Enemy</p></TooltipContent></Tooltip></TooltipProvider>
@@ -675,7 +734,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 </div>
             </div>
 
-            {/* Results List Panel */}
             <div className="flex flex-col border rounded-lg overflow-hidden flex-1 bg-card mt-3">
               <div className="p-3 bg-muted border-b flex justify-between items-center">
                 <h3 className="text-md font-semibold text-primary">Results ({isLoadingList || isBuildingIndex ? "..." : filteredMonsters.length})</h3>
@@ -752,21 +810,39 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 <div className="p-4"> 
                 {isCreatingHomebrew ? (
                     <div className="space-y-3 text-sm">
+                        <div><Label htmlFor="hb-name">Name*</Label><Input id="hb-name" name="name" value={homebrewFormData.name} onChange={handleHomebrewFormChange} /></div>
+                        <div><Label htmlFor="hb-cr">CR</Label><Input id="hb-cr" name="challenge_rating" value={homebrewFormData.challenge_rating || ""} onChange={handleHomebrewFormChange} placeholder="e.g., 5 or 1/2"/></div>
+                        
                         <div className="grid grid-cols-2 gap-3">
-                            <div><Label htmlFor="hb-name">Name*</Label><Input id="hb-name" name="name" value={homebrewFormData.name} onChange={handleHomebrewFormChange} /></div>
-                            <div><Label htmlFor="hb-cr">CR</Label><Input id="hb-cr" name="challenge_rating" value={homebrewFormData.challenge_rating} onChange={handleHomebrewFormChange} placeholder="e.g., 5 or 1/2"/></div>
+                          <div>
+                            <Label htmlFor="hb-type">Type</Label>
+                            <Select name="type" value={homebrewFormData.type} onValueChange={(value) => handleHomebrewSelectChange("type", value)}>
+                                <SelectTrigger id="hb-type"><SelectValue placeholder="Select Type..." /></SelectTrigger>
+                                <SelectContent>{MONSTER_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="hb-size">Size</Label>
+                            <Select name="size" value={homebrewFormData.size} onValueChange={(value) => handleHomebrewSelectChange("size", value)}>
+                                <SelectTrigger id="hb-size"><SelectValue placeholder="Select Size..." /></SelectTrigger>
+                                <SelectContent>{MONSTER_SIZES.map(size => <SelectItem key={size} value={size}>{size}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
                         </div>
+                         
                         <div className="grid grid-cols-2 gap-3">
-                            <div><Label htmlFor="hb-type">Type</Label><Input id="hb-type" name="type" value={homebrewFormData.type} onChange={handleHomebrewFormChange} placeholder="e.g., Beast"/></div>
-                            <div><Label htmlFor="hb-size">Size</Label><Input id="hb-size" name="size" value={homebrewFormData.size} onChange={handleHomebrewFormChange} placeholder="e.g., Medium"/></div>
-                        </div>
-                         <div className="grid grid-cols-2 gap-3">
                             <div><Label htmlFor="hb-ac-value">AC Value</Label><Input id="hb-ac-value" name="armor_class_value" value={homebrewFormData.armor_class_value} onChange={handleHomebrewFormChange} /></div>
-                            <div><Label htmlFor="hb-ac-type">AC Type</Label><Input id="hb-ac-type" name="armor_class_type" value={homebrewFormData.armor_class_type} onChange={handleHomebrewFormChange} placeholder="e.g., Natural Armor"/></div>
+                            <div>
+                              <Label htmlFor="hb-ac-type">AC Type</Label>
+                              <Select name="armor_class_type" value={homebrewFormData.armor_class_type} onValueChange={(value) => handleHomebrewSelectChange("armor_class_type", value)}>
+                                <SelectTrigger id="hb-ac-type"><SelectValue placeholder="Select AC Type..." /></SelectTrigger>
+                                <SelectContent>{MONSTER_AC_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div><Label htmlFor="hb-hp-value">HP Value</Label><Input id="hb-hp-value" name="hit_points_value" value={homebrewFormData.hit_points_value} onChange={handleHomebrewFormChange} /></div>
-                            <div><Label htmlFor="hb-hp-dice">HP Dice</Label><Input id="hb-hp-dice" name="hit_points_dice" value={homebrewFormData.hit_points_dice} onChange={handleHomebrewFormChange} placeholder="e.g., 6d10+12"/></div>
+                            <div><Label htmlFor="hb-hp-dice">HP Dice</Label><Input id="hb-hp-dice" name="hit_points_dice" value={homebrewFormData.hit_points_dice || ""} onChange={handleHomebrewFormChange} placeholder="e.g., 6d10+12"/></div>
                         </div>
                         <div><Label htmlFor="hb-speed">Speed</Label><Input id="hb-speed" name="speed" value={homebrewFormData.speed} onChange={handleHomebrewFormChange} placeholder="e.g., 30 ft., fly 60 ft."/></div>
                         <div className="grid grid-cols-3 gap-2">
@@ -777,23 +853,35 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                             <div><Label htmlFor="hb-wis">WIS</Label><Input id="hb-wis" name="wis" value={homebrewFormData.wis} onChange={handleHomebrewFormChange}/></div>
                             <div><Label htmlFor="hb-cha">CHA</Label><Input id="hb-cha" name="cha" value={homebrewFormData.cha} onChange={handleHomebrewFormChange}/></div>
                         </div>
-                        <div><Label htmlFor="hb-senses">Senses</Label><Input id="hb-senses" name="senses_text" value={homebrewFormData.senses_text} onChange={handleHomebrewFormChange} placeholder="e.g., Darkvision 60 ft., Passive Perception 12"/></div>
-                        <div><Label htmlFor="hb-languages">Languages</Label><Input id="hb-languages" name="languages" value={homebrewFormData.languages} onChange={handleHomebrewFormChange} placeholder="e.g., Common, Draconic"/></div>
-                        <div><Label htmlFor="hb-alignment">Alignment</Label><Input id="hb-alignment" name="alignment" value={homebrewFormData.alignment} onChange={handleHomebrewFormChange} placeholder="e.g., Chaotic Evil"/></div>
+                        <div><Label htmlFor="hb-senses">Senses</Label><Input id="hb-senses" name="senses_text" value={homebrewFormData.senses_text || ""} onChange={handleHomebrewFormChange} placeholder="e.g., Darkvision 60 ft., Passive Perception 12"/></div>
+                        <div><Label htmlFor="hb-languages">Languages</Label><Input id="hb-languages" name="languages" value={homebrewFormData.languages || ""} onChange={handleHomebrewFormChange} placeholder="e.g., Common, Draconic"/></div>
+                        <div>
+                          <Label htmlFor="hb-alignment">Alignment</Label>
+                          <Select name="alignment" value={homebrewFormData.alignment} onValueChange={(value) => handleHomebrewSelectChange("alignment", value)}>
+                              <SelectTrigger id="hb-alignment"><SelectValue placeholder="Select Alignment..." /></SelectTrigger>
+                              <SelectContent>{MONSTER_ALIGNMENTS.map(align => <SelectItem key={align} value={align}>{align}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
 
-                        <div><Label htmlFor="hb-vuln">Vulnerabilities (comma-sep)</Label><Input id="hb-vuln" name="damage_vulnerabilities_text" value={homebrewFormData.damage_vulnerabilities_text} onChange={handleHomebrewFormChange}/></div>
-                        <div><Label htmlFor="hb-resist">Resistances (comma-sep)</Label><Input id="hb-resist" name="damage_resistances_text" value={homebrewFormData.damage_resistances_text} onChange={handleHomebrewFormChange}/></div>
-                        <div><Label htmlFor="hb-immune">Immunities (comma-sep)</Label><Input id="hb-immune" name="damage_immunities_text" value={homebrewFormData.damage_immunities_text} onChange={handleHomebrewFormChange}/></div>
-                        <div><Label htmlFor="hb-cond-immune">Condition Immunities (comma-sep)</Label><Input id="hb-cond-immune" name="condition_immunities_text" value={homebrewFormData.condition_immunities_text} onChange={handleHomebrewFormChange}/></div>
+                        <div><Label htmlFor="hb-vuln">Vulnerabilities (comma-sep)</Label><Input id="hb-vuln" name="damage_vulnerabilities_text" value={homebrewFormData.damage_vulnerabilities_text || ""} onChange={handleHomebrewFormChange}/></div>
+                        <div><Label htmlFor="hb-resist">Resistances (comma-sep)</Label><Input id="hb-resist" name="damage_resistances_text" value={homebrewFormData.damage_resistances_text || ""} onChange={handleHomebrewFormChange}/></div>
+                        <div><Label htmlFor="hb-immune">Immunities (comma-sep)</Label><Input id="hb-immune" name="damage_immunities_text" value={homebrewFormData.damage_immunities_text || ""} onChange={handleHomebrewFormChange}/></div>
+                        <div><Label htmlFor="hb-cond-immune">Condition Immunities (comma-sep)</Label><Input id="hb-cond-immune" name="condition_immunities_text" value={homebrewFormData.condition_immunities_text || ""} onChange={handleHomebrewFormChange}/></div>
 
-                        <div><Label htmlFor="hb-abilities">Special Abilities</Label><Textarea id="hb-abilities" name="special_abilities_text" value={homebrewFormData.special_abilities_text} onChange={handleHomebrewFormChange} rows={3} placeholder="One ability per paragraph. Start with name in bold."/></div>
-                        <div><Label htmlFor="hb-actions">Actions</Label><Textarea id="hb-actions" name="actions_text" value={homebrewFormData.actions_text} onChange={handleHomebrewFormChange} rows={3} placeholder="One action per paragraph. Start with name in bold."/></div>
-                        <div><Label htmlFor="hb-legendary">Legendary Actions</Label><Textarea id="hb-legendary" name="legendary_actions_text" value={homebrewFormData.legendary_actions_text} onChange={handleHomebrewFormChange} rows={2} placeholder="Optional. One action per paragraph."/></div>
-                        <div><Label htmlFor="hb-image">Image URL (Optional)</Label><Input id="hb-image" name="image_url" value={homebrewFormData.image_url} onChange={handleHomebrewFormChange} /></div>
+                        <div><Label htmlFor="hb-abilities">Special Abilities</Label><Textarea id="hb-abilities" name="special_abilities_text" value={homebrewFormData.special_abilities_text || ""} onChange={handleHomebrewFormChange} rows={3} placeholder="One ability per paragraph. Start with name in bold."/></div>
+                        <div><Label htmlFor="hb-actions">Actions</Label><Textarea id="hb-actions" name="actions_text" value={homebrewFormData.actions_text || ""} onChange={handleHomebrewFormChange} rows={3} placeholder="One action per paragraph. Start with name in bold."/></div>
+                        <div><Label htmlFor="hb-legendary">Legendary Actions</Label><Textarea id="hb-legendary" name="legendary_actions_text" value={homebrewFormData.legendary_actions_text || ""} onChange={handleHomebrewFormChange} rows={2} placeholder="Optional. One action per paragraph."/></div>
+                        <div><Label htmlFor="hb-image">Image URL (Optional)</Label><Input id="hb-image" name="image_url" value={homebrewFormData.image_url || ""} onChange={handleHomebrewFormChange} /></div>
 
                         {error && <p className="text-sm text-destructive">{error}</p>}
                         <div className="flex gap-2 mt-4">
-                            <Button variant="outline" onClick={() => {setIsCreatingHomebrew(false); setError(null);}}>Cancel</Button>
+                            <Button variant="outline" onClick={() => {
+                              if (isHomebrewFormDirty) {
+                                setIsUnsavedChangesDialogOpen(true);
+                              } else {
+                                setIsCreatingHomebrew(false); setError(null);
+                              }
+                            }}>Cancel</Button>
                             <Button onClick={handleSaveHomebrewMonster}><Save className="mr-2 h-4 w-4"/>Save Homebrew Monster</Button>
                         </div>
                     </div>
@@ -845,11 +933,34 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         </div> {/* End Main 3-column container */}
 
         {/* Vertical Close Bar */}
-        <button onClick={() => onOpenChange(false)}
+        <button onClick={() => {
+          if (isCreatingHomebrew && isHomebrewFormDirty) {
+            setIsUnsavedChangesDialogOpen(true);
+          } else {
+            onOpenChange(false);
+          }
+        }}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
           aria-label="Close Monster Mash">
           <ChevronRight className="h-6 w-6" />
         </button>
+
+        <AlertDialog open={isUnsavedChangesDialogOpen} onOpenChange={setIsUnsavedChangesDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have unsaved changes in the homebrew monster form. What would you like to do?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <Button variant="outline" onClick={() => handleUnsavedChangesDialog('cancel')}>Cancel</Button>
+              <Button variant="destructive" onClick={() => handleUnsavedChangesDialog('discard')}>Discard Changes</Button>
+              <Button onClick={() => handleUnsavedChangesDialog('save')}>Save Homebrew</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </SheetContent>
     </Sheet>
   );

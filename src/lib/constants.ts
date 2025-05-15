@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, Skull, VenetianMask, PlusCircle } from 'lucide-react';
+import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown, Dice5, Skull, VenetianMask, PlusCircle, XCircle } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -208,3 +208,24 @@ export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
 export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const DICE_ROLLER_TAB_ID = "dice-roller";
 export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
+
+// Monster Mash Homebrew Form Options
+export const MONSTER_TYPES: string[] = [
+  "Aberration", "Beast", "Celestial", "Construct", "Dragon", "Elemental",
+  "Fey", "Fiend", "Giant", "Humanoid", "Monstrosity", "Ooze", "Plant", "Undead"
+];
+
+export const MONSTER_SIZES: string[] = [
+  "Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"
+];
+
+export const MONSTER_AC_TYPES: string[] = [
+  "Natural Armor", "Plate", "Leather", "Shield", "Mage Armor", "Unarmored Defense", "Other"
+];
+
+export const MONSTER_ALIGNMENTS: string[] = [
+  "Lawful Good", "Neutral Good", "Chaotic Good",
+  "Lawful Neutral", "True Neutral", "Chaotic Neutral",
+  "Lawful Evil", "Neutral Evil", "Chaotic Evil",
+  "Unaligned", "Any Alignment", "Varies"
+];
