@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDrawer";
@@ -9,16 +9,26 @@ import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMas
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon, ListOrdered, ChevronRight, VenetianMask } from "lucide-react"; // Added VenetianMask
+import { Dice5, Swords, Skull, Hexagon, ChevronRight, VenetianMask, ListOrdered } from "lucide-react";
+import { useToast } from "@/hooks/use-toast"; // Assuming toast might be used for quick roll log
+import { parseDiceNotation, rollMultipleDice } from "@/lib/dice-utils";
+
 
 interface LandedDieState {
   x: number;
   y: number;
-  finalX: number;
-  finalY: number;
+  points: { x: number; y: number }[]; // Path: initial, wobble1, wobble2, final
+  currentStep: number; // 0 (at initial), 1 (at wobble1), 2 (at wobble2), 3 (at final/showing result)
+  result: number | null;
   id: string;
-  isSettling: boolean; 
+  isVisible: boolean;
+  opacity: number;
 }
+
+const QUICK_ROLL_HOLD_TIME_MS = 200; // Time to hold before drag starts
+const QUICK_ROLL_WOBBLE_RADIUS = 75;
+const QUICK_ROLL_ANIMATION_STEP_DURATION = 150; // ms per wobble step
+const QUICK_ROLL_RESULT_VISIBILITY_MS = 5000;
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
@@ -26,22 +36,20 @@ export function RightDockedToolbar() {
 
   const [isDraggingDie, setIsDraggingDie] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  const [justFinishedDrag, setJustFinishedDrag] = useState(false);
-
+  
   const [landedDie, setLandedDie] = useState<LandedDieState | null>(null);
-  const [landedDieTimeoutId, setLandedDieTimeoutId] = useState<NodeJS.Timeout | null>(null);
-  const [settleDieTimeoutId, setSettleDieTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const landedDieTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const animationStepTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const diceRollerButtonRef = useRef<HTMLButtonElement>(null);
+  const dragStartTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const isDragIntendedRef = useRef(false);
+
+  const { toast } = useToast(); // For adding to a conceptual quick roll log later
 
   const handleToggleDrawer = (itemId: string) => {
-    if (justFinishedDrag) {
-      setJustFinishedDrag(false); 
-      return;
-    }
-    if (isDraggingDie) return; 
-
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
-      const newTab = itemId === DICE_ROLLER_TAB_ID ? DICE_ROLLER_TAB_ID : COMBAT_TRACKER_TAB_ID;
+      const newTab = itemId;
       if (openDrawerId === COMBINED_TOOLS_DRAWER_ID && activeCombinedTab === newTab) {
         setOpenDrawerId(null);
       } else {
@@ -59,61 +67,78 @@ export function RightDockedToolbar() {
            activeCombinedTab === itemId;
   };
 
-  const handleDragStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+  // Clear existing landed die and its timers
+  const clearLandedDie = () => {
+    if (landedDieTimerRef.current) clearTimeout(landedDieTimerRef.current);
+    if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
+    setLandedDie(null);
+  };
+
+  const handleMouseDownDiceRoller = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
+    event.preventDefault(); // Prevent default text selection/drag behaviors
 
-    if (landedDie) setLandedDie(null);
-    if (landedDieTimeoutId) clearTimeout(landedDieTimeoutId);
-    if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId);
-    
-    setLandedDieTimeoutId(null);
-    setSettleDieTimeoutId(null);
+    clearLandedDie();
+    isDragIntendedRef.current = false;
 
-    setIsDraggingDie(true);
-    setDragPosition({ x: event.clientX, y: event.clientY }); 
-    document.body.style.cursor = 'grabbing';
-    event.preventDefault();
-  }, [landedDie, landedDieTimeoutId, settleDieTimeoutId]);
+    dragStartTimeoutIdRef.current = setTimeout(() => {
+      isDragIntendedRef.current = true;
+      setIsDraggingDie(true);
+      setDragPosition({ x: event.clientX, y: event.clientY });
+      document.body.style.cursor = 'grabbing';
+    }, QUICK_ROLL_HOLD_TIME_MS);
+  }, []);
+
+  const handleMouseUpDiceRoller = useCallback(() => {
+    if (dragStartTimeoutIdRef.current) {
+      clearTimeout(dragStartTimeoutIdRef.current);
+      dragStartTimeoutIdRef.current = null;
+    }
+    if (!isDragIntendedRef.current && !isDraggingDie) {
+      handleToggleDrawer(DICE_ROLLER_TAB_ID);
+    }
+    // If it was a drag, global mouseup will handle it
+  }, [isDraggingDie]);
+
 
   const handleMouseUpGlobal = useCallback((event: MouseEvent) => {
-    if (isDraggingDie) {
-        setIsDraggingDie(false);
-        document.body.style.cursor = 'default';
-
-        const releaseX = event.clientX;
-        const releaseY = event.clientY;
-        const angle = Math.random() * 2 * Math.PI;
-        const radius = Math.random() * 50; 
-        const offsetX = Math.cos(angle) * radius;
-        const offsetY = Math.sin(angle) * radius;
-
-        const newLandedDieId = Date.now().toString();
-        const newLandedDie: LandedDieState = {
-            x: releaseX, 
-            y: releaseY,
-            finalX: releaseX + offsetX, 
-            finalY: releaseY + offsetY,
-            id: newLandedDieId,
-            isSettling: true, 
-        };
-        setLandedDie(newLandedDie);
-        
-        if (landedDieTimeoutId) clearTimeout(landedDieTimeoutId);
-        const newVisibilityTimeoutId = setTimeout(() => {
-            setLandedDie(prevLandedDie => {
-                if (prevLandedDie && prevLandedDie.id === newLandedDieId) {
-                    return null;
-                }
-                return prevLandedDie;
-            });
-        }, 5100); // 100ms for settle animation + 5000ms visibility
-        setLandedDieTimeoutId(newVisibilityTimeoutId);
-
-        setJustFinishedDrag(true);
-        setTimeout(() => setJustFinishedDrag(false), 50); 
+    if (dragStartTimeoutIdRef.current) {
+      clearTimeout(dragStartTimeoutIdRef.current);
+      dragStartTimeoutIdRef.current = null;
     }
-  }, [isDraggingDie, landedDieTimeoutId]);
 
+    if (isDraggingDie) {
+      setIsDraggingDie(false);
+      document.body.style.cursor = 'default';
+
+      const releaseX = event.clientX;
+      const releaseY = event.clientY;
+      
+      const points = [{ x: releaseX, y: releaseY }]; // Start at release point
+      for (let i = 0; i < 3; i++) { // 2 wobble points + 1 final
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = Math.random() * QUICK_ROLL_WOBBLE_RADIUS;
+        points.push({
+          x: releaseX + Math.cos(angle) * radius,
+          y: releaseY + Math.sin(angle) * radius,
+        });
+      }
+
+      const newLandedDieId = Date.now().toString();
+      setLandedDie({
+        x: releaseX, // Initial position is release point
+        y: releaseY,
+        points: points,
+        currentStep: 0,
+        result: null,
+        id: newLandedDieId,
+        isVisible: true,
+        opacity: 1,
+      });
+      isDragIntendedRef.current = false; // Reset for next interaction
+    }
+  }, [isDraggingDie]);
+  
   useEffect(() => {
     const handleMouseMoveGlobal = (event: MouseEvent) => {
       if (isDraggingDie) {
@@ -121,7 +146,7 @@ export function RightDockedToolbar() {
       }
     };
 
-    if (isDraggingDie) {
+    if (isDraggingDie || dragStartTimeoutIdRef.current) { // Listen if dragging or in hold period
       window.addEventListener('mousemove', handleMouseMoveGlobal);
       window.addEventListener('mouseup', handleMouseUpGlobal);
     } else {
@@ -132,36 +157,62 @@ export function RightDockedToolbar() {
       window.removeEventListener('mousemove', handleMouseMoveGlobal);
       window.removeEventListener('mouseup', handleMouseUpGlobal);
       document.body.style.cursor = 'default';
+      if (dragStartTimeoutIdRef.current) {
+        clearTimeout(dragStartTimeoutIdRef.current);
+      }
     };
   }, [isDraggingDie, handleMouseUpGlobal]);
 
+
   useEffect(() => {
-    if (landedDie && landedDie.isSettling) {
-      if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId);
-      const newSettleTimeoutId = setTimeout(() => {
+    if (!landedDie || !landedDie.isVisible) return;
+
+    if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
+
+    if (landedDie.currentStep < landedDie.points.length -1) { // -1 because points[0] is initial
+      animationStepTimerRef.current = setTimeout(() => {
         setLandedDie(prev => {
-          if (prev && prev.id === landedDie.id && prev.isSettling) {
-            return { ...prev, x: prev.finalX, y: prev.finalY, isSettling: false };
-          }
-          return prev;
+          if (!prev || !prev.isVisible) return prev;
+          const nextStep = prev.currentStep + 1;
+          return {
+            ...prev,
+            x: prev.points[nextStep].x,
+            y: prev.points[nextStep].y,
+            currentStep: nextStep,
+          };
         });
-      }, 100); // Increased delay to 100ms before "settle" animation starts
-      setSettleDieTimeoutId(newSettleTimeoutId);
+      }, QUICK_ROLL_ANIMATION_STEP_DURATION);
+    } else if (landedDie.currentStep === landedDie.points.length -1 && landedDie.result === null) { // At final point, roll result
+      const d20Roll = rollMultipleDice(1, 20).sum;
+      setLandedDie(prev => {
+        if (!prev || !prev.isVisible) return prev;
+        // TODO: Add this roll to the Dice Roller log
+        // Example: toast({ title: "Quick Roll", description: `d20 Result: ${d20Roll}` });
+        return { ...prev, result: d20Roll };
+      });
+      
+      // Start fade out timer AFTER result is shown
+      if (landedDieTimerRef.current) clearTimeout(landedDieTimerRef.current);
+      landedDieTimerRef.current = setTimeout(() => {
+        setLandedDie(prev => prev ? { ...prev, opacity: 0 } : null); 
+        // Actual removal after fade out
+        setTimeout(() => setLandedDie(null), 500); // match opacity transition duration
+      }, QUICK_ROLL_RESULT_VISIBILITY_MS);
     }
-     return () => {
-        if (settleDieTimeoutId) {
-            clearTimeout(settleDieTimeoutId);
-        }
+
+    return () => {
+      if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
     };
   }, [landedDie]);
 
-  useEffect(() => {
-    return () => { 
-        if (landedDieTimeoutId) clearTimeout(landedDieTimeoutId);
-        if (settleDieTimeoutId) clearTimeout(settleDieTimeoutId);
-    };
-  }, [landedDieTimeoutId, settleDieTimeoutId]);
 
+  useEffect(() => { // Cleanup on unmount
+    return () => {
+      if (landedDieTimerRef.current) clearTimeout(landedDieTimerRef.current);
+      if (animationStepTimerRef.current) clearTimeout(animationStepTimerRef.current);
+      if (dragStartTimeoutIdRef.current) clearTimeout(dragStartTimeoutIdRef.current);
+    };
+  }, []);
 
   return (
     <>
@@ -174,6 +225,7 @@ export function RightDockedToolbar() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
+                      ref={isDiceRollerButton ? diceRollerButtonRef : null}
                       variant="ghost"
                       size="icon"
                       className={cn(
@@ -182,8 +234,9 @@ export function RightDockedToolbar() {
                         "bg-primary/20 text-primary ring-2 ring-primary",
                         isDiceRollerButton && "cursor-grab"
                       )}
-                      onClick={() => handleToggleDrawer(item.id)}
-                      onMouseDown={isDiceRollerButton ? handleDragStart : undefined}
+                      onClick={isDiceRollerButton ? undefined : () => handleToggleDrawer(item.id)}
+                      onMouseDown={isDiceRollerButton ? handleMouseDownDiceRoller : undefined}
+                      onMouseUp={isDiceRollerButton ? handleMouseUpDiceRoller : undefined}
                       aria-label={item.label}
                     >
                       <item.icon className="h-7 w-7" />
@@ -211,8 +264,8 @@ export function RightDockedToolbar() {
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <div className="relative h-14 w-14 flex items-center justify-center">
-            <Hexagon className="h-14 w-14 text-primary animate-spin" fill="hsl(var(--primary-foreground))" />
+          <div className="relative h-16 w-16 flex items-center justify-center"> {/* Increased size */}
+            <Hexagon className="h-16 w-16 text-primary animate-spin" fill="hsl(var(--primary-foreground))" />
             <span
               className="absolute -top-1 -right-2 text-primary font-bold text-sm"
               style={{ userSelect: 'none' }}
@@ -223,24 +276,30 @@ export function RightDockedToolbar() {
         </div>
       )}
 
-      {landedDie && !isDraggingDie && (
+      {landedDie && landedDie.isVisible && (
         <div
           style={{
             position: 'fixed',
             left: landedDie.x,
             top: landedDie.y,
-            pointerEvents: 'none', 
-            zIndex: 1999, 
+            pointerEvents: 'none',
+            zIndex: 1999,
             transform: 'translate(-50%, -50%)',
-            transition: landedDie.isSettling ? 'none' : 'left 0.1s ease-out, top 0.1s ease-out',
+            transition: `left ${QUICK_ROLL_ANIMATION_STEP_DURATION}ms ease-out, top ${QUICK_ROLL_ANIMATION_STEP_DURATION}ms ease-out, opacity 0.5s ease-out`,
+            opacity: landedDie.opacity,
           }}
-          className={cn(
-            "animate-in fade-in", 
-            landedDie.isSettling ? "duration-50" : "duration-100" 
-          )}
+          className={cn("animate-in fade-in duration-100")}
         >
-          <div className="relative h-14 w-14 flex items-center justify-center">
-            <Hexagon className="h-14 w-14 text-primary" fill="hsl(var(--primary)/ 0.3)" />
+          <div className="relative h-16 w-16 flex items-center justify-center"> {/* Increased size */}
+            <Hexagon className="h-16 w-16 text-primary" fill="hsl(var(--primary)/ 0.3)" />
+            {landedDie.result !== null && (
+              <span 
+                className="absolute text-2xl font-bold text-primary-foreground"
+                style={{ textShadow: '0 0 5px hsl(var(--primary))' }}
+              >
+                {landedDie.result}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -257,3 +316,5 @@ export function RightDockedToolbar() {
     </>
   );
 }
+
+    
