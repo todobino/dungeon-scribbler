@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna } from 'lucide-react';
+import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -17,8 +17,8 @@ export const APP_NAME = "Adventure Architect";
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
-  { label: 'Campaign Journal', href: '/campaign-journal', icon: BookText },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
+  { label: 'Encounter Planner', href: '/encounter-planner', icon: Swords },
 ];
 
 export const STORY_NAV_ITEMS: NavItem[] = [
@@ -38,7 +38,7 @@ export const ADVANCED_NAV_ITEMS: NavItem[] = [
   { label: 'Improvisation Asst.', href: '/improvisation-assistant', icon: Wand2, isAdvanced: true, isGenAI: true, disabled: true },
   { label: 'Backstory Integrator', href: '/backstory-integrator', icon: ShieldQuestion, isAdvanced: true, isGenAI: true, disabled: true },
   { label: 'Lore Wiki', href: '/lore-wiki', icon: HelpCircle, isAdvanced: true, disabled: true },
-  { label: 'Dialogue Generator', href: '/dialogue-generator', icon: FileText, isAdvanced: true, isGenAI: true, disabled: true },
+  { label: 'Dialogue Generator', href: '/dialogue-generator', icon: MessageSquare, isAdvanced: true, isGenAI: true, disabled: true },
 ];
 
 
