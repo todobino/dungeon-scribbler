@@ -388,14 +388,12 @@ export interface HomebrewSpellFormData {
   higher_level?: string; // Single textarea
   classes?: string; // Comma-separated string
   subclasses?: string; // Comma-separated string
-  // The following might be too complex for initial homebrew, can be text within desc
-  // attack_type?: string;
-  // damage_type?: string;
-  // damage_at_slot_level?: string; // e.g., "3:8d6, 4:9d6"
-  // area_of_effect_type?: string;
-  // area_of_effect_size?: string;
-  // dc_type?: string;
-  // dc_success?: string;
 }
 
-```
+export interface EncounterMonster {
+  id: string;
+  name: string;
+  quantity: number;
+  cr?: string; // Challenge Rating, user input for now
+  // xp?: number; // XP value, could be derived from CR or input
+}

@@ -16,11 +16,12 @@ export const APP_NAME = "Adventure Architect";
 
 // Toolbar IDs - DEFINE THESE FIRST
 export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
+export const DICE_ROLLER_TAB_ID = "dice-roller"; // Used by CombinedToolDrawer
+export const COMBAT_TRACKER_TAB_ID = "combat-tracker"; // Used by CombinedToolDrawer
 export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const SPELLBOOK_DRAWER_ID = "spellbook";
-export const DICE_ROLLER_TAB_ID = "dice-roller";
-export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
+
 
 // Toolbar items
 export const TOOLBAR_ITEMS = [
@@ -195,6 +196,8 @@ export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`;
 export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
+export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Encounter_`;
+
 
 // Adventure Recap Page Keys
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
