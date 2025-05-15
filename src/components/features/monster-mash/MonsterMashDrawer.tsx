@@ -114,9 +114,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     }
     
     const [minCR, maxCR] = crRange;
-    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) { // Only filter if slider is not at full range
+    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) {
         tempFiltered = tempFiltered.filter(monster => {
-            if (monster.cr === undefined) return false; // Exclude if CR is unknown when filter is active
+            if (monster.cr === undefined) return false; 
             const monsterCRNum = monster.cr; 
             return monsterCRNum >= minCR && monsterCRNum <= maxCR;
         });
@@ -182,7 +182,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       
       localStorage.setItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY, JSON.stringify(enrichedMonsters));
       setAllMonstersData(enrichedMonsters);
-      // applyFiltersAndSort(); // This will be called by the useEffect for allMonstersData
 
     } catch (err: any) {
       console.error("Error building full monster index:", err);
@@ -216,7 +215,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             if (cachedIndex) {
                 const parsedIndex: MonsterSummaryWithCR[] = JSON.parse(cachedIndex);
                 setAllMonstersData(parsedIndex);
-                setIsLoadingList(false); // Data loaded from cache
+                setIsLoadingList(false);
             } else {
                 fetchAndCacheFullMonsterIndex();
             }
@@ -228,7 +227,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   }, [open, allMonstersData.length, isLoadingList, isBuildingIndex, fetchAndCacheFullMonsterIndex]);
   
   useEffect(() => {
-    if (allMonstersData.length > 0) { // Apply filters whenever allMonstersData changes (e.g. after initial load/cache build)
+    if (allMonstersData.length > 0) { 
         applyFiltersAndSort();
     }
   }, [allMonstersData, applyFiltersAndSort]);
@@ -264,7 +263,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         console.error("Error saving favorites to localStorage", e);
       }
     } else if (favorites.length === 0 && localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY)) {
-      // If favorites is empty but was previously set, remove it from localStorage
       localStorage.removeItem(MONSTER_MASH_FAVORITES_STORAGE_KEY);
     }
   }, [favorites]);
@@ -305,7 +303,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       }
       
       if (crValue === undefined || typeValue === undefined) {
-        // If CR or Type is missing from summary, fetch full details
         setIsLoadingDetail(true);
         try {
           const monsterUrl = (monsterToToggle as MonsterSummaryWithCR).url || `/api/monsters/${monsterToToggle.index}`;
@@ -415,7 +412,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             <TooltipProvider delayDuration={100}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80" tabIndex={-1}>
                     <HelpCircle className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -673,3 +670,4 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     </Sheet>
   );
 }
+
