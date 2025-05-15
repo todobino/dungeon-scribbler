@@ -36,15 +36,14 @@ export function CombinedToolDrawer({
   open, 
   onOpenChange, 
   defaultTab,
-  rollLog, // Received from parent
-  onInternalRoll, // Received from parent
-  getNewRollId, // Received from parent
-  onClearRollLog // Received from parent
+  rollLog,
+  onInternalRoll,
+  getNewRollId,
+  onClearRollLog
 }: CombinedToolDrawerProps) {
   // Dice Roller State
   const [inputValue, setInputValue] = useState("");
   const [rollMode, setRollMode] = useState<RollMode>("normal");
-  // RollLog state is now managed by RightDockedToolbar
   const diceUniqueId = useId();
 
   // Combat Tracker State
@@ -77,7 +76,7 @@ export function CombinedToolDrawer({
   const handleDiceRoll = () => {
     const notationToParse = inputValue.trim() === "" ? "1d20" : inputValue.trim();
     const parsed = parseDiceNotation(notationToParse);
-    const entryId = getNewRollId(); // Use parent-provided ID generator
+    const entryId = getNewRollId(); 
 
     if (parsed.error) {
       const errorEntryData: Omit<RollLogEntry, 'id'> = {
@@ -98,7 +97,7 @@ export function CombinedToolDrawer({
       inputText: notationToParse, resultText: "...", detailText: "Rolling...",
       isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage", isRolling: true,
     };
-    onInternalRoll(placeholderEntryData, entryId); // Pass entryId to update this specific entry
+    onInternalRoll(placeholderEntryData, entryId); 
 
     setTimeout(() => {
       let finalResult: number;
@@ -144,7 +143,7 @@ export function CombinedToolDrawer({
         isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage",
         rolls: resultRolls, chosenRoll: chosen, discardedRoll: discarded, modifier: parsed.modifier, sides: parsed.sides,
       };
-      onInternalRoll(finalLogEntryData, entryId); // Update the specific entry
+      onInternalRoll(finalLogEntryData, entryId); 
     }, 500);
   };
 
@@ -286,10 +285,14 @@ export function CombinedToolDrawer({
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
-            <div className="p-4 border-b shrink-0">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value={DICE_ROLLER_TAB_ID} className="flex items-center gap-2"><Dice5 className="h-4 w-4"/>Dice Roller</TabsTrigger>
-                <TabsTrigger value={COMBAT_TRACKER_TAB_ID} className="flex items-center gap-2"><ListOrdered className="h-4 w-4"/>Combat Tracker</TabsTrigger>
+            <div className="p-4 border-b shrink-0 bg-primary text-primary-foreground">
+              <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
+                <TabsTrigger value={DICE_ROLLER_TAB_ID} className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground">
+                    <Dice5 className="h-4 w-4"/>Dice Roller
+                </TabsTrigger>
+                <TabsTrigger value={COMBAT_TRACKER_TAB_ID} className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground">
+                    <ListOrdered className="h-4 w-4"/>Combat Tracker
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -297,7 +300,7 @@ export function CombinedToolDrawer({
               <TabsContent value={DICE_ROLLER_TAB_ID} className="data-[state=active]:flex flex-col h-full">
                 <div className="p-4 space-y-4 flex-grow flex flex-col">
                   <div>
-                    <Label htmlFor="dice-notation">Dice Notation (e.g., 2d6+3, d20)</Label>
+                    <Label htmlFor="dice-notation">Dice Notation</Label>
                     <Input id="dice-notation" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="e.g., 2d6+3, d20" />
                   </div>
                   <div>
@@ -309,7 +312,8 @@ export function CombinedToolDrawer({
                     </RadioGroup>
                   </div>
                   <Button onClick={handleDiceRoll} className={cn("w-full", rollMode === "advantage" && "border-2 border-green-500 hover:border-green-600", rollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600")}>
-                    <Zap className="mr-2 h-5 w-5" /> {inputValue.trim() === "" ? "Roll d20" : "Roll"}
+                     {inputValue.trim() === "" ? <Dice5 className="mr-2 h-5 w-5" /> : <Zap className="mr-2 h-5 w-5" />}
+                    {inputValue.trim() === "" ? "Roll d20" : "Roll"}
                   </Button>
                   <div className="flex-grow flex flex-col min-h-0">
                     <div className="flex justify-between items-center mb-1"><Label>Roll Log</Label><Button variant="ghost" size="sm" onClick={onClearRollLog} className="text-xs text-muted-foreground hover:text-foreground"><Trash2 className="mr-1 h-3 w-3" /> Clear Log</Button></div>
@@ -438,3 +442,4 @@ export function CombinedToolDrawer({
     </>
   );
 }
+
