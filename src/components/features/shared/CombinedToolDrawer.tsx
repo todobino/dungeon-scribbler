@@ -32,9 +32,9 @@ interface CombinedToolDrawerProps {
 type RollMode = "normal" | "advantage" | "disadvantage";
 
 
-export function CombinedToolDrawer({ 
-  open, 
-  onOpenChange, 
+export function CombinedToolDrawer({
+  open,
+  onOpenChange,
   defaultTab,
   rollLog,
   onInternalRoll,
@@ -57,7 +57,7 @@ export function CombinedToolDrawer({
   const [friendlyInitiativeInput, setFriendlyInitiativeInput] = useState<string>("");
   const [isAddEnemyDialogOpen, setIsAddEnemyDialogOpen] = useState(false);
   const [enemyName, setEnemyName] = useState("");
-  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>(""); 
+  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>("");
   const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
   const [rollEnemyInitiativeFlag, setRollEnemyInitiativeFlag] = useState<boolean>(false);
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
@@ -69,14 +69,14 @@ export function CombinedToolDrawer({
   const [activeTab, setActiveTab] = useState(defaultTab);
   useEffect(() => {
     setActiveTab(defaultTab);
-  }, [defaultTab, open]); 
+  }, [defaultTab, open]);
 
 
   // --- Dice Roller Logic ---
   const handleDiceRoll = () => {
     const notationToParse = inputValue.trim() === "" ? "1d20" : inputValue.trim();
     const parsed = parseDiceNotation(notationToParse);
-    const entryId = getNewRollId(); 
+    const entryId = getNewRollId();
 
     if (parsed.error) {
       const errorEntryData: Omit<RollLogEntry, 'id'> = {
@@ -92,12 +92,12 @@ export function CombinedToolDrawer({
       onInternalRoll(errorEntryData);
       return;
     }
-    
+
     const placeholderEntryData: Omit<RollLogEntry, 'id'> = {
       inputText: notationToParse, resultText: "...", detailText: "Rolling...",
       isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage", isRolling: true,
     };
-    onInternalRoll(placeholderEntryData, entryId); 
+    onInternalRoll(placeholderEntryData, entryId);
 
     setTimeout(() => {
       let finalResult: number;
@@ -111,7 +111,7 @@ export function CombinedToolDrawer({
         resultRolls = rolls;
         finalResult = sum + parsed.modifier;
         detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
-      } else { 
+      } else {
         if (parsed.count !== 1 || parsed.sides !== 20) {
             const { rolls, sum } = rollMultipleDice(parsed.count, parsed.sides);
             resultRolls = rolls;
@@ -126,13 +126,13 @@ export function CombinedToolDrawer({
           if (rollMode === "advantage") {
             chosen = Math.max(roll1, roll2);
             discarded = Math.min(roll1, roll2);
-          } else { 
+          } else {
             chosen = Math.min(roll1, roll2);
             discarded = Math.max(roll1, roll2);
           }
           finalResult = chosen + parsed.modifier;
-          resultRolls = [roll1, roll2]; 
-          
+          resultRolls = [roll1, roll2];
+
           detailText = `Rolled 1d20 (${rollMode}) ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: `;
           detailText += `[${roll1 === chosen ? `**${roll1}**` : roll1}, ${roll2 === chosen ? `**${roll2}**` : roll2}]`;
           detailText += ` ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
@@ -143,13 +143,13 @@ export function CombinedToolDrawer({
         isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage",
         rolls: resultRolls, chosenRoll: chosen, discardedRoll: discarded, modifier: parsed.modifier, sides: parsed.sides,
       };
-      onInternalRoll(finalLogEntryData, entryId); 
+      onInternalRoll(finalLogEntryData, entryId);
     }, 500);
   };
 
   useEffect(() => {
     if (!open) {
-      setRollMode("normal"); 
+      setRollMode("normal");
     }
   }, [open]);
 
@@ -206,7 +206,7 @@ export function CombinedToolDrawer({
     if (!isAllyMode && selectedPlayerToAdd) mod = selectedPlayerToAdd.initiativeModifier || 0;
     setFriendlyInitiativeInput((rollDie(20) + mod).toString());
   };
-  
+
   const handleAddEnemy = () => {
     if (!enemyName.trim()) {
       return;
@@ -252,12 +252,12 @@ export function CombinedToolDrawer({
         return { ...combatant, currentHp: newHp };
       } return combatant;
     }));
-    setDamageInputs(prev => ({ ...prev, [combatantId]: "" })); 
+    setDamageInputs(prev => ({ ...prev, [combatantId]: "" }));
   };
   const removeCombatant = (id: string) => {
     const combatantToRemoveIndex = combatants.findIndex(c => c.id === id);
     setCombatants(prev => {
-      const newCombatants = prev.filter(c => c.id !== id); combatantRefs.current.delete(id); 
+      const newCombatants = prev.filter(c => c.id !== id); combatantRefs.current.delete(id);
       if (newCombatants.length === 0) setCurrentTurnIndex(null);
       else if (currentTurnIndex !== null) {
         if (combatantToRemoveIndex === currentTurnIndex) setCurrentTurnIndex(currentTurnIndex >= newCombatants.length ? (newCombatants.length > 0 ? newCombatants.length - 1 : null) : currentTurnIndex);
@@ -284,20 +284,22 @@ export function CombinedToolDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
         <div className="flex flex-col h-full pr-8">
-          <SheetHeader className="p-4 border-b bg-primary text-primary-foreground shrink-0">
-            <SheetTitle className="text-xl">DM Tools</SheetTitle>
+           {/* Visually hidden header for accessibility */}
+          <SheetHeader className="sr-only">
+            <SheetTitle>DM Tools</SheetTitle>
           </SheetHeader>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
             <div className="p-4 border-b shrink-0 bg-primary text-primary-foreground">
               <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
-                <TabsTrigger 
-                    value={DICE_ROLLER_TAB_ID} 
+                <TabsTrigger
+                    value={DICE_ROLLER_TAB_ID}
                     className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground"
                 >
                     <Dice5 className="h-4 w-4"/>Dice Roller
                 </TabsTrigger>
-                <TabsTrigger 
-                    value={COMBAT_TRACKER_TAB_ID} 
+                <TabsTrigger
+                    value={COMBAT_TRACKER_TAB_ID}
                     className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground"
                 >
                     <Swords className="h-4 w-4"/>Combat Tracker
@@ -332,7 +334,7 @@ export function CombinedToolDrawer({
                         {rollLog.map(entry => (
                           <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm transition-all", entry.isRolling ? "opacity-70" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
                             {entry.isRolling ? (
-                               <div className="flex items-center justify-center h-10">
+                               <div className="flex items-center h-10">
                                  <Dice5 className="h-6 w-6 animate-spin text-primary" />
                                  <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
                                </div>
@@ -412,7 +414,7 @@ export function CombinedToolDrawer({
             </div>
           </Tabs>
         </div>
-        
+
         <button
           onClick={() => onOpenChange(false)}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
@@ -451,4 +453,3 @@ export function CombinedToolDrawer({
     </>
   );
 }
-
