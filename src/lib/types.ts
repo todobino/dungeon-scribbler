@@ -317,3 +317,66 @@ export interface ConditionDetail {
   name: string;
   desc: string[]; // API returns description as an array of strings
 }
+
+// For Spellbook Drawer
+export interface SpellSummary {
+  index: string;
+  name: string;
+  url: string;
+}
+
+export interface SpellDetail {
+  index: string;
+  name: string;
+  desc: string[];
+  higher_level?: string[];
+  range: string;
+  components: string[]; // e.g., ["V", "S", "M"]
+  material?: string;
+  ritual: boolean;
+  duration: string;
+  concentration: boolean;
+  casting_time: string;
+  level: number; // 0 for cantrips
+  attack_type?: string; // e.g., "ranged"
+  damage?: {
+    damage_type?: {
+      index: string;
+      name: string;
+      url: string;
+    };
+    // Damage at slot level for scaling spells like Fireball
+    damage_at_slot_level?: Record<string, string>; // e.g., {"3": "8d6", "4": "9d6"}
+    // Damage at character level for scaling cantrips
+    damage_at_character_level?: Record<string, string>; // e.g., {"1": "1d10", "5": "2d10"}
+  };
+  school: {
+    index: string;
+    name: string; // e.g., "Evocation"
+    url: string;
+  };
+  classes: {
+    index: string;
+    name: string;
+    url: string;
+  }[];
+  subclasses?: {
+    index: string;
+    name: string;
+    url: string;
+  }[];
+  area_of_effect?: {
+    type: string; // e.g., "sphere"
+    size: number; // e.g., 20 (feet)
+  };
+  dc?: {
+    dc_type: {
+        index: string;
+        name: string;
+        url: string;
+    };
+    dc_success: string; // e.g. "half"
+    desc?: string;
+  };
+  heal_at_slot_level?: Record<string, string>; // e.g. {"1": "1d4+MOD"}
+}
