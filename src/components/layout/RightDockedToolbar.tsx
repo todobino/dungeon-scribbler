@@ -10,7 +10,7 @@ import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_R
 import type { RollLogEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon, ChevronRight, XCircle } from "lucide-react"; 
+import { Dice5, Swords, Skull, VenetianMask, ChevronRight, XCircle, Hexagon } from "lucide-react"; 
 import { rollMultipleDice } from "@/lib/dice-utils";
 
 interface LandedDieState {
@@ -27,28 +27,13 @@ const QUICK_ROLL_HOLD_TIME_MS = 200;
 const QUICK_ROLL_WOBBLE_RADIUS = 75;
 const QUICK_ROLL_ANIMATION_STEP_DURATION = 150;
 const QUICK_ROLL_RESULT_VISIBILITY_MS = 5000;
-const LANDED_DIE_SIZE_CLASS = "h-20 w-20"; // Increased size
+const LANDED_DIE_SIZE_CLASS = "h-20 w-20"; 
 const LANDED_DIE_SHRINK_DURATION_MS = 300;
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
 
-  // State for Quick-Roll drag and landed die
-  const [isDraggingDie, setIsDraggingDie] = useState(false);
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  const [landedDie, setLandedDie] = useState<LandedDieState | null>(null);
-  const [isDragOverCancelArea, setIsDragOverCancelArea] = useState(false);
-
-  const diceRollerButtonRef = useRef<HTMLButtonElement>(null);
-  const dragStartTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-  const isDragIntendedRef = useRef(false); // Ref to track if drag was truly intended vs. a click
-  
-  const animationStepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const shrinkClearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Lifted state for RollLog
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
 
@@ -73,6 +58,31 @@ export function RightDockedToolbar() {
     });
   }, [getNewRollId]);
 
+
+  const [isDraggingDie, setIsDraggingDie] = useState(false);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [landedDie, setLandedDie] = useState<LandedDieState | null>(null);
+  const [isDragOverCancelArea, setIsDragOverCancelArea] = useState(false);
+
+  const diceRollerButtonRef = useRef<HTMLButtonElement>(null);
+  const dragStartTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const isDragIntendedRef = useRef(false); 
+  
+  const animationStepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shrinkClearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearLandedDieTimeouts = () => {
+    if (animationStepTimeoutRef.current) clearTimeout(animationStepTimeoutRef.current);
+    if (visibilityTimeoutRef.current) clearTimeout(visibilityTimeoutRef.current);
+    if (shrinkClearTimeoutRef.current) clearTimeout(shrinkClearTimeoutRef.current);
+  };
+  
+  const clearLandedDie = useCallback(() => {
+    clearLandedDieTimeouts();
+    setLandedDie(null);
+  }, []);
+
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
       const newTab = itemId;
@@ -93,22 +103,11 @@ export function RightDockedToolbar() {
            activeCombinedTab === itemId;
   };
 
-  const clearLandedDieTimeouts = () => {
-    if (animationStepTimeoutRef.current) clearTimeout(animationStepTimeoutRef.current);
-    if (visibilityTimeoutRef.current) clearTimeout(visibilityTimeoutRef.current);
-    if (shrinkClearTimeoutRef.current) clearTimeout(shrinkClearTimeoutRef.current);
-  };
-  
-  const clearLandedDie = useCallback(() => {
-    clearLandedDieTimeouts();
-    setLandedDie(null);
-  }, []);
-
   const handleMouseDownDiceRoller = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return; 
     
     clearLandedDie(); 
-    isDragIntendedRef.current = false; // Reset drag intention for this specific interaction
+    isDragIntendedRef.current = false; 
 
     if (dragStartTimeoutIdRef.current) {
       clearTimeout(dragStartTimeoutIdRef.current);
@@ -116,10 +115,8 @@ export function RightDockedToolbar() {
     }
 
     dragStartTimeoutIdRef.current = setTimeout(() => {
-      isDragIntendedRef.current = true; // Mark that a drag was intended
+      isDragIntendedRef.current = true; 
       setIsDraggingDie(true);
-      setDragPosition({ x: event.clientX, y: event.clientY });
-      // Cursor style change will be handled by global mousemove effect
     }, QUICK_ROLL_HOLD_TIME_MS);
   }, [clearLandedDie]);
 
@@ -128,13 +125,9 @@ export function RightDockedToolbar() {
       clearTimeout(dragStartTimeoutIdRef.current);
       dragStartTimeoutIdRef.current = null;
     }
-    // Only toggle drawer if it was NOT a drag intention AND not currently dragging
-    // isDragIntendedRef.current is true if the timeout fired, false if cleared early (click)
     if (!isDragIntendedRef.current && !isDraggingDie) { 
       handleToggleDrawer(DICE_ROLLER_TAB_ID);
     }
-    // If drag was intended, handleMouseUpGlobal will manage the drop or cancellation.
-    // isDragIntendedRef.current will be reset in handleMouseUpGlobal.
   }, [handleToggleDrawer, isDraggingDie]);
 
 
@@ -143,22 +136,19 @@ export function RightDockedToolbar() {
         setDragPosition({ x: event.clientX, y: event.clientY });
         if (diceRollerButtonRef.current) {
           const buttonRect = diceRollerButtonRef.current.getBoundingClientRect();
-          if (
+          const currentlyOverCancelArea = 
             event.clientX >= buttonRect.left &&
             event.clientX <= buttonRect.right &&
             event.clientY >= buttonRect.top &&
-            event.clientY <= buttonRect.bottom
-          ) {
-            setIsDragOverCancelArea(true);
-          } else {
-            setIsDragOverCancelArea(false);
-          }
+            event.clientY <= buttonRect.bottom;
+          setIsDragOverCancelArea(currentlyOverCancelArea);
+        } else {
+           setIsDragOverCancelArea(false);
         }
       }
     }, [isDraggingDie]);
 
   const handleMouseUpGlobal = useCallback((event: MouseEvent) => {
-    // Clear pending drag timeout if mouse is released globally before it fires
     if (dragStartTimeoutIdRef.current) {
       clearTimeout(dragStartTimeoutIdRef.current);
       dragStartTimeoutIdRef.current = null;
@@ -166,18 +156,17 @@ export function RightDockedToolbar() {
 
     if (isDraggingDie) {
       document.body.style.cursor = 'default';
-      const currentlyOverCancelArea = diceRollerButtonRef.current &&
-        event.clientX >= diceRollerButtonRef.current.getBoundingClientRect().left &&
-        event.clientX <= diceRollerButtonRef.current.getBoundingClientRect().right &&
-        event.clientY >= diceRollerButtonRef.current.getBoundingClientRect().top &&
-        event.clientY <= diceRollerButtonRef.current.getBoundingClientRect().bottom;
+      
+      const buttonRect = diceRollerButtonRef.current?.getBoundingClientRect();
+      const releasedOverCancelArea = buttonRect &&
+        event.clientX >= buttonRect.left &&
+        event.clientX <= buttonRect.right &&
+        event.clientY >= buttonRect.top &&
+        event.clientY <= buttonRect.bottom;
 
-      if (currentlyOverCancelArea) {
-        // CANCELLED DRAG
+      if (releasedOverCancelArea && isDragIntendedRef.current) { // Drag was intended and released on cancel area
         clearLandedDie();
-        // No roll logged
-      } else {
-        // SUCCESSFUL DRAG (not cancelled)
+      } else if (isDragIntendedRef.current) { // Drag was intended and released elsewhere
         const releaseX = event.clientX;
         const releaseY = event.clientY;
         
@@ -198,15 +187,13 @@ export function RightDockedToolbar() {
           isShrinking: false,
         });
       }
-      // CRITICAL: Reset drag states after any drag operation (cancelled or successful)
+      
       setIsDraggingDie(false);
       setIsDragOverCancelArea(false);
-      isDragIntendedRef.current = false; 
-    } else {
-      // If mouseup happened globally but we weren't "officially" dragging
-      isDragIntendedRef.current = false;
     }
-  }, [isDraggingDie, clearLandedDie, addRollToLog, getNewRollId]); // Added getNewRollId and addRollToLog
+    isDragIntendedRef.current = false; 
+    document.body.style.cursor = 'default';
+  }, [isDraggingDie, clearLandedDie, addRollToLog, getNewRollId]); 
   
   useEffect(() => {
     const currentMouseMove = (e: MouseEvent) => handleMouseMoveGlobal(e);
@@ -234,11 +221,9 @@ export function RightDockedToolbar() {
     };
   }, [isDraggingDie, handleMouseMoveGlobal, handleMouseUpGlobal]);
 
-
   useEffect(() => {
     if (!landedDie || !landedDie.isVisible || landedDie.isShrinking) return;
 
-    // Clear previous timeouts when landedDie state changes to ensure fresh timers
     clearLandedDieTimeouts(); 
 
     const animateStep = () => {
@@ -251,16 +236,18 @@ export function RightDockedToolbar() {
           animationStepTimeoutRef.current = setTimeout(animateStep, QUICK_ROLL_ANIMATION_STEP_DURATION);
           return { ...prevDie, currentPointIndex: nextPointIndex };
         } else { 
-          if (prevDie.result === null) { // Only roll if result hasn't been set
+          if (prevDie.result === null) { 
             const d20Result = rollMultipleDice(1, 20).sum;
             
             addRollToLog({
                 inputText: "d20 (Quick Roll)",
                 resultText: d20Result.toString(),
                 detailText: `Rolled 1d20 (Quick): [${d20Result}] = ${d20Result}`,
+                rolls: [d20Result],
+                modifier: 0,
+                sides: 20,
             });
             
-            // Start timer to make die shrink and disappear
             visibilityTimeoutRef.current = setTimeout(() => {
               setLandedDie(d => d && d.id === prevDie.id ? { ...d, isShrinking: true, opacity: 0 } : null);
               shrinkClearTimeoutRef.current = setTimeout(() => {
@@ -275,16 +262,13 @@ export function RightDockedToolbar() {
       });
     };
     
-    // Initial delay for the first step to ensure visibility before moving
     const initialDelay = landedDie.currentPointIndex === 0 ? 10 : QUICK_ROLL_ANIMATION_STEP_DURATION;
     animationStepTimeoutRef.current = setTimeout(animateStep, initialDelay);
 
     return () => { 
-      clearLandedDieTimeouts(); // Cleanup on unmount or if landedDie changes drastically
+      clearLandedDieTimeouts(); 
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [landedDie?.id, landedDie?.currentPointIndex, landedDie?.isVisible, landedDie?.isShrinking, addRollToLog]); // Removed landedDie from dep array to avoid re-triggering on every sub-property change. ID and relevant sub-props are used.
-
+  }, [landedDie?.id, landedDie?.currentPointIndex, landedDie?.isVisible, landedDie?.isShrinking, addRollToLog]); 
 
   useEffect(() => { 
     return () => {
@@ -317,7 +301,7 @@ export function RightDockedToolbar() {
                 if (isDragOverCancelArea) {
                   finalButtonCn = cn(buttonBaseCn, "bg-destructive text-destructive-foreground hover:bg-destructive/90");
                   iconCn = cn(iconCn, "text-destructive-foreground"); 
-                } else if (isActiveTool) {
+                } else if (isActiveTool) { // Maintain active style if dragging but not over cancel area
                    finalButtonCn = cn(buttonBaseCn, "bg-primary/20 text-primary ring-2 ring-primary");
                 }
               }

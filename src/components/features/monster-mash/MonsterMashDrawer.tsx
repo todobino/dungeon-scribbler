@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle, ChevronRight, VenetianMask } from "lucide-react";
+import { Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, ShieldCheck, BookOpen, ArrowUpDown, HelpCircle, ChevronRight, Skull } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -65,7 +65,7 @@ const formatCRDisplay = (crValue: string | number | undefined): string => {
     if (numCR === 0.5) return "1/2";
     if (numCR === 0.75) return "3/4";
     if (Number.isInteger(numCR)) return numCR.toString();
-    return numCR.toFixed(2); // For any other fractions like 0.33 if they ever occur
+    return numCR.toFixed(2); 
 };
 
 
@@ -73,16 +73,15 @@ const CR_SLIDER_MIN = 0;
 const CR_SLIDER_MAX = 30;
 const CR_SLIDER_STEP = 0.125; 
 
-// Snapping function for CR slider
 const snapCRValue = (rawValue: number): number => {
   if (rawValue < 0) return 0;
   if (rawValue >= 1) {
-    return Math.round(rawValue); // Round to nearest integer for 1 and above
-  } else { // rawValue is between 0 and < 1. User wants 0, 0.25, 0.5, 0.75
-    if (rawValue < (0 + 0.25) / 2) return 0;       // Closest to 0
-    if (rawValue < (0.25 + 0.5) / 2) return 0.25;  // Closest to 0.25
-    if (rawValue < (0.5 + 0.75) / 2) return 0.5;   // Closest to 0.5
-    return 0.75;                                 // Closest to 0.75
+    return Math.round(rawValue); 
+  } else { 
+    if (rawValue < (0 + 0.25) / 2) return 0;       
+    if (rawValue < (0.25 + 0.5) / 2) return 0.25;  
+    if (rawValue < (0.5 + 0.75) / 2) return 0.5;   
+    return 0.75;                                 
   }
 };
 
@@ -115,11 +114,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     }
     
     const [minCR, maxCR] = crRange;
-     // Only filter by CR if the range is not the default full range
-    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) {
+    if (minCR !== CR_SLIDER_MIN || maxCR !== CR_SLIDER_MAX) { // Only filter if slider is not at full range
         tempFiltered = tempFiltered.filter(monster => {
             if (monster.cr === undefined) return false; // Exclude if CR is unknown when filter is active
-            const monsterCRNum = monster.cr; // CR is already a number in MonsterSummaryWithCR
+            const monsterCRNum = monster.cr; 
             return monsterCRNum >= minCR && monsterCRNum <= maxCR;
         });
     }
@@ -160,6 +158,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       const enrichedMonsters: MonsterSummaryWithCR[] = [];
       for (const summary of summaries) {
         try {
+          // To avoid hitting API rate limits too hard, consider adding a small delay if needed
+          // await new Promise(resolve => setTimeout(resolve, 50)); // e.g., 50ms delay
           const detailResponse = await fetch(`${DND5E_API_BASE_URL}${summary.url}`);
           if (detailResponse.ok) {
             const detailData: MonsterDetail = await detailResponse.json();
@@ -182,25 +182,30 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       
       localStorage.setItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY, JSON.stringify(enrichedMonsters));
       setAllMonstersData(enrichedMonsters);
-      applyFiltersAndSort();
+      // applyFiltersAndSort(); // This will be called by the useEffect for allMonstersData
 
     } catch (err: any) {
       console.error("Error building full monster index:", err);
       setError(err.message || "Could not build local monster index. Some features might be limited.");
+      // Fallback to basic list if index build fails but summaries were fetched
       if (allMonstersData.length === 0) {
-         const summaryResponseFallback = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
-         if (summaryResponseFallback.ok) {
-            const summaryDataFallback = await summaryResponseFallback.json();
-            setAllMonstersData((summaryDataFallback.results || []).map(m => ({index: m.index, name: m.name, url: m.url})));
-         } else {
-            setError("Failed to load even basic monster list. Please try again later.");
+         try {
+            const summaryResponseFallback = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
+            if (summaryResponseFallback.ok) {
+                const summaryDataFallback = await summaryResponseFallback.json();
+                setAllMonstersData((summaryDataFallback.results || []).map((m: MonsterSummary) => ({index: m.index, name: m.name, url: m.url})));
+            } else {
+                setError("Failed to load even basic monster list. Please try again later.");
+            }
+         } catch (fallbackErr) {
+            setError("Failed to load basic monster list after index build error. Please try again later.");
          }
       }
     } finally {
       setIsBuildingIndex(false);
       setIsLoadingList(false); 
     }
-  }, [applyFiltersAndSort, allMonstersData.length]);
+  }, [allMonstersData.length]);
 
 
   useEffect(() => {
@@ -211,8 +216,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             if (cachedIndex) {
                 const parsedIndex: MonsterSummaryWithCR[] = JSON.parse(cachedIndex);
                 setAllMonstersData(parsedIndex);
-                applyFiltersAndSort();
-                setIsLoadingList(false);
+                setIsLoadingList(false); // Data loaded from cache
             } else {
                 fetchAndCacheFullMonsterIndex();
             }
@@ -221,7 +225,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             fetchAndCacheFullMonsterIndex();
         }
     }
-  }, [open, allMonstersData.length, isLoadingList, isBuildingIndex, fetchAndCacheFullMonsterIndex, applyFiltersAndSort]);
+  }, [open, allMonstersData.length, isLoadingList, isBuildingIndex, fetchAndCacheFullMonsterIndex]);
+  
+  useEffect(() => {
+    if (allMonstersData.length > 0) { // Apply filters whenever allMonstersData changes (e.g. after initial load/cache build)
+        applyFiltersAndSort();
+    }
+  }, [allMonstersData, applyFiltersAndSort]);
+
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -252,6 +263,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       } catch (e) {
         console.error("Error saving favorites to localStorage", e);
       }
+    } else if (favorites.length === 0 && localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY)) {
+      // If favorites is empty but was previously set, remove it from localStorage
+      localStorage.removeItem(MONSTER_MASH_FAVORITES_STORAGE_KEY);
     }
   }, [favorites]);
 
@@ -290,7 +304,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         typeValue = monsterToToggle.type;
       }
       
-      if (crValue === undefined) {
+      if (crValue === undefined || typeValue === undefined) {
+        // If CR or Type is missing from summary, fetch full details
         setIsLoadingDetail(true);
         try {
           const monsterUrl = (monsterToToggle as MonsterSummaryWithCR).url || `/api/monsters/${monsterToToggle.index}`;
@@ -395,7 +410,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex flex-row items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-2">
             <SheetTitle className="flex items-center text-2xl text-primary-foreground">
-              <VenetianMask className="mr-3 h-7 w-7"/>Monster Mash
+              <Skull className="mr-3 h-7 w-7"/>Monster Mash
             </SheetTitle>
             <TooltipProvider delayDuration={100}>
               <Tooltip>
@@ -405,7 +420,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
-                  <p>Search the D&D 5e bestiary. The first time opening this drawer may be slow as it builds a local index of monster CRs for filtering.</p>
+                  <p>Search the D&D 5e bestiary. The first time opening may be slow as it builds a local index of monster CRs for filtering.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -486,9 +501,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         id="cr-slider"
                         min={CR_SLIDER_MIN}
                         max={CR_SLIDER_MAX}
-                        step={CR_SLIDER_STEP} // Use fine step for raw values
+                        step={CR_SLIDER_STEP} 
                         value={crRange}
-                        onValueChange={handleCRSliderChange} // Use handler for snapping
+                        onValueChange={handleCRSliderChange} 
                         className="my-2"
                     />
                 </div>
