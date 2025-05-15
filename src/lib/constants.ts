@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen } from 'lucide-react';
+import { Users, UserCog, BookText, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -188,7 +188,7 @@ export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
 
-// Adventure Recap Page Keys
+// Adventure Recap Page Keys (Formerly Story So Far Refactored)
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
 export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_CurrentSession_`;
 export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionSummaries_`;
@@ -204,6 +204,8 @@ export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_F
 export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_FullIndexWithCR`;
 export const MONSTER_MASH_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Homebrew`;
 
+// Spellbook Feature Key
+export const SPELLBOOK_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}Spellbook_Homebrew`;
 
 // Toolbar IDs for shared state management
 export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
@@ -224,7 +226,7 @@ export const MONSTER_SIZES: string[] = [
 ];
 
 export const MONSTER_AC_TYPES: string[] = [
-  "Natural Armor", "Plate", "Leather", "Shield", "Mage Armor", "Unarmored Defense", "Other"
+  "Natural Armor", "Plate Armor", "Leather Armor", "Hide Armor", "Chain Mail", "Scale Mail", "Shield", "Mage Armor", "Unarmored Defense", "Other"
 ];
 
 export const MONSTER_ALIGNMENTS: string[] = [
@@ -232,4 +234,10 @@ export const MONSTER_ALIGNMENTS: string[] = [
   "Lawful Neutral", "True Neutral", "Chaotic Neutral",
   "Lawful Evil", "Neutral Evil", "Chaotic Evil",
   "Unaligned", "Any Alignment", "Varies"
+];
+
+// Spellbook Homebrew Form Options
+export const SPELL_SCHOOLS: string[] = [
+    "Abjuration", "Conjuration", "Divination", "Enchantment",
+    "Evocation", "Illusion", "Necromancy", "Transmutation"
 ];

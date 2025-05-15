@@ -7,10 +7,10 @@ export interface PlayerCharacter {
   level: number;
   class: DndClass;
   armorClass: number;
-  race: string; 
-  initiativeModifier?: number; 
+  race: string;
+  initiativeModifier?: number;
   color?: string;
-  abilities?: string[]; 
+  abilities?: string[];
   racialTraits?: string[];
 }
 
@@ -32,9 +32,9 @@ export interface NPC {
 export interface CampaignNote {
   id: string;
   title: string;
-  content: string; 
-  createdAt: string; 
-  updatedAt: string; 
+  content: string;
+  createdAt: string;
+  updatedAt: string;
   linkedNpcIds?: string[];
   linkedLocationIds?: string[];
 }
@@ -42,7 +42,7 @@ export interface CampaignNote {
 export interface RandomTableOption {
   id: string;
   value: string;
-  weight?: number; 
+  weight?: number;
 }
 
 export interface RandomTable {
@@ -55,15 +55,15 @@ export interface RandomTable {
 export interface MapData {
   id: string;
   name: string;
-  imageUrl: string; 
+  imageUrl: string;
   markers?: MapMarker[];
 }
 
 export interface MapMarker {
   id:string;
-  x: number; 
-  y: number; 
-  noteId?: string; 
+  x: number;
+  y: number;
+  noteId?: string;
   description?: string;
 }
 
@@ -78,43 +78,43 @@ export interface Combatant {
   name: string;
   initiative: number;
   type: 'player' | 'enemy';
-  color?: string; 
-  playerId?: string; 
-  ac?: number;      
-  hp?: number;      
-  currentHp?: number; 
+  color?: string;
+  playerId?: string;
+  ac?: number;
+  hp?: number;
+  currentHp?: number;
 }
 
 export interface Faction {
   id: string;
-  campaignId: string; 
+  campaignId: string;
   name: string;
-  goals: string; 
-  reputation: number; 
+  goals: string;
+  reputation: number;
   notes?: string;
   leader?: string;
   headquarters?: string;
-  allies?: string; 
-  enemies?: string; 
+  allies?: string;
+  enemies?: string;
   lieutenant?: string;
   philosophy?: string;
-  supportingCast?: string; 
+  supportingCast?: string;
   introductionScene?: string;
 }
 
 export interface Location {
   id: string;
-  campaignId: string; 
+  campaignId: string;
   name: string;
   description?: string;
-  mapId?: string; 
-  factionId?: string; 
+  mapId?: string;
+  factionId?: string;
   notes?: string;
 }
 
 export interface PlotPoint {
   id: string;
-  sessionNumber: number; 
+  sessionNumber: number;
   timestamp: string;
   text: string;
 }
@@ -129,9 +129,9 @@ export interface MonsterSummary {
 export interface MonsterSummaryWithCR {
   index: string;
   name: string;
-  cr?: number;     
-  type?: string;   
-  url?: string; 
+  cr?: number;
+  type?: string;
+  url?: string;
   source?: 'api' | 'homebrew'; // To distinguish API monsters from homebrew
 }
 
@@ -153,7 +153,7 @@ export interface Speed {
 export interface Sense {
   darkvision?: string;
   passive_perception: number;
-  [key: string]: string | number | undefined; 
+  [key: string]: string | number | undefined;
 }
 
 export interface ProficiencyEntry {
@@ -215,51 +215,48 @@ export interface LegendaryAction {
   damage?: ActionDamage[];
 }
 
-// This interface can be used for both API-fetched and homebrew monsters.
-// For homebrew, some fields might be optional or simplified.
 export interface MonsterDetail extends MonsterSummary {
   size?: string;
   type?: string;
   subtype?: string;
   alignment?: string;
-  armor_class?: ArmorClass[] | { value: number; type: string; desc?: string }[]; // Allow simpler AC input for homebrew
+  armor_class?: ArmorClass[] | { value: number; type: string; desc?: string }[];
   hit_points?: number;
   hit_dice?: string;
-  hit_points_roll?: string; // Keep for API, optional for homebrew
-  speed?: Speed | string; // Allow string input for homebrew speed
+  hit_points_roll?: string;
+  speed?: Speed | string;
   strength?: number;
   dexterity?: number;
   constitution?: number;
   intelligence?: number;
   wisdom?: number;
   charisma?: number;
-  proficiencies?: ProficiencyEntry[]; // Complex, may be simplified to text for homebrew
+  proficiencies?: ProficiencyEntry[];
   damage_vulnerabilities?: string[];
   damage_resistances?: string[];
   damage_immunities?: string[];
-  condition_immunities?: { index: string; name: string; url: string }[] | string[]; // Allow string array for homebrew
-  senses?: Sense | string; // Allow string input for homebrew
+  condition_immunities?: { index: string; name: string; url: string }[] | string[] | string;
+  senses?: Sense | string;
   languages?: string;
-  challenge_rating?: number; 
+  challenge_rating?: number;
   xp?: number;
-  special_abilities?: SpecialAbility[] | string; // Allow simplified string for homebrew
-  actions?: MonsterAction[] | string; // Allow simplified string for homebrew
-  legendary_actions?: LegendaryAction[] | string; // Allow simplified string for homebrew
-  image?: string; 
-  source?: 'api' | 'homebrew'; // Important for distinguishing
-  isHomebrew?: boolean; // Alternative way to flag
+  special_abilities?: SpecialAbility[] | string;
+  actions?: MonsterAction[] | string;
+  legendary_actions?: LegendaryAction[] | string;
+  image?: string;
+  source?: 'api' | 'homebrew';
+  isHomebrew?: boolean;
 }
 
 
 export interface FavoriteMonster {
-  index: string; // Can be API index or homebrew ID
+  index: string;
   name: string;
-  cr: number; 
+  cr: number;
   type: string;
   source: 'api' | 'homebrew';
 }
 
-// For Dice Roller Log in CombinedToolDrawer and RightDockedToolbar
 export interface RollLogEntry {
   id: string;
   inputText: string;
@@ -275,10 +272,9 @@ export interface RollLogEntry {
   isRolling?: boolean;
 }
 
-// Simplified Homebrew Monster input form state
 export interface HomebrewMonsterFormData {
   name: string;
-  challenge_rating?: string; // Input as string, then parse
+  challenge_rating?: string;
   type?: string;
   size?: string;
   armor_class_value?: string;
@@ -305,7 +301,6 @@ export interface HomebrewMonsterFormData {
   condition_immunities_text?: string;
 }
 
-// For Status Conditions Drawer
 export interface ConditionSummary {
   index: string;
   name: string;
@@ -315,10 +310,9 @@ export interface ConditionSummary {
 export interface ConditionDetail {
   index: string;
   name: string;
-  desc: string[]; // API returns description as an array of strings
+  desc: string[];
 }
 
-// For Spellbook Drawer
 export interface SpellSummary {
   index: string;
   name: string;
@@ -328,46 +322,44 @@ export interface SpellSummary {
 export interface SpellDetail {
   index: string;
   name: string;
-  desc: string[];
-  higher_level?: string[];
+  desc: string[] | string; // string for homebrew input, string[] for API
+  higher_level?: string[] | string; // string for homebrew input
   range: string;
-  components: string[]; // e.g., ["V", "S", "M"]
-  material?: string;
+  components: string[] | string; // string for homebrew input (e.g. "V, S, M (diamond dust)")
+  material?: string; // API uses this, for homebrew it can be part of components string
   ritual: boolean;
   duration: string;
   concentration: boolean;
   casting_time: string;
   level: number; // 0 for cantrips
-  attack_type?: string; // e.g., "ranged"
+  attack_type?: string;
   damage?: {
     damage_type?: {
       index: string;
       name: string;
       url: string;
     };
-    // Damage at slot level for scaling spells like Fireball
-    damage_at_slot_level?: Record<string, string>; // e.g., {"3": "8d6", "4": "9d6"}
-    // Damage at character level for scaling cantrips
-    damage_at_character_level?: Record<string, string>; // e.g., {"1": "1d10", "5": "2d10"}
+    damage_at_slot_level?: Record<string, string>;
+    damage_at_character_level?: Record<string, string>;
   };
   school: {
     index: string;
-    name: string; // e.g., "Evocation"
-    url: string;
+    name: string;
+    url?: string; // API has URL, homebrew just name
   };
-  classes: {
+  classes: { // API provides array of objects
     index: string;
     name: string;
     url: string;
-  }[];
-  subclasses?: {
+  }[] | string; // For homebrew, allow simple comma-separated string
+  subclasses?: { // API provides array of objects
     index: string;
     name: string;
     url: string;
-  }[];
+  }[] | string; // For homebrew, allow simple comma-separated string
   area_of_effect?: {
-    type: string; // e.g., "sphere"
-    size: number; // e.g., 20 (feet)
+    type: string;
+    size: number;
   };
   dc?: {
     dc_type: {
@@ -375,8 +367,35 @@ export interface SpellDetail {
         name: string;
         url: string;
     };
-    dc_success: string; // e.g. "half"
+    dc_success: string;
     desc?: string;
   };
-  heal_at_slot_level?: Record<string, string>; // e.g. {"1": "1d4+MOD"}
+  heal_at_slot_level?: Record<string, string>;
+  isHomebrew?: boolean;
+  source?: 'api' | 'homebrew';
 }
+
+export interface HomebrewSpellFormData {
+  name: string;
+  level: string; // Input as string, parse to number
+  casting_time: string;
+  range: string;
+  components: string; // e.g., "V, S, M (diamond dust worth 100 gp)"
+  duration: string;
+  concentration: boolean;
+  school: string; // School name
+  desc: string; // Single textarea for description
+  higher_level?: string; // Single textarea
+  classes?: string; // Comma-separated string
+  subclasses?: string; // Comma-separated string
+  // The following might be too complex for initial homebrew, can be text within desc
+  // attack_type?: string;
+  // damage_type?: string;
+  // damage_at_slot_level?: string; // e.g., "3:8d6, 4:9d6"
+  // area_of_effect_type?: string;
+  // area_of_effect_size?: string;
+  // dc_type?: string;
+  // dc_success?: string;
+}
+
+```
