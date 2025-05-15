@@ -9,7 +9,7 @@ import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDra
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull } from "lucide-react";
+import { Dice5, Swords, Skull, Hexagon } from "lucide-react"; // Added Hexagon
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
@@ -17,9 +17,14 @@ export function RightDockedToolbar() {
 
   const [isDraggingDie, setIsDraggingDie] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [justFinishedDrag, setJustFinishedDrag] = useState(false);
 
   const handleToggleDrawer = (itemId: string) => {
-    if (isDraggingDie) return; // Prevent drawer toggle during drag
+    if (justFinishedDrag) {
+      setJustFinishedDrag(false);
+      return;
+    }
+    if (isDraggingDie) return; 
 
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
       const newTab = itemId === DICE_ROLLER_TAB_ID ? DICE_ROLLER_TAB_ID : COMBAT_TRACKER_TAB_ID;
@@ -41,25 +46,23 @@ export function RightDockedToolbar() {
   };
 
   const handleDragStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return; // Only main left mouse button
+    if (event.button !== 0) return; 
     setIsDraggingDie(true);
-    // Set initial position slightly offset from cursor to avoid immediate hover issues
-    // Adjust offset as needed so icon appears centered on cursor or slightly below/right
     setDragPosition({ x: event.clientX, y: event.clientY });
     event.preventDefault();
   }, []);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
-      // No need to check isDraggingDie here as listener is only active when it's true
       setDragPosition({ x: event.clientX, y: event.clientY });
     };
 
     const handleMouseUp = (event: MouseEvent) => {
-      // No need to check isDraggingDie here
       setIsDraggingDie(false);
+      setJustFinishedDrag(true); 
       // Future: Trigger quick roll logic here
       event.preventDefault();
+      setTimeout(() => setJustFinishedDrag(false), 0); // Reset after click event cycle
     };
 
     if (isDraggingDie) {
@@ -71,7 +74,6 @@ export function RightDockedToolbar() {
     }
 
     return () => {
-      // Cleanup listeners and cursor style
       document.body.style.cursor = 'default';
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -120,15 +122,22 @@ export function RightDockedToolbar() {
         <div
           style={{
             position: 'fixed',
-            left: dragPosition.x - 16, // Adjust to center 32px icon on cursor
-            top: dragPosition.y - 16,  // Adjust to center 32px icon on cursor
+            left: dragPosition.x, 
+            top: dragPosition.y,  
             pointerEvents: 'none', 
             zIndex: 2000, 
-            transform: 'translate(-50%, -50%)' // Alternative centering if x,y is direct cursor
+            transform: 'translate(-50%, -50%)',
           }}
-          className="transform -translate-x-1/2 -translate-y-1/2" // Centering using Tailwind
         >
-          <Dice5 className="h-8 w-8 text-primary animate-spin" />
+          <div className="relative h-10 w-10 flex items-center justify-center"> {/* Increased size slightly for better visibility */}
+            <Hexagon className="h-10 w-10 text-primary animate-spin" fill="hsl(var(--primary-foreground))" /> {/* Fill for better text contrast */}
+            <span 
+              className="absolute text-primary font-bold text-sm" // Adjusted size and color for visibility
+              style={{ userSelect: 'none' }} // Prevent text selection
+            >
+              20
+            </span>
+          </div>
         </div>
       )}
 
