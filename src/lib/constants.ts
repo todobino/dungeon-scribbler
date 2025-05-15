@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -193,10 +193,10 @@ export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Party_`;
 export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Factions_`;
 export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Locations_`;
 export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`;
-export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
-export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
+
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
 export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Encounter_`;
+export const SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}SavedEncounters_`;
 
 
 // Adventure Recap Page Keys

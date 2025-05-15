@@ -394,6 +394,13 @@ export interface EncounterMonster {
   id: string;
   name: string;
   quantity: number;
-  cr?: string; // Challenge Rating, user input for now
-  // xp?: number; // XP value, could be derived from CR or input
+  cr?: string;
+  ac?: string;
+  hp?: string;
+}
+
+export interface SavedEncounter {
+  id: string;
+  title: string;
+  monsters: EncounterMonster[];
 }
