@@ -9,7 +9,7 @@ import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDra
 import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, Hexagon } from "lucide-react"; // Added Hexagon
+import { Dice5, Swords, Skull, Hexagon, ListOrdered } from "lucide-react";
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
@@ -24,12 +24,12 @@ export function RightDockedToolbar() {
       setJustFinishedDrag(false);
       return;
     }
-    if (isDraggingDie) return; 
+    if (isDraggingDie) return;
 
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
       const newTab = itemId === DICE_ROLLER_TAB_ID ? DICE_ROLLER_TAB_ID : COMBAT_TRACKER_TAB_ID;
       if (openDrawerId === COMBINED_TOOLS_DRAWER_ID && activeCombinedTab === newTab) {
-        setOpenDrawerId(null); 
+        setOpenDrawerId(null);
       } else {
         setOpenDrawerId(COMBINED_TOOLS_DRAWER_ID);
         setActiveCombinedTab(newTab);
@@ -46,7 +46,7 @@ export function RightDockedToolbar() {
   };
 
   const handleDragStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return; 
+    if (event.button !== 0) return;
     setIsDraggingDie(true);
     setDragPosition({ x: event.clientX, y: event.clientY });
     event.preventDefault();
@@ -59,7 +59,7 @@ export function RightDockedToolbar() {
 
     const handleMouseUp = (event: MouseEvent) => {
       setIsDraggingDie(false);
-      setJustFinishedDrag(true); 
+      setJustFinishedDrag(true);
       // Future: Trigger quick roll logic here
       event.preventDefault();
       setTimeout(() => setJustFinishedDrag(false), 0); // Reset after click event cycle
@@ -95,7 +95,7 @@ export function RightDockedToolbar() {
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "h-12 w-12 rounded-md",
+                        "h-12 w-12 rounded-md", // Button size remains consistent
                         (isCombinedToolActive(item.id) || (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID)) &&
                         "bg-primary/20 text-primary ring-2 ring-primary",
                         isDiceRollerButton && "cursor-grab"
@@ -122,18 +122,18 @@ export function RightDockedToolbar() {
         <div
           style={{
             position: 'fixed',
-            left: dragPosition.x, 
-            top: dragPosition.y,  
-            pointerEvents: 'none', 
-            zIndex: 2000, 
+            left: dragPosition.x,
+            top: dragPosition.y,
+            pointerEvents: 'none',
+            zIndex: 2000,
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <div className="relative h-10 w-10 flex items-center justify-center"> {/* Increased size slightly for better visibility */}
-            <Hexagon className="h-10 w-10 text-primary animate-spin" fill="hsl(var(--primary-foreground))" /> {/* Fill for better text contrast */}
-            <span 
-              className="absolute text-primary font-bold text-sm" // Adjusted size and color for visibility
-              style={{ userSelect: 'none' }} // Prevent text selection
+          <div className="relative h-14 w-14 flex items-center justify-center"> {/* Container for icon + text */}
+            <Hexagon className="h-14 w-14 text-primary animate-spin" fill="hsl(var(--primary-foreground))" />
+            <span
+              className="absolute -top-1 -right-2 text-primary font-bold text-sm" // Positioned top-right of the hexagon
+              style={{ userSelect: 'none' }}
             >
               20
             </span>
