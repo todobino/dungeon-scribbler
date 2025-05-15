@@ -23,7 +23,7 @@ export default function AppLayout({
             </main>
           </SidebarInset>
         </div>
-        <RightDockedToolbar />
+        <RightDockedToolbar /> 
       </SidebarProvider>
     </CampaignProvider>
   );

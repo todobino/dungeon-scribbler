@@ -49,7 +49,7 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
 // Toolbar items
 export const TOOLBAR_ITEMS = [
   { id: 'dice-roller', label: 'Dice Roller', icon: Dice5 },
-  { id: 'initiative-tracker', label: 'Combat Tracker', icon: Swords },
+  { id: 'combat-tracker', label: 'Combat Tracker', icon: Swords },
   { id: 'monster-mash', label: 'Monster Mash', icon: Skull },
 ];
 
@@ -200,3 +200,9 @@ export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}NextSessionGoals_Ref
 // Monster Mash Feature Key
 export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Favorites`;
 export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_FullIndexWithCR`;
+
+// Toolbar IDs for shared state management
+export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
+export const MONSTER_MASH_DRAWER_ID = "monster-mash";
+export const DICE_ROLLER_TAB_ID = "dice-roller";
+export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
