@@ -39,7 +39,6 @@ import { Search, X, Star, ShieldAlert, MapPin, Loader2, AlertTriangle, Info, Shi
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cva } from "class-variance-authority";
 import { useToast } from "@/hooks/use-toast";
 import { useCampaign } from "@/contexts/campaign-context";
 import type { EncounterMonster } from "@/lib/types";
@@ -71,7 +70,7 @@ const crToNumber = (cr: string | number | undefined): number => {
     }
     return parseFloat(cr);
   }
-  return -1; 
+  return -1;
 };
 
 export const formatCRDisplay = (crValue: string | number | undefined): string => {
@@ -83,14 +82,14 @@ export const formatCRDisplay = (crValue: string | number | undefined): string =>
     if (numCR === 0.125) return "1/8";
     if (numCR === 0.25) return "1/4";
     if (numCR === 0.5) return "1/2";
-    if (numCR === 0.75) return "3/4"; 
+    if (numCR === 0.75) return "3/4";
     if (Number.isInteger(numCR)) return numCR.toString();
     if (numCR > 0 && numCR < 1) {
         for (let i = 8; i >= 2; i /= 2) {
             if (Math.abs(numCR - 1/i) < 0.001) return `1/${i}`;
         }
     }
-    return numCR.toString(); 
+    return numCR.toString();
 };
 
 const CR_SLIDER_MIN = 0;
@@ -98,12 +97,12 @@ const CR_SLIDER_MAX = 30;
 
 const snapCRValue = (rawValue: number): number => {
   if (rawValue <= 0) return 0;
-  if (rawValue < 0.125) return 0; 
-  if (rawValue < (0.125 + 0.25) / 2) return 0.125; 
-  if (rawValue < (0.25 + 0.5) / 2) return 0.25;   
-  if (rawValue < (0.5 + 0.75) / 2) return 0.5;    
-  if (rawValue < (0.75 + 1) / 2) return 0.75;     
-  return Math.round(rawValue); 
+  if (rawValue < 0.125) return 0;
+  if (rawValue < (0.125 + 0.25) / 2) return 0.125;
+  if (rawValue < (0.25 + 0.5) / 2) return 0.25;
+  if (rawValue < (0.5 + 0.75) / 2) return 0.5;
+  if (rawValue < (0.75 + 1) / 2) return 0.75;
+  return Math.round(rawValue);
 };
 
 const initialHomebrewFormData: HomebrewMonsterFormData = {
@@ -166,7 +165,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [homebrewMonsters, setHomebrewMonsters] = useState<MonsterDetail[]>([]);
 
   const [isCreatingHomebrew, setIsCreatingHomebrew] = useState(false);
-  const [editingHomebrewIndex, setEditingHomebrewIndex] = useState<string | null>(null); 
+  const [editingHomebrewIndex, setEditingHomebrewIndex] = useState<string | null>(null);
   const [homebrewFormData, setHomebrewFormData] = useState<HomebrewMonsterFormData>(initialHomebrewFormData);
   const [initialEditFormData, setInitialEditFormData] = useState<HomebrewMonsterFormData | null>(null);
 
@@ -183,7 +182,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [favorites, setFavorites] = useState<FavoriteMonster[]>([]);
 
   const [isLoadingList, setIsLoadingList] = useState(false);
-  const [isBuildingIndex, setIsBuildingIndex] = useState(false); 
+  const [isBuildingIndex, setIsBuildingIndex] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -193,7 +192,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   const applyFiltersAndSort = useCallback(() => {
     let combinedData: MonsterSummaryWithCR[] = [
-        ...allMonstersData.filter(m => m.source !== 'homebrew'), 
+        ...allMonstersData.filter(m => m.source !== 'homebrew'),
         ...homebrewMonsters.map(hb => ({
             index: hb.index, name: hb.name, cr: crToNumber(hb.challenge_rating), type: hb.type,
             url: hb.url, source: 'homebrew' as 'homebrew'
@@ -211,8 +210,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     const [minCRSlider, maxCRSlider] = crRange;
      if (minCRSlider !== CR_SLIDER_MIN || maxCRSlider !== CR_SLIDER_MAX) {
         tempFiltered = tempFiltered.filter(monster => {
-            const monsterCRNum = monster.cr; 
-            if (monsterCRNum === undefined || monsterCRNum === -1) return false; // Exclude if no CR and filter is active
+            const monsterCRNum = monster.cr;
+            if (monsterCRNum === undefined || monsterCRNum === -1) return false; // Exclude if CR unknown & filter active
             return monsterCRNum >= minCRSlider && monsterCRNum <= maxCRSlider;
         });
     }
@@ -225,8 +224,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         if (sortKey === 'name') {
             valA = a.name.toLowerCase();
             valB = b.name.toLowerCase();
-        } else { 
-            valA = a.cr === undefined ? -Infinity : a.cr; 
+        } else {
+            valA = a.cr === undefined ? -Infinity : a.cr;
             valB = b.cr === undefined ? -Infinity : b.cr;
         }
 
@@ -251,7 +250,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       const summaries: MonsterSummary[] = summaryData.results || [];
 
       const enrichedMonstersPromises = summaries.map(async (summary, index) => {
-        await new Promise(resolve => setTimeout(resolve, index * 10)); 
+        await new Promise(resolve => setTimeout(resolve, index * 5));
         try {
           const detailResponse = await fetch(`${DND5E_API_BASE_URL}${summary.url}`);
           if (detailResponse.ok) {
@@ -260,8 +259,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
               index: detailData.index,
               name: detailData.name,
               cr: crToNumber(detailData.challenge_rating),
-              type: detailData.type, 
-              url: summary.url, 
+              type: detailData.type,
+              url: summary.url,
               source: 'api' as 'api'
             };
           }
@@ -280,7 +279,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setAllMonstersData(validEnrichedMonsters);
     } catch (err: any) {
       setError(err.message || "Could not build local monster index. Refresh to try again. Some features may be limited.");
-      if (allMonstersData.length === 0) { 
+      if (allMonstersData.length === 0) {
          try {
             const summaryResponseFallback = await fetch(`${DND5E_API_BASE_URL}/api/monsters`);
             if (summaryResponseFallback.ok) {
@@ -293,7 +292,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setIsBuildingIndex(false);
       setIsLoadingList(false);
     }
-  }, [allMonstersData.length]); 
+  }, [allMonstersData.length]);
 
 
   useEffect(() => {
@@ -303,14 +302,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             const cachedIndex = localStorage.getItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY);
             if (cachedIndex) {
                 const parsedIndex: MonsterSummaryWithCR[] = JSON.parse(cachedIndex);
-                setAllMonstersData(parsedIndex.map(m => ({...m, source: m.source || 'api'}))); 
+                setAllMonstersData(parsedIndex.map(m => ({...m, source: m.source || 'api'})));
                 setIsLoadingList(false);
             } else {
                 fetchAndCacheFullMonsterIndex();
             }
         } catch (e) {
             console.error("Error loading cached index:", e);
-            fetchAndCacheFullMonsterIndex(); 
+            fetchAndCacheFullMonsterIndex();
         }
     }
   }, [open, allMonstersData.length, isLoadingList, isBuildingIndex, fetchAndCacheFullMonsterIndex]);
@@ -319,14 +318,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     if (allMonstersData.length > 0 || homebrewMonsters.length > 0) {
       applyFiltersAndSort();
     }
-  }, [allMonstersData, homebrewMonsters, applyFiltersAndSort]); 
+  }, [allMonstersData, homebrewMonsters, applyFiltersAndSort]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      if (open && (allMonstersData.length > 0 || homebrewMonsters.length > 0)) { 
+      if (open && (allMonstersData.length > 0 || homebrewMonsters.length > 0)) {
         applyFiltersAndSort();
       }
-    }, 300); 
+    }, 300);
     return () => clearTimeout(debounceTimer);
   }, [searchTerm, crRange, resultsSortConfig, open, allMonstersData, homebrewMonsters, applyFiltersAndSort]);
 
@@ -348,7 +347,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   }, []);
 
   useEffect(() => {
-    if (favorites.length > 0 || localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY)) { 
+    if (favorites.length > 0 || localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY)) {
       try { localStorage.setItem(MONSTER_MASH_FAVORITES_STORAGE_KEY, JSON.stringify(favorites)); }
       catch (e) { console.error("Error saving favorites to localStorage", e); }
     } else if (favorites.length === 0 && localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY)) {
@@ -373,11 +372,11 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       }
       setPendingMonsterFetchArgs(null);
     }
-    if (isCreatingHomebrew && pendingMonsterFetchArgs?.index) { 
+    if (isCreatingHomebrew && pendingMonsterFetchArgs?.index) {
         setIsCreatingHomebrew(false);
         setEditingHomebrewIndex(null);
         setHomebrewFormData(initialHomebrewFormData);
-        setInitialEditFormData(null); 
+        setInitialEditFormData(null);
         setIsHomebrewFormDirty(false);
     }
   };
@@ -385,35 +384,35 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const handleUnsavedChangesDialogChoice = (choice: 'save' | 'discard' | 'cancel') => {
     setIsUnsavedChangesDialogOpen(false);
     if (choice === 'save') {
-      handleSaveHomebrewMonster(); 
-      setTimeout(() => { 
+      handleSaveHomebrewMonster();
+      setTimeout(() => {
         proceedWithPendingAction();
-      }, 100); 
+      }, 100);
     } else if (choice === 'discard') {
       setIsCreatingHomebrew(false);
       setEditingHomebrewIndex(null);
       setHomebrewFormData(initialHomebrewFormData);
-      setInitialEditFormData(null); 
+      setInitialEditFormData(null);
       setIsHomebrewFormDirty(false);
       proceedWithPendingAction();
     } else { // cancel
-      setPendingMonsterFetchArgs(null); 
+      setPendingMonsterFetchArgs(null);
     }
   };
 
 
   const handleOpenCreateHomebrewForm = (skipDirtyCheck = false) => {
     const action = () => {
-        setSelectedMonster(null); 
-        setEditingHomebrewIndex(null); 
+        setSelectedMonster(null);
+        setEditingHomebrewIndex(null);
         setHomebrewFormData(initialHomebrewFormData);
-        setInitialEditFormData(null); 
+        setInitialEditFormData(null);
         setIsCreatingHomebrew(true);
-        setIsHomebrewFormDirty(false); 
+        setIsHomebrewFormDirty(false);
     };
 
     if (!skipDirtyCheck && isCreatingHomebrew && isHomebrewFormDirty) {
-        setPendingMonsterFetchArgs(null); 
+        setPendingMonsterFetchArgs(null);
         setIsUnsavedChangesDialogOpen(true);
     } else {
         action();
@@ -422,16 +421,16 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   const handleOpenEditHomebrewForm = (monster: MonsterDetail) => {
      const action = () => {
-        setSelectedMonster(monster); 
+        setSelectedMonster(monster);
         setEditingHomebrewIndex(monster.index);
         const formData = monsterDetailToFormData(monster);
         setHomebrewFormData(formData);
-        setInitialEditFormData(formData); 
+        setInitialEditFormData(formData);
         setIsCreatingHomebrew(true);
-        setIsHomebrewFormDirty(false); 
+        setIsHomebrewFormDirty(false);
     };
     if (isCreatingHomebrew && isHomebrewFormDirty && editingHomebrewIndex !== monster.index) {
-      setPendingMonsterFetchArgs({ index: monster.index, source: 'homebrew' }); 
+      setPendingMonsterFetchArgs({ index: monster.index, source: 'homebrew' });
       setIsUnsavedChangesDialogOpen(true);
     } else {
       action();
@@ -446,14 +445,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         setIsUnsavedChangesDialogOpen(true);
         return;
     }
-    
+
     setIsCreatingHomebrew(false);
     setEditingHomebrewIndex(null);
-    setHomebrewFormData(initialHomebrewFormData);
-    setInitialEditFormData(null);
-    setIsHomebrewFormDirty(false);
+    // No need to reset homebrewFormData here, as it's not visible if not isCreatingHomebrew
+    // setInitialEditFormData(null); // This too
+    // setIsHomebrewFormDirty(false); // This too
 
-    setIsLoadingDetail(true); setError(null); setSelectedMonster(null); 
+    setIsLoadingDetail(true); setError(null); setSelectedMonster(null);
     if (source === 'homebrew') {
         const homebrewDetail = homebrewMonsters.find(m => m.index === monsterIndex);
         if (homebrewDetail) {
@@ -469,7 +468,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterIndex}`);
         if (!response.ok) throw new Error(`Failed to fetch details for ${monsterIndex}: ${response.statusText}`);
         const data: MonsterDetail = await response.json();
-        setSelectedMonster({...data, source: 'api'}); 
+        setSelectedMonster({...data, source: 'api'});
     } catch (err: any) {
         setError(err.message || `Could not load details for ${monsterIndex}.`);
         setSelectedMonster(null);
@@ -486,23 +485,26 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     } else {
       let monsterDetailToSave: MonsterDetail;
 
-      if (!('hit_points' in monsterToToggle) || !monsterToToggle.armor_class) { // If it's a summary or incomplete detail
+      if (!('hit_points' in monsterToToggle) || !('armor_class' in monsterToToggle) || !monsterToToggle.armor_class) {
+        // If it's a summary or incomplete detail, fetch full details
         try {
+          setIsLoadingDetail(true);
           const detailResponse = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToToggle.index}`);
           if (!detailResponse.ok) {
-            setError(`Failed to fetch details for ${monsterToToggle.name} to favorite.`); return;
+            setError(`Failed to fetch details for ${monsterToToggle.name} to favorite.`); setIsLoadingDetail(false); return;
           }
           monsterDetailToSave = await detailResponse.json();
-        } catch (e) { setError(`Error fetching details for ${monsterToToggle.name} to favorite.`); return; }
+          setIsLoadingDetail(false);
+        } catch (e) { setError(`Error fetching details for ${monsterToToggle.name} to favorite.`); setIsLoadingDetail(false); return; }
       } else {
         monsterDetailToSave = monsterToToggle as MonsterDetail;
       }
-      
+
       const crNum = crToNumber(monsterDetailToSave.challenge_rating);
-      if (crNum === undefined || crNum === -1) {
+      if (crNum === undefined || crNum === -1) { // Check if crNum is truly invalid
          setError(`CR value invalid for ${monsterDetailToSave.name}. Cannot add to favorites.`); return;
       }
-      
+
       let acValue, acType;
       if (monsterDetailToSave.armor_class && monsterDetailToSave.armor_class.length > 0) {
           acValue = monsterDetailToSave.armor_class[0].value;
@@ -512,7 +514,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       const newFavorite: FavoriteMonster = {
         index: monsterDetailToSave.index,
         name: monsterDetailToSave.name,
-        cr: crNum, 
+        cr: crNum,
         type: monsterDetailToSave.type || "Unknown Type",
         source: monsterDetailToSave.source || (monsterDetailToSave.isHomebrew ? 'homebrew' : 'api'),
         acValue: acValue,
@@ -528,22 +530,28 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
  useEffect(() => {
     if (isCreatingHomebrew) {
       if (editingHomebrewIndex && initialEditFormData) {
+        // Only check if editing an existing monster and initial data is set
         setIsHomebrewFormDirty(JSON.stringify(homebrewFormData) !== JSON.stringify(initialEditFormData));
       } else if (!editingHomebrewIndex) {
+        // For new monster, check against truly initial form
         setIsHomebrewFormDirty(JSON.stringify(homebrewFormData) !== JSON.stringify(initialHomebrewFormData));
       }
+      // If editingHomebrewIndex exists but initialEditFormData is null, it means form just opened for edit, so not dirty yet.
+      // If !isCreatingHomebrew, form is not active, so not dirty.
     } else {
-      setIsHomebrewFormDirty(false);
+      setIsHomebrewFormDirty(false); // Not in creation mode, so form is not considered dirty
     }
-  }, [homebrewFormData, initialEditFormData, initialHomebrewFormData, isCreatingHomebrew, editingHomebrewIndex]);
+  }, [homebrewFormData, initialEditFormData, isCreatingHomebrew, editingHomebrewIndex]);
 
 
   const handleHomebrewFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setHomebrewFormData(prev => ({ ...prev, [name]: value }));
+    if(!isHomebrewFormDirty && isCreatingHomebrew) setIsHomebrewFormDirty(true); // Set dirty on first change in creation mode
   };
   const handleHomebrewSelectChange = (name: keyof HomebrewMonsterFormData, value: string) => {
     setHomebrewFormData(prev => ({ ...prev, [name]: value }));
+    if(!isHomebrewFormDirty && isCreatingHomebrew) setIsHomebrewFormDirty(true); // Set dirty on first change in creation mode
   };
 
   const handleSaveHomebrewMonster = () => {
@@ -567,12 +575,12 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         intelligence: parseInt(homebrewFormData.int || "10") || 10,
         wisdom: parseInt(homebrewFormData.wis || "10") || 10,
         charisma: parseInt(homebrewFormData.cha || "10") || 10,
-        proficiencies: [], 
+        proficiencies: [],
         damage_vulnerabilities: homebrewFormData.damage_vulnerabilities_text?.split(',').map(s => s.trim()).filter(Boolean) || [],
         damage_resistances: homebrewFormData.damage_resistances_text?.split(',').map(s => s.trim()).filter(Boolean) || [],
         damage_immunities: homebrewFormData.damage_immunities_text?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        condition_immunities: homebrewFormData.condition_immunities_text?.split(',').map(ci => ci.trim()).filter(Boolean) || [],
-        senses: homebrewFormData.senses_text?.trim() || "Passive Perception 10", 
+        condition_immunities: homebrewFormData.condition_immunities_text?.split(',').map(ci => ci.trim()).filter(Boolean).map(name => ({name, index: name.toLowerCase()})) || [], // Store as array of objects for consistency
+        senses: homebrewFormData.senses_text?.trim() || "Passive Perception 10",
         languages: homebrewFormData.languages?.trim() || "None",
         alignment: homebrewFormData.alignment?.trim() || "Unaligned",
         special_abilities: homebrewFormData.special_abilities_text?.trim(),
@@ -585,23 +593,25 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
     let newSelectedMonster: MonsterDetail | null = null;
     if (editingHomebrewIndex) {
-        const updatedMonster = { ...monsterData, index: editingHomebrewIndex, url: '' }; 
+        const updatedMonster = { ...monsterData, index: editingHomebrewIndex, url: '' };
         setHomebrewMonsters(prev => prev.map(m => m.index === editingHomebrewIndex ? updatedMonster : m));
-        newSelectedMonster = updatedMonster; 
+        newSelectedMonster = updatedMonster;
+        toast({ title: "Homebrew Monster Updated", description: `"${updatedMonster.name}" has been updated.` });
     } else {
         const newIndex = `homebrew-${Date.now()}-${homebrewFormData.name.toLowerCase().replace(/\s+/g, '-')}`;
         const newMonster = { ...monsterData, index: newIndex, url: '' };
         setHomebrewMonsters(prev => [...prev, newMonster]);
-        newSelectedMonster = newMonster; 
+        newSelectedMonster = newMonster;
+        toast({ title: "Homebrew Monster Created", description: `"${newMonster.name}" has been added.` });
     }
 
     setIsCreatingHomebrew(false);
     setEditingHomebrewIndex(null);
     setHomebrewFormData(initialHomebrewFormData);
-    setInitialEditFormData(null); 
-    setError(null); 
+    setInitialEditFormData(null);
+    setError(null);
     setIsHomebrewFormDirty(false);
-    setSelectedMonster(newSelectedMonster); 
+    setSelectedMonster(newSelectedMonster);
   };
 
   const handleOpenDeleteHomebrewConfirm = (monsterIndex: string) => {
@@ -614,7 +624,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     setHomebrewMonsters(prev => prev.filter(m => m.index !== monsterToDeleteIndex));
     setFavorites(prev => prev.filter(f => f.index !== monsterToDeleteIndex));
     if (selectedMonster?.index === monsterToDeleteIndex) {
-      setSelectedMonster(null); 
+      setSelectedMonster(null);
     }
     if (editingHomebrewIndex === monsterToDeleteIndex) {
       setIsCreatingHomebrew(false);
@@ -625,17 +635,18 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     }
     setIsDeleteHomebrewConfirmOpen(false);
     setMonsterToDeleteIndex(null);
+    toast({ title: "Homebrew Monster Deleted" });
   };
 
   const handleCancelHomebrewForm = () => {
      if (isHomebrewFormDirty) {
         setIsUnsavedChangesDialogOpen(true);
-        setPendingMonsterFetchArgs(null); 
+        setPendingMonsterFetchArgs(null);
     } else {
         setIsCreatingHomebrew(false);
         setEditingHomebrewIndex(null);
         setHomebrewFormData(initialHomebrewFormData);
-        setInitialEditFormData(null); 
+        setInitialEditFormData(null);
         setIsHomebrewFormDirty(false);
     }
   };
@@ -643,7 +654,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   const formatArmorClass = (acArray: MonsterDetail["armor_class"] | undefined): string => {
     if (!acArray || acArray.length === 0) return "N/A";
-    const mainAc = acArray[0]; 
+    const mainAc = acArray[0];
     let str = `${mainAc.value} (${mainAc.type})`;
     if ('desc' in mainAc && (mainAc as ArmorClass).desc) {
       str += ` - ${(mainAc as ArmorClass).desc}`;
@@ -676,13 +687,13 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     if (!actions || actions.length === 0) return <p className="text-sm text-muted-foreground">None</p>;
     return (
       <ul className="list-disc pl-5 space-y-2">
-        {actions.map((action: ActionType) => ( 
+        {actions.map((action: ActionType) => (
           <li key={action.name} className="text-sm">
             <strong className="font-medium">{action.name}
             {('usage' in action && action.usage) ? ` (${action.usage.type}${(action.usage as any).times ? ` ${(action.usage as any).times} times` : ''}${(action.usage as any).dice ? `, recharges on ${(action.usage as any).dice}` : ''})` : ''}
-            .</strong> {(action as any).desc} 
+            .</strong> {(action as any).desc}
             { ('attack_bonus' in action && action.attack_bonus !== undefined) && <p className="text-xs pl-2">Attack Bonus: +{action.attack_bonus}</p> }
-            { ('damage' in action && action.damage) && ((action.damage as any[])).map((dmg: any, i: number) => ( 
+            { ('damage' in action && action.damage) && ((action.damage as any[])).map((dmg: any, i: number) => (
               <p key={i} className="text-xs pl-2">Damage: {dmg.damage_dice} {dmg.damage_type?.name}</p>
             ))}
              { ('dc' in action && action.dc) && <p className="text-xs pl-2">DC {(action.dc as any).dc_value} {(action.dc as any).dc_type.name} ({(action.dc as any).success_type})</p>}
@@ -714,7 +725,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       if (favoritesSortConfig.key === 'name') {
         valA = a.name.toLowerCase();
         valB = b.name.toLowerCase();
-      } else { 
+      } else {
         valA = a.cr;
         valB = b.cr;
       }
@@ -731,7 +742,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       if (homebrewSortConfig.key === 'name') {
         valA = a.name.toLowerCase();
         valB = b.name.toLowerCase();
-      } else { 
+      } else {
         valA = crToNumber(a.challenge_rating);
         valB = crToNumber(b.challenge_rating);
       }
@@ -750,8 +761,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     const encounterKey = `${ENCOUNTER_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
     try {
       const storedEncounter = localStorage.getItem(encounterKey);
-      let currentEncounter: { title: string; monsters: EncounterMonster[] } = storedEncounter 
-        ? JSON.parse(storedEncounter) 
+      let currentEncounter: { title: string; monsters: EncounterMonster[] } = storedEncounter
+        ? JSON.parse(storedEncounter)
         : { title: "New Encounter", monsters: [] };
 
       const monsterToAdd: EncounterMonster = {
@@ -774,12 +785,12 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right" 
-        className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden" 
-        hideCloseButton={true} 
+      <SheetContent
+        side="right"
+        className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden"
+        hideCloseButton={true}
       >
-        <div className="flex flex-col h-full pr-8"> {/* Main wrapper for padding-right */}
+        <div className="flex flex-col h-full pr-8">
             <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex flex-row items-center justify-between sticky top-0 z-20">
             <div className="flex items-center gap-2">
                 <Skull className="mr-3 h-7 w-7"/>
@@ -801,9 +812,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             </div>
             </SheetHeader>
 
-            <div className="flex flex-1 min-h-0 border-t"> 
-            {/* Left Sidebar */}
-            <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card flex flex-col overflow-y-auto">
+            <div className="flex flex-1 min-h-0 border-t">
+            <div className="w-1/5 min-w-[200px] max-w-[280px] bg-card border-r flex flex-col overflow-y-auto">
                 <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
                 <AccordionItem value="favorites-section">
                      <div className="flex justify-between items-center w-full px-3 py-2 bg-muted rounded-t-md">
@@ -882,8 +892,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     </div>
                     <AccordionContent className="pt-1 pb-0 px-1 space-y-2">
                         <Separator />
-                        <Button variant="outline" className="w-full mt-2" onClick={() => handleOpenCreateHomebrewForm()}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Create New Homebrew
+                         <Button variant="outline" className="w-full justify-start text-sm mt-1" onClick={() => handleOpenCreateHomebrewForm()}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Create New Homebrew
                         </Button>
                         <ScrollArea className="h-60">
                             {homebrewMonsters.length === 0 && !isCreatingHomebrew ? (
@@ -903,35 +913,34 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 </Accordion>
             </div>
 
-            {/* Middle Column: Search/Filters & Results List */}
-            <div className="w-2/5 flex flex-col border-r bg-background overflow-y-auto p-4"> 
-                <div className="sticky top-0 bg-background z-10 py-3 space-y-3"> 
+            <div className="w-2/5 flex flex-col border-r bg-background overflow-y-auto p-4">
+                <div className="sticky top-0 bg-background z-10 py-3 space-y-3">
                     <div className="relative">
-                        <Input 
-                        id="monster-search" 
-                        placeholder="Search by Name..." 
-                        value={searchTerm} 
-                        onChange={(e) => setSearchTerm(e.target.value)} 
-                        className="pr-10 h-9 border-primary focus-visible:ring-primary" 
+                        <Input
+                        id="monster-search"
+                        placeholder="Search by Name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pr-10 h-9 border-primary focus-visible:ring-primary"
                         />
                         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                         {searchTerm && <Button variant="ghost" size="icon" className="absolute right-8 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
                     </div>
                     <div>
                         <Label htmlFor="cr-slider" className="text-sm mb-1 block">{formatCRSliderRangeLabel()}</Label>
-                        <Slider 
-                        id="cr-slider" 
-                        min={CR_SLIDER_MIN} 
-                        max={CR_SLIDER_MAX} 
-                        step={0.125} 
-                        value={crRange} 
-                        onValueChange={handleCRSliderChange} 
+                        <Slider
+                        id="cr-slider"
+                        min={CR_SLIDER_MIN}
+                        max={CR_SLIDER_MAX}
+                        step={0.125}
+                        value={crRange}
+                        onValueChange={handleCRSliderChange}
                         className="my-2"
                         />
                     </div>
                 </div>
 
-                <div className="flex flex-col border rounded-lg overflow-hidden flex-1 bg-card mt-0"> 
+                <div className="flex flex-col border rounded-lg overflow-hidden flex-1 bg-card mt-0">
                 <div className="p-3 bg-muted border-b flex justify-between items-center">
                     <h3 className="text-md font-semibold text-primary">Results ({isLoadingList || isBuildingIndex ? "..." : filteredMonsters.length})</h3>
                     <DropdownMenu>
@@ -944,7 +953,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         <DropdownMenuLabel>Sort Key</DropdownMenuLabel>
                         <DropdownMenuRadioGroup value={resultsSortConfig.key} onValueChange={(value) => setResultsSortConfig(prev => ({ ...prev, key: value as SortKey }))}>
                         <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="cr" disabled={isBuildingIndex || !allMonstersData.every(m => m.cr !== undefined)}>CR</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="cr" disabled={isBuildingIndex}>CR</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Order</DropdownMenuLabel>
@@ -990,14 +999,13 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 </div>
             </div>
 
-            {/* Right Column: Monster Details / Homebrew Form */}
-            <div className="flex-1 flex flex-col bg-card border-l overflow-y-auto"> 
-                <div className="px-3 py-2 border-b flex justify-between items-center sticky top-0 bg-muted z-10"> 
-                    <h3 className="text-lg font-semibold truncate pr-2 text-foreground flex items-center"> 
-                        {isCreatingHomebrew 
+            <div className="flex-1 flex flex-col bg-card border-l overflow-y-auto">
+                <div className="px-3 py-2 border-b flex justify-between items-center sticky top-0 bg-muted z-10">
+                    <h3 className="text-lg font-semibold truncate pr-2 text-foreground flex items-center">
+                        {isCreatingHomebrew
                             ? (editingHomebrewIndex ? "Edit Homebrew Monster" : "Create Homebrew Monster")
-                            : (selectedMonster 
-                                ? <> {selectedMonster.name} {selectedMonster.isHomebrew && <Badge variant="outline" className="ml-2 align-middle text-xs">Homebrew</Badge>} </> 
+                            : (selectedMonster
+                                ? <> {selectedMonster.name} {selectedMonster.isHomebrew && <Badge variant="outline" className="ml-2 align-middle text-xs">Homebrew</Badge>} </>
                                 : "Monster Details")
                         }
                     </h3>
@@ -1031,9 +1039,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 </div>
 
                 <ScrollArea className="flex-1">
-                    <div className="p-4"> 
+                    <div className="p-4">
                     {isCreatingHomebrew ? (
                         <div className="space-y-3 text-sm">
+                            {error && <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">{error}</p>}
                             <div><Label htmlFor="hb-name">Name*</Label><Input id="hb-name" name="name" value={homebrewFormData.name} onChange={handleHomebrewFormChange} /></div>
                             <div><Label htmlFor="hb-cr">CR</Label><Input id="hb-cr" name="challenge_rating" value={homebrewFormData.challenge_rating || ""} onChange={handleHomebrewFormChange} placeholder="e.g., 5 or 1/2"/></div>
 
@@ -1100,10 +1109,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                             <div><Label htmlFor="hb-legendary">Legendary Actions</Label><Textarea id="hb-legendary" name="legendary_actions_text" value={homebrewFormData.legendary_actions_text || ""} onChange={handleHomebrewFormChange} rows={2} placeholder="Optional. One action per paragraph."/></div>
                             <div><Label htmlFor="hb-image">Image URL (Optional)</Label><Input id="hb-image" name="image_url" value={homebrewFormData.image_url || ""} onChange={handleHomebrewFormChange} /></div>
 
-                            {error && <p className="text-sm text-destructive">{error}</p>}
-
-                            <div className="flex gap-2 mt-4 items-center">
-                                {!editingHomebrewIndex && ( 
+                           <div className="flex gap-2 mt-4 items-center">
+                                {(!editingHomebrewIndex) && (
                                     <Button onClick={handleSaveHomebrewMonster}>
                                         <Save className="mr-2 h-4 w-4"/>Save New Monster
                                     </Button>
@@ -1111,7 +1118,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                                 <Button variant="outline" onClick={handleCancelHomebrewForm}>
                                     {editingHomebrewIndex ? "Cancel Editing" : "Cancel Creation"}
                                 </Button>
-                                {editingHomebrewIndex && ( 
+                                {editingHomebrewIndex && (
                                     <Button variant="destructive" onClick={() => handleOpenDeleteHomebrewConfirm(editingHomebrewIndex)} className="ml-auto">
                                         <Trash2 className="mr-2 h-4 w-4"/> Delete Monster
                                     </Button>
@@ -1141,7 +1148,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         {selectedMonster.damage_vulnerabilities?.length > 0 && <div><strong>Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities.join(', ')}</div>}
                         {selectedMonster.damage_resistances?.length > 0 && <div><strong>Resistances:</strong> {selectedMonster.damage_resistances.join(', ')}</div>}
                         {selectedMonster.damage_immunities?.length > 0 && <div><strong>Immunities:</strong> {selectedMonster.damage_immunities.join(', ')}</div>}
-                        {selectedMonster.condition_immunities?.length > 0 && <div><strong>Condition Immunities:</strong> {(Array.isArray(selectedMonster.condition_immunities) && selectedMonster.condition_immunities.length > 0 && typeof selectedMonster.condition_immunities[0] !== 'string') ? (selectedMonster.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (selectedMonster.condition_immunities as string[] | string || []).join(', ') }</div>}
+                        {selectedMonster.condition_immunities && (typeof selectedMonster.condition_immunities === 'string' ? selectedMonster.condition_immunities.length > 0 : selectedMonster.condition_immunities.length > 0) && <div><strong>Condition Immunities:</strong> {(Array.isArray(selectedMonster.condition_immunities) && selectedMonster.condition_immunities.length > 0 && typeof selectedMonster.condition_immunities[0] !== 'string') ? (selectedMonster.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (Array.isArray(selectedMonster.condition_immunities) ? selectedMonster.condition_immunities.join(', ') : selectedMonster.condition_immunities) }</div>}
                         <div><strong>Senses:</strong> {typeof selectedMonster.senses === 'string' ? selectedMonster.senses : selectedMonster.senses ? Object.entries(selectedMonster.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ') : 'N/A'}</div>
                         <div><strong>Languages:</strong> {selectedMonster.languages || "None"}</div>
                         {renderMonsterTextField("Special Abilities", typeof selectedMonster.special_abilities === 'string' ? selectedMonster.special_abilities : undefined)}
@@ -1150,7 +1157,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                         {typeof selectedMonster.actions !== 'string' && renderMonsterActions(selectedMonster.actions as ActionType[])}
                         {renderMonsterTextField("Legendary Actions", typeof selectedMonster.legendary_actions === 'string' ? selectedMonster.legendary_actions : undefined)}
                         {typeof selectedMonster.legendary_actions !== 'string' && renderMonsterActions(selectedMonster.legendary_actions as ActionType[])}
-                        {selectedMonster.image && (<div className="mt-2"><Image src={selectedMonster.source === 'api' ? `${DND5E_API_BASE_URL}${selectedMonster.image}` : selectedMonster.image} alt={selectedMonster.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${selectedMonster.type || 'monster'} image`} /></div>)}
+                        {selectedMonster.image && (<div className="mt-2"><Image src={selectedMonster.source === 'api' ? `${DND5E_API_BASE_URL}${selectedMonster.image}` : selectedMonster.image} alt={selectedMonster.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${selectedMonster.type} monster`} /></div>)}
                     </div>
                     ) : error && !isBuildingIndex && !isLoadingList ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-4 text-center"> <AlertTriangle className="h-12 w-12 text-destructive mb-2"/><p className="text-destructive text-center">{error}</p> </div>
@@ -1160,16 +1167,16 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     </div>
                 </ScrollArea>
             </div>
-            </div> 
+            </div>
         </div>
 
-        <button 
+        <button
           onClick={() => {
             if (isCreatingHomebrew && isHomebrewFormDirty) {
               setIsUnsavedChangesDialogOpen(true);
-              setPendingMonsterFetchArgs(null); 
+              setPendingMonsterFetchArgs(null);
             } else {
-              onOpenChange(false); 
+              onOpenChange(false);
             }
           }}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
@@ -1213,33 +1220,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   );
 }
 
+// Removed local buttonVariants definition
 
-// Helper for buttonVariants if used locally
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
+    
