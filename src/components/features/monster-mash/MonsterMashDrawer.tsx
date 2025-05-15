@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; // Removed SheetDescription
-import { CardDescription } from "@/components/ui/card"; // Keep for monster details
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { 
     DropdownMenu, 
@@ -61,7 +60,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const [selectedMonster, setSelectedMonster] = useState<MonsterDetail | null>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
-  // Removed minCRInput and maxCRInput states
 
   const [favorites, setFavorites] = useState<FavoriteMonster[]>([]);
   
@@ -84,7 +82,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         .then(data => {
           const monsters = data.results || [];
           setAllMonstersData(monsters);
-          setFilteredMonsters(monsters); // Initialize filtered list
+          setFilteredMonsters(monsters); 
         })
         .catch(err => {
           console.error("Error fetching monster list:", err);
@@ -119,8 +117,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
     let monstersToProcess = [...allMonstersData];
     
-    // Removed CR filtering logic
-
     if (searchTerm.trim() !== "") {
       monstersToProcess = monstersToProcess.filter(monster =>
         monster.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -137,7 +133,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             return resultsSortConfig.order === 'asc' ? comparison : comparison * -1;
         });
     }
-    // CR sorting for results list is effectively disabled via UI due to API limitations
     
     setFilteredMonsters(monstersToProcess);
     setIsLoadingList(false);
@@ -250,25 +245,41 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full h-full max-w-full sm:max-w-full flex flex-col p-0 overflow-hidden">
-        <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
-          <SheetTitle className="flex items-center text-2xl">
-            <Swords className="mr-3 h-7 w-7 text-primary"/>Monster Mash
-          </SheetTitle>
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <HelpCircle className="h-5 w-5 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p>Search the D&D 5e bestiary and manage your favorite creatures.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <SheetHeader className="p-4 border-b bg-muted flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <SheetTitle className="flex items-center text-2xl text-foreground">
+              <Swords className="mr-3 h-7 w-7 text-primary"/>Monster Mash
+            </SheetTitle>
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>Search the D&D 5e bestiary and manage your favorite creatures.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </SheetHeader>
 
-        <div className="flex flex-1 min-h-0 border-t"> {/* Main container for columns */}
+        {/* Search Bar - Moved up */}
+        <div className="p-4 border-b">
+          <div className="relative">
+            <Input 
+              id="monster-search" 
+              placeholder="Search by Name..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-8"
+            />
+            {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
+          </div>
+        </div>
+
+        <div className="flex flex-1 min-h-0"> {/* Main container for columns */}
           
           {/* Favorites Sidebar (Column 1) */}
           <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card p-3 flex flex-col">
@@ -317,23 +328,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             </ScrollArea>
           </div>
 
-          {/* Middle Column: Search & Results List (Column 2) */}
+          {/* Middle Column: Results List (Column 2) */}
           <div className="w-2/5 flex flex-col p-4 border-r bg-background overflow-y-auto">
-            {/* Search and Filters */}
-            <div className="mb-4 pb-3 border-b space-y-3 sticky top-0 bg-background z-10 py-3">
-              <div className="relative">
-                <Input 
-                  id="monster-search" 
-                  placeholder="Search by Name..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-8"
-                />
-                {searchTerm && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm("")}><X className="h-4 w-4"/></Button>}
-              </div>
-              {/* CR Filter Removed */}
-            </div>
-            
             {/* Results List Panel */}
             <div className="flex flex-col border rounded-lg overflow-hidden flex-1 bg-card">
               <div className="p-3 bg-muted border-b flex justify-between items-center">
@@ -406,8 +402,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
           </div>
 
           {/* Right Column: Monster Details (Column 3) */}
-          <div className="flex-1 flex flex-col bg-card border-l"> {/* Removed p-4, bg-background, overflow-y-auto. Added bg-card and border-l */}
-            <div className="p-3 border-b flex justify-between items-center sticky top-0 bg-card z-10"> {/* This is the details header */}
+          <div className="flex-1 flex flex-col bg-card border-l">
+            <div className="p-3 border-b flex justify-between items-center sticky top-0 bg-card z-10">
                 <h3 className="text-md font-semibold truncate pr-2 text-foreground">{selectedMonster ? selectedMonster.name : "Monster Details"}</h3>
                 {selectedMonster && (
                     <div className="flex gap-1">
@@ -427,9 +423,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : selectedMonster ? (
-              <ScrollArea className="flex-1"> {/* ScrollArea now takes remaining space */}
-                <div className="p-4 space-y-3 text-sm"> {/* Padding applied to this inner div */}
-                    <CardDescription>{selectedMonster.size} {selectedMonster.type} ({selectedMonster.subtype || 'no subtype'}), {selectedMonster.alignment}</CardDescription>
+              <ScrollArea className="flex-1">
+                <div className="p-4 space-y-3 text-sm">
+                    <p className="text-sm text-muted-foreground">{selectedMonster.size} {selectedMonster.type} ({selectedMonster.subtype || 'no subtype'}), {selectedMonster.alignment}</p>
                     <div className="grid grid-cols-3 gap-2 text-xs border p-2 rounded-md bg-background">
                       <div><strong>AC:</strong> {formatArmorClass(selectedMonster.armor_class)}</div>
                       <div><strong>HP:</strong> {selectedMonster.hit_points} ({selectedMonster.hit_points_roll})</div>
