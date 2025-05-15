@@ -2,16 +2,16 @@
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog as UIDialog, DialogContent as UIDialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter as UIDialogFooter } from "@/components/ui/dialog"; // Renamed to avoid conflict
+import { Dialog as UIDialog, DialogContent as UIDialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter as UIDialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, ChevronsRightIcon, Skull } from "lucide-react";
+import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, ChevronsRightIcon, Skull, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant } from "@/lib/types";
@@ -73,7 +73,7 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
   const [activeTab, setActiveTab] = useState(defaultTab);
   useEffect(() => {
     setActiveTab(defaultTab);
-  }, [defaultTab, open]); // Also reset if drawer re-opens with different default
+  }, [defaultTab, open]); 
 
 
   // --- Dice Roller Logic ---
@@ -213,9 +213,6 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
   
   const handleAddEnemy = () => {
     if (!enemyName.trim()) {
-      // This console.error was causing a test failure as it's not a user-facing error.
-      // User is prevented from clicking by disabled state.
-      // console.error("Missing Information: Please enter enemy name.");
       return;
     }
     const quantity = parseInt(enemyQuantityInput) || 1; if (quantity <= 0) return;
@@ -290,12 +287,7 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        {/* This div wrapper makes space for the vertical close bar */}
         <div className="flex flex-col h-full pr-8"> 
-          <SheetHeader className="p-4 border-b shrink-0">
-            <SheetTitle>DM Tools</SheetTitle>
-          </SheetHeader>
-
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
             <div className="p-4 border-b shrink-0">
               <TabsList className="grid w-full grid-cols-2">
@@ -304,7 +296,6 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
               </TabsList>
             </div>
 
-            {/* This div will contain the scrollable content of the active tab */}
             <div className="flex-grow overflow-auto">
               <TabsContent value={DICE_ROLLER_TAB_ID} className="data-[state=active]:flex flex-col h-full">
                 <div className="p-4 space-y-4 flex-grow flex flex-col">
@@ -329,9 +320,18 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
                       {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
                       <div className="space-y-3">
                         {rollLog.map(entry => (
-                          <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm transition-all", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
-                            <p className="text-2xl font-bold text-primary">{entry.resultText}</p>
-                            <p className="text-xs text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: entry.detailText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+                          <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm transition-all", entry.isRolling ? "opacity-70" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
+                            {entry.isRolling ? (
+                              <div className="flex items-center justify-center h-10">
+                                <Dice5 className="h-6 w-6 animate-spin text-primary" />
+                                <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-2xl font-bold text-primary">{entry.resultText}</p>
+                                <p className="text-xs text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: entry.detailText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -400,10 +400,6 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
                   )}
               </TabsContent>
             </div>
-            
-            <SheetFooter className="p-4 border-t shrink-0">
-                {/* Shared footer for combined drawer if needed */}
-            </SheetFooter>
           </Tabs>
         </div>
         
@@ -445,3 +441,5 @@ export function CombinedToolDrawer({ open, onOpenChange, defaultTab }: CombinedT
     </>
   );
 }
+
+    
