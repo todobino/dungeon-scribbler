@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, HelpCircle, Library, Users, Loader2, Trash2, Edit3 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogClose, DialogContent as UIDialogContent, DialogDescription as UIDialogDescription, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogFooter as UIDialogFooter } from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -237,8 +237,9 @@ export default function StorySoFarRefactoredPage() {
     if (currentSessionPlotPoints.length === 0) {
         toast({
             title: "Cannot Advance Empty Session",
-            description: "Please add at least one plot point to the current session before advancing, or use the clear log option if you wish to restart.",
+            description: "Please add at least one plot point to the current session before advancing.",
             variant: "destructive",
+            duration: 5000,
         });
         return;
     }
@@ -409,7 +410,7 @@ export default function StorySoFarRefactoredPage() {
         <CardHeader>
           <Library className="mx-auto h-16 w-16 text-muted-foreground" />
           <CardTitle className="mt-4">No Active Campaign</CardTitle>
-          <CardDescription>Please select or create a campaign to manage its story.</CardDescription>
+          <UIDialogDescription>Please select or create a campaign to manage its story.</UIDialogDescription>
         </CardHeader>
         <CardContent>
           <Button asChild>
@@ -574,7 +575,7 @@ export default function StorySoFarRefactoredPage() {
           <Card> {/* AI Story Tools Card */}
             <CardHeader>
               <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary" />AI Story Tools</CardTitle>
-              <CardDescription>Generate a summary of the entire campaign or adjust detail level for new summaries.</CardDescription>
+              <UIDialogDescription>Generate a summary of the entire campaign or adjust detail level for new summaries.</UIDialogDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -628,7 +629,7 @@ export default function StorySoFarRefactoredPage() {
             <Card className="bg-primary/10 border-primary">
               <CardHeader>
                 <CardTitle className="text-primary">Generated Full Campaign Summary</CardTitle>
-                <CardDescription>Detail Level: {summaryDetailLevel}</CardDescription>
+                <UIDialogDescription>Detail Level: {summaryDetailLevel}</UIDialogDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{fullCampaignSummary}</p>
@@ -638,12 +639,12 @@ export default function StorySoFarRefactoredPage() {
         </div>
       </div>
 
-      <Dialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Plot Point</DialogTitle>
-            <DialogDescription>Modify the text for this plot point.</DialogDescription>
-          </DialogHeader>
+      <UIDialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
+        <UIDialogContent>
+          <UIDialogHeader>
+            <UIDialogTitle>Edit Plot Point</UIDialogTitle>
+            <UIDialogDescription>Modify the text for this plot point.</UIDialogDescription>
+          </UIDialogHeader>
           <div className="py-4">
             <Textarea
               value={editedPlotPointText}
@@ -651,37 +652,37 @@ export default function StorySoFarRefactoredPage() {
               rows={4}
             />
           </div>
-          <DialogFooter>
+          <UIDialogFooter>
             <Button variant="outline" onClick={() => setIsEditPlotPointDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveEditedPlotPoint} disabled={!editedPlotPointText.trim()}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UIDialogFooter>
+        </UIDialogContent>
+      </UIDialog>
 
       <AlertDialog open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Plot Point?</DialogTitle>
-            <DialogDescription>
+        <UIAlertDialogContent>
+          <UIAlertDialogHeader>
+            <UIAlertDialogTitle>Delete Plot Point?</UIAlertDialogTitle>
+            <UIAlertDialogDescription>
               Are you sure you want to delete this plot point? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </UIAlertDialogDescription>
+          </UIAlertDialogHeader>
+          <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsDeletePlotPointConfirmOpen(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeletePlotPoint} className={buttonVariants({variant: "destructive"})}>Delete</AlertDialogAction>
-          </DialogFooter>
-        </DialogContent>
+          </UIAlertDialogFooter>
+        </UIAlertDialogContent>
       </AlertDialog>
 
       <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+        <UIAlertDialogContent>
+          <UIAlertDialogHeader>
+            <UIAlertDialogTitle>Are you absolutely sure?</UIAlertDialogTitle>
+            <UIAlertDialogDescription>
               This action cannot be undone. This will permanently delete ALL plot points and summaries for the campaign "{activeCampaign?.name}".
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
+            </UIAlertDialogDescription>
+          </UIAlertDialogHeader>
+          <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsClearLogConfirm1Open(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => { setIsClearLogConfirm1Open(false); setIsClearLogConfirm2Open(true); }}
@@ -689,23 +690,23 @@ export default function StorySoFarRefactoredPage() {
             >
               Proceed to Final Confirmation
             </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+          </UIAlertDialogFooter>
+        </UIAlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
+      <UIDialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
         if (!isOpen) {
           setDeleteConfirmInput("");
         }
         setIsClearLogConfirm2Open(isOpen);
       }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Final Confirmation to Delete Log</DialogTitle>
-            <DialogDescription>
+        <UIDialogContent>
+          <UIDialogHeader>
+            <UIDialogTitle>Final Confirmation to Delete Log</UIDialogTitle>
+            <UIDialogDescription>
               To permanently delete the entire Adventure Recap for "{activeCampaign?.name}", please type "DELETE" in the box below.
-            </DialogDescription>
-          </DialogHeader>
+            </UIDialogDescription>
+          </UIDialogHeader>
           <div className="py-4">
             <Input
               value={deleteConfirmInput}
@@ -714,7 +715,7 @@ export default function StorySoFarRefactoredPage() {
               className="border-destructive focus-visible:ring-destructive"
             />
           </div>
-          <DialogFooter>
+          <UIDialogFooter>
             <Button variant="outline" onClick={() => { setIsClearLogConfirm2Open(false); setDeleteConfirmInput(""); }}>Cancel</Button>
             <Button
               variant="destructive"
@@ -723,17 +724,17 @@ export default function StorySoFarRefactoredPage() {
             >
               Confirm Deletion
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UIDialogFooter>
+        </UIDialogContent>
+      </UIDialog>
 
 
-      <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary" />How to Use: Adventure Recap</DialogTitle>
-            <DialogDescription>Track your campaign's progress and generate summaries.</DialogDescription>
-          </DialogHeader>
+      <UIDialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+        <UIDialogContent className="max-w-lg">
+          <UIDialogHeader>
+            <UIDialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary" />How to Use: Adventure Recap</UIDialogTitle>
+            <UIDialogDescription>Track your campaign's progress and generate summaries.</UIDialogDescription>
+          </UIDialogHeader>
           <ScrollArea className="max-h-[60vh] pr-3">
             <div className="text-sm text-muted-foreground space-y-3 py-4">
               <p>1. Log key events as "Plot Points" for the <strong className="text-foreground">current session ({currentSessionNumber})</strong> using the input field on the right.</p>
@@ -756,13 +757,13 @@ export default function StorySoFarRefactoredPage() {
               <p>5. All data is saved per campaign to your browser's local storage.</p>
             </div>
           </ScrollArea>
-          <DialogFooter>
+          <UIDialogFooter>
             <DialogClose asChild>
               <Button>Close</Button>
             </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </UIDialogFooter>
+        </UIDialogContent>
+      </UIDialog>
     </div>
     </TooltipProvider>
   );
