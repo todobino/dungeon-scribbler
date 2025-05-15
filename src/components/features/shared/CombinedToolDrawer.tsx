@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog as UIDialog, DialogContent as UIDialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter as UIDialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, ChevronsRightIcon, Skull, Loader2 } from "lucide-react";
+import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, ChevronsRightIcon, Skull, Loader2, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry } from "@/lib/types";
@@ -287,11 +287,17 @@ export function CombinedToolDrawer({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
             <div className="p-4 border-b shrink-0 bg-primary text-primary-foreground">
               <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
-                <TabsTrigger value={DICE_ROLLER_TAB_ID} className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground">
+                <TabsTrigger 
+                    value={DICE_ROLLER_TAB_ID} 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground"
+                >
                     <Dice5 className="h-4 w-4"/>Dice Roller
                 </TabsTrigger>
-                <TabsTrigger value={COMBAT_TRACKER_TAB_ID} className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground">
-                    <ListOrdered className="h-4 w-4"/>Combat Tracker
+                <TabsTrigger 
+                    value={COMBAT_TRACKER_TAB_ID} 
+                    className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground"
+                >
+                    <Swords className="h-4 w-4"/>Combat Tracker
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -323,10 +329,10 @@ export function CombinedToolDrawer({
                         {rollLog.map(entry => (
                           <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm transition-all", entry.isRolling ? "opacity-70" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
                             {entry.isRolling ? (
-                              <div className="flex items-center justify-center h-10">
-                                <Dice5 className="h-6 w-6 animate-spin text-primary" />
-                                <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
-                              </div>
+                               <div className="flex items-center justify-center h-10">
+                                 <Dice5 className="h-6 w-6 animate-spin text-primary" />
+                                 <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
+                               </div>
                             ) : (
                               <>
                                 <p className="text-2xl font-bold text-primary">{entry.resultText}</p>

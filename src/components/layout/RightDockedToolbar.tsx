@@ -10,12 +10,13 @@ import { TOOLBAR_ITEMS, COMBINED_TOOLS_DRAWER_ID, MONSTER_MASH_DRAWER_ID, DICE_R
 import type { RollLogEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, XCircle, Hexagon, VenetianMask } from "lucide-react"; 
+import { Dice5, Swords, Skull, XCircle, Hexagon, VenetianMask, ListOrdered } from "lucide-react"; 
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
 
+  // State for Dice Roller Log (lifted from CombinedToolDrawer)
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
 
@@ -23,18 +24,21 @@ export function RightDockedToolbar() {
     const idToUse = entryIdToUpdate || getNewRollId();
     setRollLog(prevLog => {
       if (entryIdToUpdate && prevLog.find(entry => entry.id === entryIdToUpdate)) {
+        // Update existing entry
         return prevLog.map(entry => 
             entry.id === entryIdToUpdate 
-            ? {...entry, ...rollData, isRolling: false } 
+            ? {...entry, ...rollData, isRolling: false } // Ensure isRolling is set to false on update
             : entry
         );
       } else {
+        // Add new entry
         const newEntry: RollLogEntry = {
             id: idToUse,
             ...rollData,
-            isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
+            isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false, // Default to false if not specified
         };
-        return [newEntry, ...prevLog.slice(0, 49)]; 
+        const updatedLog = [newEntry, ...prevLog];
+        return updatedLog.slice(0, 10); // Keep only the last 10 entries
       }
     });
   }, [getNewRollId]);
@@ -42,6 +46,7 @@ export function RightDockedToolbar() {
   const handleClearRollLog = useCallback(() => {
     setRollLog([]);
   }, []);
+
 
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
@@ -122,3 +127,4 @@ export function RightDockedToolbar() {
     </>
   );
 }
+
