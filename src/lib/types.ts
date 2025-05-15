@@ -126,6 +126,17 @@ export interface MonsterSummary {
   url: string;
 }
 
+// Enriched summary for local caching with CR
+export interface MonsterSummaryWithCR {
+  index: string;
+  name: string;
+  cr?: number;     // Challenge Rating
+  type?: string;   // Monster type (e.g., "aberration", "beast")
+  // url field is not strictly needed if we always fetch by index, but keeping it for now
+  url?: string; 
+}
+
+
 export interface ArmorClass {
   type: string;
   value: number;
@@ -228,17 +239,17 @@ export interface MonsterDetail extends MonsterSummary {
   condition_immunities: { index: string; name: string; url: string }[];
   senses: Sense;
   languages: string;
-  challenge_rating: number;
+  challenge_rating: number; // CR is a number here
   xp: number;
   special_abilities?: SpecialAbility[];
   actions?: MonsterAction[];
   legendary_actions?: LegendaryAction[];
-  image?: string; // e.g. /api/images/monsters/aboleth.png - need to prepend base URL
+  image?: string; 
 }
 
 export interface FavoriteMonster {
   index: string;
   name: string;
-  cr: number;
+  cr: number; // Store CR as a number
   type: string;
 }

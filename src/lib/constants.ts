@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, ListOrdered, ArrowUpDown } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -182,12 +182,12 @@ export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = `${SHARED_PREFIX}ActiveCampaignId`
 export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Party_`;
 export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Factions_`;
 export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Locations_`;
-export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`; // Changed for clarity
+export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`; 
 export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
 
-// Refactored "Adventure Recap" Page Keys
+// Adventure Recap Page Keys
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
 export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_CurrentSession_`;
 export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionSummaries_`;
@@ -195,8 +195,9 @@ export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = `${SHARED_PREFIX}Adventu
 export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_FullCampaignSummary_`;
 export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SummaryDetailLevel_`;
 
-// Refactored "Next Session Goals" Page Keys
+// Next Session Goals (Refactored) Page Keys
 export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}NextSessionGoals_RefactoredGoals_`;
 
 // Monster Mash Feature Key
 export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Favorites`;
+export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_FullIndexWithCR`; // New key for cached full index
