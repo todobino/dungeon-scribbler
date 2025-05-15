@@ -34,7 +34,7 @@ function getCurrentPageTitle(pathname: string): string {
   if (pathname === "/campaign-management" && !activeItem) {
     // For campaign management, it might be better to not show a page title if activeCampaign name is already there.
     // Or, show "Manage Campaigns" if no campaign is active in the dropdown.
-    return ""; // Let's keep it clean if the campaign name is the focus.
+    return ""; 
   }
   return activeItem ? activeItem.label : "";
 }
@@ -56,10 +56,7 @@ export function PageHeader() {
 
   return (
     <div className="flex items-center h-[3.25rem] px-4 sm:px-6 lg:px-8 border-b bg-card text-card-foreground sticky top-0 z-30 shrink-0">
-      <span className="font-semibold text-lg">{APP_NAME}</span>
-      
-      <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
-
+      {/* Removed APP_NAME and initial ChevronRight */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="px-2 py-1 h-auto text-lg hover:bg-muted/50 data-[state=open]:bg-muted/50">
