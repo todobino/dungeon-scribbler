@@ -11,7 +11,7 @@ import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, H
 import { useState, useEffect, useCallback } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -70,7 +70,7 @@ export default function StorySoFarRefactoredPage() {
 
   useEffect(() => {
     if (isLoadingCampaigns) {
-      setIsLoadingData(true); // Still loading campaign context
+      setIsLoadingData(true); 
       return;
     }
 
@@ -264,7 +264,7 @@ export default function StorySoFarRefactoredPage() {
   const handleGenerateFullCampaignSummary = async () => {
     if (!activeCampaign || plotPoints.length === 0) return;
     setIsGeneratingGlobalSummary(true);
-    setFullCampaignSummary(null); // Clear previous summary before generating
+    setFullCampaignSummary(null); 
     await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
     const allPlotPointsText = plotPoints.map(p => `S${p.sessionNumber}: ${p.text}`).join('\\n');
     const newSummary = `AI Generated Full Story Summary (Campaign: ${activeCampaign.name}, Detail: ${summaryDetailLevel}): The grand saga, woven from ${plotPoints.length} total plot points, unfolds thusly: ${allPlotPointsText.substring(0, 150)}... An epic indeed!`;
@@ -307,7 +307,6 @@ export default function StorySoFarRefactoredPage() {
         ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       );
       clearFullCampaignSummaryCache();
-      // If the edited point was in a past session, re-generate its summary
       if (editingPlotPoint.sessionNumber < currentSessionNumber) {
         handleRegenerateSessionSummary(editingPlotPoint.sessionNumber);
       }
@@ -455,8 +454,8 @@ export default function StorySoFarRefactoredPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow min-h-0">
-         <div className="lg:col-span-2 flex flex-col h-full"> {/* Left Column Wrapper */}
-            <Card className="flex flex-col flex-grow"> {/* Campaign Log Card */}
+         <div className="lg:col-span-2 flex flex-col h-full">
+            <Card className="flex flex-col flex-grow">
                 <CardHeader className="shrink-0">
                   <CardTitle>Campaign Log</CardTitle>
                 </CardHeader>
@@ -556,8 +555,8 @@ export default function StorySoFarRefactoredPage() {
         </div>
 
 
-        <div className="lg:col-span-1 space-y-6 shrink-0"> {/* Right Column */}
-          <Card> {/* Add Plot Point Card */}
+        <div className="lg:col-span-1 space-y-6 shrink-0">
+          <Card>
             <CardHeader>
               <CardTitle>Add Plot Point to Current Session ({currentSessionNumber})</CardTitle>
             </CardHeader>
@@ -578,7 +577,7 @@ export default function StorySoFarRefactoredPage() {
             </CardFooter>
           </Card>
 
-          <Card> {/* AI Story Tools Card */}
+          <Card> 
             <CardHeader>
               <CardTitle className="flex items-center"><Brain className="mr-2 h-5 w-5 text-primary" />AI Story Tools</CardTitle>
               <CardDescription>Generate a summary of the entire campaign or adjust detail level for new summaries.</CardDescription>
@@ -665,18 +664,20 @@ export default function StorySoFarRefactoredPage() {
         </DialogContent>
       </Dialog>
 
-      <UIAlertDialogContent open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
-        <UIAlertDialogHeader>
-          <UIAlertDialogTitle>Delete Plot Point?</UIAlertDialogTitle>
-          <UIAlertDialogDescription>
-            Are you sure you want to delete this plot point? This action cannot be undone.
-          </UIAlertDialogDescription>
-        </UIAlertDialogHeader>
-        <UIAlertDialogFooter>
-          <AlertDialogCancel onClick={() => setIsDeletePlotPointConfirmOpen(false)}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmDeletePlotPoint} className={buttonVariants({variant: "destructive"})}>Delete</AlertDialogAction>
-        </UIAlertDialogFooter>
-      </UIAlertDialogContent>
+      <AlertDialog open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
+        <UIAlertDialogContent>
+          <UIAlertDialogHeader>
+            <UIAlertDialogTitle>Delete Plot Point?</UIAlertDialogTitle>
+            <UIAlertDialogDescription>
+              Are you sure you want to delete this plot point? This action cannot be undone.
+            </UIAlertDialogDescription>
+          </UIAlertDialogHeader>
+          <UIAlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeletePlotPointConfirmOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeletePlotPoint} className={buttonVariants({variant: "destructive"})}>Delete</AlertDialogAction>
+          </UIAlertDialogFooter>
+        </UIAlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
         <UIAlertDialogContent>
