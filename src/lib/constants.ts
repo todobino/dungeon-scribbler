@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass } from 'lucide-react';
+import { Users, UserCog, BookText, Dice5, MapIcon, LayoutDashboard, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -47,6 +47,14 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
  { label: 'Settings', href: '/settings', icon: Cog, disabled: true },
 ];
 
+// Toolbar items
+export const TOOLBAR_ITEMS = [
+  { id: 'dice-roller', label: 'Dice Roller', icon: Dice5 },
+  { id: 'initiative-tracker', label: 'Initiative Tracker', icon: ListOrdered },
+  { id: 'monster-mash', label: 'Monster Mash', icon: Swords },
+];
+
+
 export const DND_CLASSES = [
   "Artificer", "Barbarian", "Bard", "Cleric", "Druid", "Fighter",
   "Monk", "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard"
@@ -55,31 +63,31 @@ export const DND_CLASSES = [
 export type DndClass = typeof DND_CLASSES[number];
 
 export const PREDEFINED_COLORS = [
-  { name: 'Red', value: '#ef4444' }, // red-500
-  { name: 'Orange', value: '#f97316' }, // orange-500
-  { name: 'Amber', value: '#f59e0b' }, // amber-500
-  { name: 'Yellow', value: '#eab308' }, // yellow-500
-  { name: 'Lime', value: '#84cc16' }, // lime-500
-  { name: 'Green', value: '#22c55e' }, // green-500
-  { name: 'Emerald', value: '#10b981' }, // emerald-500
-  { name: 'Teal', value: '#14b8a6' }, // teal-500
-  { name: 'Cyan', value: '#06b6d4' }, // cyan-500
-  { name: 'Sky', value: '#0ea5e9' }, // sky-500
-  { name: 'Blue', value: '#3b82f6' }, // blue-500
-  { name: 'Indigo', value: '#6366f1' }, // indigo-500
-  { name: 'Violet', value: '#8b5cf6' }, // violet-500
-  { name: 'Purple', value: '#a855f7' }, // purple-500
-  { name: 'Fuchsia', value: '#d946ef' }, // fuchsia-500
-  { name: 'Pink', value: '#ec4899' }, // pink-500
-  { name: 'Rose', value: '#f43f5e' }, // rose-500
-  { name: 'Slate', value: '#64748b' }, // slate-500
+  { name: 'Red', value: '#ef4444' }, 
+  { name: 'Orange', value: '#f97316' }, 
+  { name: 'Amber', value: '#f59e0b' }, 
+  { name: 'Yellow', value: '#eab308' }, 
+  { name: 'Lime', value: '#84cc16' }, 
+  { name: 'Green', value: '#22c55e' }, 
+  { name: 'Emerald', value: '#10b981' }, 
+  { name: 'Teal', value: '#14b8a6' }, 
+  { name: 'Cyan', value: '#06b6d4' }, 
+  { name: 'Sky', value: '#0ea5e9' }, 
+  { name: 'Blue', value: '#3b82f6' }, 
+  { name: 'Indigo', value: '#6366f1' }, 
+  { name: 'Violet', value: '#8b5cf6' }, 
+  { name: 'Purple', value: '#a855f7' }, 
+  { name: 'Fuchsia', value: '#d946ef' }, 
+  { name: 'Pink', value: '#ec4899' }, 
+  { name: 'Rose', value: '#f43f5e' }, 
+  { name: 'Slate', value: '#64748b' }, 
 ] as const;
 
 export type PredefinedColor = typeof PREDEFINED_COLORS[number];
 
 export const FACTION_REPUTATION_SCALE = {
-  MIN: -5, // Sworn Enemy
-  MAX: 5,  // Sworn Ally
+  MIN: -5, 
+  MAX: 5,  
   STEP: 1,
   LABELS: {
     "-5": "Sworn Enemy",
@@ -102,13 +110,12 @@ export const getFactionReputationLabel = (reputation: number): string => {
 
 export const getFactionReputationColorClass = (reputation: number): string => {
   if (reputation <= -3) return "text-destructive";
-  if (reputation < 0) return "text-orange-500"; // Using a Tailwind color directly
+  if (reputation < 0) return "text-orange-500"; 
   if (reputation === 0) return "text-muted-foreground";
-  if (reputation < 3) return "text-blue-500"; // Using a Tailwind color directly
-  return "text-green-500"; // Using a Tailwind color directly
+  if (reputation < 3) return "text-blue-500"; 
+  return "text-green-500"; 
 };
 
-// CAMPAIGN WIZARD OPTIONS
 export interface CampaignOption {
   value: string;
   description: string;
@@ -168,38 +175,28 @@ export const POWER_BALANCE_OPTIONS: CampaignOption[] = [
   { value: "Power Vacuum", description: "A recent collapse of authority has left a void, with various groups scrambling to fill it." }
 ];
 
-
-// Storage Key Prefixes & Names
 const SHARED_PREFIX = "adventureArchitect_"; 
 
-// Campaign Context Storage Keys
 export const CAMPAIGNS_STORAGE_KEY = `${SHARED_PREFIX}Campaigns`;
 export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = `${SHARED_PREFIX}ActiveCampaignId`;
-export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Characters_`;
-
-// Factions Page Keys
+export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Party_`;
 export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Factions_`;
 export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Locations_`;
-
-// Global NPC List Key
-export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs`; 
-
-// Campaign Journal Page Key
+export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`; // Changed for clarity
 export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}JournalNotes_`;
-
-// Map Integration Page Key
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Maps_`;
-
-// Adventure Recap (Refactored Story So Far) Page Keys
-export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}RefactoredPlotPoints_`;
-export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}RefactoredCurrentSession_`;
-export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}RefactoredSessionSummaries_`;
-export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = `${SHARED_PREFIX}RefactoredSessionViewModes_`;
-export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = `${SHARED_PREFIX}RefactoredFullCampaignSummary_`;
-export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = `${SHARED_PREFIX}RefactoredSummaryDetailLevel_`;
-
-// Next Session Goals (Refactored) Page Keys
-export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}RefactoredGoals_`;
-
-// Campaign Wizard Page Key
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
+
+// Refactored "Adventure Recap" (formerly Story So Far Refactored) Page Keys
+export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
+export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_CurrentSession_`;
+export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionSummaries_`;
+export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionViewModes_`;
+export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_FullCampaignSummary_`;
+export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SummaryDetailLevel_`;
+
+// Refactored "Next Session Goals" Page Keys
+export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}NextSessionGoals_RefactoredGoals_`;
+
+// Monster Mash Feature Key
+export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Favorites`;
