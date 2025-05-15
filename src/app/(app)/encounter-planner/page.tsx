@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Library, Users, Swords, PlusCircle, Trash2, XCircle, Skull, Star, SaveAll, FolderOpen, ListChecks, Edit } from "lucide-react";
+import { Library, Users, Swords, PlusCircle, Trash2, XCircle, Skull, Star, SaveAll, FolderOpen, ListChecks, Edit, MinusCircle } from "lucide-react";
 import { useCampaign } from "@/contexts/campaign-context";
 import type { EncounterMonster, SavedEncounter, FavoriteMonster } from "@/lib/types";
 import { ENCOUNTER_STORAGE_KEY_PREFIX, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY } from "@/lib/constants";
@@ -195,9 +195,10 @@ export default function EncounterPlannerPage() {
   const handleSelectFavorite = (fav: FavoriteMonster) => {
     setMonsterName(fav.name);
     setMonsterCR(formatCRDisplay(fav.cr));
-    setMonsterAC(""); 
-    setMonsterHP("");
+    setMonsterAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
+    setMonsterHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
     setIsFavoriteDialogOpen(false);
+    toast({title: "Favorite Selected", description: `${fav.name} details pre-filled.`});
   };
 
   const handleRemoveMonster = (id: string) => {
@@ -240,8 +241,8 @@ export default function EncounterPlannerPage() {
 
     const existingEncounter = savedEncounters.find(enc => enc.title.toLowerCase() === trimmedTitle.toLowerCase());
     if (existingEncounter) {
-      setConflictingEncounterTitle(existingEncounter.title); // Store the exact title for display
-      setNewEncounterNameForRename(trimmedTitle); // Pre-fill rename input
+      setConflictingEncounterTitle(existingEncounter.title); 
+      setNewEncounterNameForRename(trimmedTitle); 
       setIsDuplicateNameDialogOpen(true);
     } else {
       performSaveEncounter(trimmedTitle, encounterMonsters);
@@ -249,8 +250,8 @@ export default function EncounterPlannerPage() {
   };
   
   const handleDuplicateNameDialogAction = (action: DuplicateNameAction) => {
-    const trimmedOriginalTitle = conflictingEncounterTitle.trim(); // The title that caused conflict
-    const currentTrimmedTitle = currentEncounterTitle.trim(); // Current title in the input field
+    const trimmedOriginalTitle = conflictingEncounterTitle.trim(); 
+    const currentTrimmedTitle = currentEncounterTitle.trim(); 
 
     if (action === "overwrite") {
       const existing = savedEncounters.find(enc => enc.title.toLowerCase() === trimmedOriginalTitle.toLowerCase());
@@ -260,11 +261,11 @@ export default function EncounterPlannerPage() {
     } else if (action === "rename") {
       if (!newEncounterNameForRename.trim()) {
         toast({ title: "New Name Required", description: "Please enter a new name for the encounter.", variant: "destructive" });
-        return; // Keep dialog open
+        return; 
       }
       if (savedEncounters.some(enc => enc.title.toLowerCase() === newEncounterNameForRename.trim().toLowerCase())) {
          toast({ title: "Name Still Exists", description: "That name is also taken. Please choose another.", variant: "destructive" });
-        return; // Keep dialog open
+        return; 
       }
       performSaveEncounter(newEncounterNameForRename.trim(), encounterMonsters);
     } else if (action === "append") {
@@ -290,6 +291,16 @@ export default function EncounterPlannerPage() {
   const handleDeleteSavedEncounter = (id: string) => {
     setSavedEncounters(prev => prev.filter(enc => enc.id !== id));
     toast({ title: "Saved Encounter Deleted" });
+  };
+
+  const handleQuantityChange = (monsterId: string, change: number) => {
+    setEncounterMonsters(prev => 
+      prev.map(monster => 
+        monster.id === monsterId 
+          ? { ...monster, quantity: Math.max(1, monster.quantity + change) } 
+          : monster
+      )
+    );
   };
 
 
@@ -335,7 +346,7 @@ export default function EncounterPlannerPage() {
                 <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle>Select Favorite Monster</DialogTitle>
-                    <DialogDescription>Choose a monster from your Monster Mash favorites. AC & HP will need to be entered manually.</DialogDescription>
+                    <DialogDescription>Choose a monster from your Monster Mash favorites. AC & HP will be pre-filled if available.</DialogDescription>
                   </DialogHeader>
                   <ScrollArea className="max-h-[60vh] mt-4">
                     {favoritesList.length === 0 ? (
@@ -430,17 +441,26 @@ export default function EncounterPlannerPage() {
                 <ul className="space-y-3">
                   {encounterMonsters.map((monster) => (
                     <li key={monster.id} className="flex justify-between items-center p-3 border rounded-md shadow-sm bg-card">
-                      <div>
-                        <p className="font-medium">{monster.name} (x{monster.quantity})</p>
-                        <div className="text-xs text-muted-foreground flex gap-2">
+                      <div className="flex-grow">
+                        <p className="font-medium">{monster.name}</p>
+                        <div className="text-xs text-muted-foreground flex gap-2 flex-wrap">
                           {monster.cr && <span>CR: {monster.cr}</span>}
                           {monster.ac && <span>AC: {monster.ac}</span>}
                           {monster.hp && <span>HP: {monster.hp}</span>}
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => handleRemoveMonster(monster.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleQuantityChange(monster.id, -1)} disabled={monster.quantity <= 1}>
+                            <MinusCircle className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm font-medium w-6 text-center">{monster.quantity}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleQuantityChange(monster.id, 1)}>
+                            <PlusCircle className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveMonster(monster.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -561,5 +581,3 @@ export default function EncounterPlannerPage() {
     </div>
   );
 }
-
-    

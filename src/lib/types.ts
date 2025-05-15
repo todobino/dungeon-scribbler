@@ -255,6 +255,9 @@ export interface FavoriteMonster {
   cr: number;
   type: string;
   source: 'api' | 'homebrew';
+  acValue?: number;
+  acType?: string;
+  hpValue?: number;
 }
 
 export interface RollLogEntry {
@@ -322,16 +325,16 @@ export interface SpellSummary {
 export interface SpellDetail {
   index: string;
   name: string;
-  desc: string[] | string; // string for homebrew input, string[] for API
-  higher_level?: string[] | string; // string for homebrew input
+  desc: string[] | string; 
+  higher_level?: string[] | string; 
   range: string;
-  components: string[] | string; // string for homebrew input (e.g. "V, S, M (diamond dust)")
-  material?: string; // API uses this, for homebrew it can be part of components string
+  components: string[] | string; 
+  material?: string; 
   ritual: boolean;
   duration: string;
   concentration: boolean;
   casting_time: string;
-  level: number; // 0 for cantrips
+  level: number; 
   attack_type?: string;
   damage?: {
     damage_type?: {
@@ -345,18 +348,18 @@ export interface SpellDetail {
   school: {
     index: string;
     name: string;
-    url?: string; // API has URL, homebrew just name
+    url?: string; 
   };
-  classes: { // API provides array of objects
+  classes: { 
     index: string;
     name: string;
     url: string;
-  }[] | string; // For homebrew, allow simple comma-separated string
-  subclasses?: { // API provides array of objects
+  }[] | string; 
+  subclasses?: { 
     index: string;
     name: string;
     url: string;
-  }[] | string; // For homebrew, allow simple comma-separated string
+  }[] | string; 
   area_of_effect?: {
     type: string;
     size: number;
@@ -377,17 +380,17 @@ export interface SpellDetail {
 
 export interface HomebrewSpellFormData {
   name: string;
-  level: string; // Input as string, parse to number
+  level: string; 
   casting_time: string;
   range: string;
-  components: string; // e.g., "V, S, M (diamond dust worth 100 gp)"
+  components: string; 
   duration: string;
   concentration: boolean;
-  school: string; // School name
-  desc: string; // Single textarea for description
-  higher_level?: string; // Single textarea
-  classes?: string; // Comma-separated string
-  subclasses?: string; // Comma-separated string
+  school: string; 
+  desc: string; 
+  higher_level?: string; 
+  classes?: string; 
+  subclasses?: string; 
 }
 
 export interface EncounterMonster {

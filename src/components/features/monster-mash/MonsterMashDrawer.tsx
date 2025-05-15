@@ -10,7 +10,8 @@ import {
   MONSTER_TYPES,
   MONSTER_SIZES,
   MONSTER_AC_TYPES,
-  MONSTER_ALIGNMENTS
+  MONSTER_ALIGNMENTS,
+  ENCOUNTER_STORAGE_KEY_PREFIX
 } from "@/lib/constants";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,9 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cva } from "class-variance-authority";
+import { useToast } from "@/hooks/use-toast";
+import { useCampaign } from "@/contexts/campaign-context";
+import type { EncounterMonster } from "@/lib/types";
 
 
 const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
@@ -114,13 +118,21 @@ const initialHomebrewFormData: HomebrewMonsterFormData = {
 };
 
 const monsterDetailToFormData = (monster: MonsterDetail): HomebrewMonsterFormData => {
+  let acValue = "10";
+  let acType = "Natural Armor";
+  if (monster.armor_class && monster.armor_class.length > 0) {
+    const firstAc = monster.armor_class[0];
+    acValue = firstAc.value.toString();
+    acType = firstAc.type;
+  }
+
   return {
     name: monster.name || "",
     challenge_rating: monster.challenge_rating !== undefined ? formatCRDisplay(monster.challenge_rating) : "",
     type: monster.type || "",
     size: monster.size || "",
-    armor_class_value: monster.armor_class && monster.armor_class[0] ? monster.armor_class[0].value.toString() : "10",
-    armor_class_type: monster.armor_class && monster.armor_class[0] ? monster.armor_class[0].type : "Natural Armor",
+    armor_class_value: acValue,
+    armor_class_type: acType,
     hit_points_value: monster.hit_points?.toString() || "10",
     hit_points_dice: monster.hit_dice || "",
     speed: typeof monster.speed === 'string' ? monster.speed : (monster.speed ? Object.entries(monster.speed).map(([k, v]) => `${k} ${v}`).join(', ') : "30 ft."),
@@ -146,6 +158,8 @@ const monsterDetailToFormData = (monster: MonsterDetail): HomebrewMonsterFormDat
 
 
 export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps) {
+  const { activeCampaign } = useCampaign();
+  const { toast } = useToast();
   const [allMonstersData, setAllMonstersData] = useState<MonsterSummaryWithCR[]>([]);
   const [filteredMonsters, setFilteredMonsters] = useState<MonsterSummaryWithCR[]>([]);
   const [selectedMonster, setSelectedMonster] = useState<MonsterDetail | null>(null);
@@ -198,7 +212,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
      if (minCRSlider !== CR_SLIDER_MIN || maxCRSlider !== CR_SLIDER_MAX) {
         tempFiltered = tempFiltered.filter(monster => {
             const monsterCRNum = monster.cr; 
-            if (monsterCRNum === undefined || monsterCRNum === -1) return false; 
+            if (monsterCRNum === undefined || monsterCRNum === -1) return false; // Exclude if no CR and filter is active
             return monsterCRNum >= minCRSlider && monsterCRNum <= maxCRSlider;
         });
     }
@@ -237,7 +251,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       const summaries: MonsterSummary[] = summaryData.results || [];
 
       const enrichedMonstersPromises = summaries.map(async (summary, index) => {
-        await new Promise(resolve => setTimeout(resolve, index * 5)); 
+        await new Promise(resolve => setTimeout(resolve, index * 10)); 
         try {
           const detailResponse = await fetch(`${DND5E_API_BASE_URL}${summary.url}`);
           if (detailResponse.ok) {
@@ -251,6 +265,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
               source: 'api' as 'api'
             };
           }
+          console.warn(`Failed to fetch detail for ${summary.name}, using summary only.`);
           return { index: summary.index, name: summary.name, url: summary.url, source: 'api' as 'api', cr: undefined, type: undefined };
         } catch (detailError) {
             console.error(`Detail fetch error for ${summary.name}:`, detailError);
@@ -358,7 +373,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       }
       setPendingMonsterFetchArgs(null);
     }
-    if (isCreatingHomebrew && pendingMonsterFetchArgs?.index) { // If action was to open a new form
+    if (isCreatingHomebrew && pendingMonsterFetchArgs?.index) { 
         setIsCreatingHomebrew(false);
         setEditingHomebrewIndex(null);
         setHomebrewFormData(initialHomebrewFormData);
@@ -382,7 +397,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       setIsHomebrewFormDirty(false);
       proceedWithPendingAction();
     } else { // cancel
-      setPendingMonsterFetchArgs(null); // Clear pending action if user cancels
+      setPendingMonsterFetchArgs(null); 
     }
   };
 
@@ -398,7 +413,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     };
 
     if (!skipDirtyCheck && isCreatingHomebrew && isHomebrewFormDirty) {
-        setPendingMonsterFetchArgs(null); // No pending fetch, just trying to open a new form
+        setPendingMonsterFetchArgs(null); 
         setIsUnsavedChangesDialogOpen(true);
     } else {
         action();
@@ -469,46 +484,40 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     if (existingFav) {
       setFavorites(favorites.filter(f => f.index !== monsterToToggle.index));
     } else {
-      let crNum: number | undefined;
-      let typeValue: string | undefined;
-      let sourceValue: 'api' | 'homebrew' = (monsterToToggle as MonsterSummaryWithCR).source || ( (monsterToToggle as MonsterDetail).isHomebrew ? 'homebrew' : 'api' );
+      let monsterDetailToSave: MonsterDetail;
 
-      if ('challenge_rating' in monsterToToggle && monsterToToggle.challenge_rating !== undefined) { 
-        crNum = crToNumber(monsterToToggle.challenge_rating);
-        typeValue = monsterToToggle.type;
-      } else if ('cr' in monsterToToggle && monsterToToggle.cr !== undefined) { 
-        crNum = monsterToToggle.cr;
-        typeValue = monsterToToggle.type;
+      if (!('hit_points' in monsterToToggle) || !monsterToToggle.armor_class) { // If it's a summary or incomplete detail
+        try {
+          const detailResponse = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToToggle.index}`);
+          if (!detailResponse.ok) {
+            setError(`Failed to fetch details for ${monsterToToggle.name} to favorite.`); return;
+          }
+          monsterDetailToSave = await detailResponse.json();
+        } catch (e) { setError(`Error fetching details for ${monsterToToggle.name} to favorite.`); return; }
       } else {
-         // Attempt to fetch full details if CR isn't on the summary (should be rare after index build)
-         try {
-            const detailResponse = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${monsterToToggle.index}`);
-            if(detailResponse.ok) {
-                const detailData: MonsterDetail = await detailResponse.json();
-                crNum = crToNumber(detailData.challenge_rating);
-                typeValue = detailData.type;
-                sourceValue = 'api';
-            } else {
-                setError(`CR undefined for ${monsterToToggle.name}. Cannot add to favorites without fetching details.`);
-                return;
-            }
-         } catch (e) {
-            setError(`Error fetching details for ${monsterToToggle.name} to favorite.`);
-            return;
-         }
+        monsterDetailToSave = monsterToToggle as MonsterDetail;
       }
       
+      const crNum = crToNumber(monsterDetailToSave.challenge_rating);
       if (crNum === undefined || crNum === -1) {
-         setError(`CR value invalid for ${monsterToToggle.name}. Cannot add to favorites.`);
-         return;
+         setError(`CR value invalid for ${monsterDetailToSave.name}. Cannot add to favorites.`); return;
       }
       
+      let acValue, acType;
+      if (monsterDetailToSave.armor_class && monsterDetailToSave.armor_class.length > 0) {
+          acValue = monsterDetailToSave.armor_class[0].value;
+          acType = monsterDetailToSave.armor_class[0].type;
+      }
+
       const newFavorite: FavoriteMonster = {
-        index: monsterToToggle.index,
-        name: monsterToToggle.name,
+        index: monsterDetailToSave.index,
+        name: monsterDetailToSave.name,
         cr: crNum, 
-        type: typeValue || "Unknown Type",
-        source: sourceValue
+        type: monsterDetailToSave.type || "Unknown Type",
+        source: monsterDetailToSave.source || (monsterDetailToSave.isHomebrew ? 'homebrew' : 'api'),
+        acValue: acValue,
+        acType: acType,
+        hpValue: monsterDetailToSave.hit_points
       };
       setFavorites(prevFavs => [...prevFavs, newFavorite]);
     }
@@ -518,28 +527,23 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
  useEffect(() => {
     if (isCreatingHomebrew) {
-      const currentDataString = JSON.stringify(homebrewFormData);
-      const initialDataString = editingHomebrewIndex 
-        ? JSON.stringify(initialEditFormData) 
-        : JSON.stringify(initialHomebrewFormData);
-
-      if (currentDataString !== initialDataString) {
-        if (!isHomebrewFormDirty) setIsHomebrewFormDirty(true);
-      } else {
-        if (isHomebrewFormDirty) setIsHomebrewFormDirty(false);
+      if (editingHomebrewIndex && initialEditFormData) {
+        setIsHomebrewFormDirty(JSON.stringify(homebrewFormData) !== JSON.stringify(initialEditFormData));
+      } else if (!editingHomebrewIndex) {
+        setIsHomebrewFormDirty(JSON.stringify(homebrewFormData) !== JSON.stringify(initialHomebrewFormData));
       }
+    } else {
+      setIsHomebrewFormDirty(false);
     }
-  }, [homebrewFormData, initialEditFormData, initialHomebrewFormData, isCreatingHomebrew, editingHomebrewIndex, isHomebrewFormDirty]);
+  }, [homebrewFormData, initialEditFormData, initialHomebrewFormData, isCreatingHomebrew, editingHomebrewIndex]);
 
 
   const handleHomebrewFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setHomebrewFormData(prev => ({ ...prev, [name]: value }));
-    if (!isHomebrewFormDirty) setIsHomebrewFormDirty(true);
   };
   const handleHomebrewSelectChange = (name: keyof HomebrewMonsterFormData, value: string) => {
     setHomebrewFormData(prev => ({ ...prev, [name]: value }));
-    if (!isHomebrewFormDirty) setIsHomebrewFormDirty(true);
   };
 
   const handleSaveHomebrewMonster = () => {
@@ -626,7 +630,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
   const handleCancelHomebrewForm = () => {
      if (isHomebrewFormDirty) {
         setIsUnsavedChangesDialogOpen(true);
-        setPendingMonsterFetchArgs(null); // No specific fetch pending when cancelling form
+        setPendingMonsterFetchArgs(null); 
     } else {
         setIsCreatingHomebrew(false);
         setEditingHomebrewIndex(null);
@@ -738,6 +742,36 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     })
   , [homebrewMonsters, homebrewSortConfig]);
 
+  const handleSendToEncounter = () => {
+    if (!selectedMonster || !activeCampaign) {
+      toast({ title: "Error", description: "No monster selected or no active campaign.", variant: "destructive" });
+      return;
+    }
+    const encounterKey = `${ENCOUNTER_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
+    try {
+      const storedEncounter = localStorage.getItem(encounterKey);
+      let currentEncounter: { title: string; monsters: EncounterMonster[] } = storedEncounter 
+        ? JSON.parse(storedEncounter) 
+        : { title: "New Encounter", monsters: [] };
+
+      const monsterToAdd: EncounterMonster = {
+        id: `${selectedMonster.index}-${Date.now()}`,
+        name: selectedMonster.name,
+        quantity: 1,
+        cr: formatCRDisplay(selectedMonster.challenge_rating),
+        ac: selectedMonster.armor_class && selectedMonster.armor_class.length > 0 ? selectedMonster.armor_class[0].value.toString() : undefined,
+        hp: selectedMonster.hit_points?.toString(),
+      };
+      currentEncounter.monsters.push(monsterToAdd);
+      localStorage.setItem(encounterKey, JSON.stringify(currentEncounter));
+      toast({ title: "Monster Sent!", description: `${selectedMonster.name} added to current encounter draft.` });
+    } catch (e) {
+      console.error("Error sending monster to encounter:", e);
+      toast({ title: "Error", description: "Could not send monster to encounter.", variant: "destructive" });
+    }
+  };
+
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
@@ -771,7 +805,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             {/* Left Sidebar */}
             <div className="w-1/5 min-w-[200px] max-w-[280px] border-r bg-card flex flex-col overflow-y-auto">
                 <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
-                {/* Favorites Section */}
                 <AccordionItem value="favorites-section">
                      <div className="flex justify-between items-center w-full px-3 py-2 bg-muted rounded-t-md">
                         <AccordionTrigger className="py-0 hover:no-underline text-left flex-grow text-lg font-semibold text-foreground">
@@ -819,7 +852,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* Homebrew Section */}
                 <AccordionItem value="homebrew-section">
                     <div className="flex justify-between items-center w-full px-3 py-2 bg-muted">
                         <AccordionTrigger className="py-0 hover:no-underline text-left flex-grow text-lg font-semibold text-foreground">
@@ -850,7 +882,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                     </div>
                     <AccordionContent className="pt-1 pb-0 px-1 space-y-2">
                         <Separator />
-                        <Button variant="outline" className="w-full mt-2" onClick={handleOpenCreateHomebrewForm}>
+                        <Button variant="outline" className="w-full mt-2" onClick={() => handleOpenCreateHomebrewForm()}>
                             <PlusCircle className="mr-2 h-4 w-4" /> Create New Homebrew
                         </Button>
                         <ScrollArea className="h-60">
@@ -989,7 +1021,9 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                                     <Star className={cn("h-5 w-5", isFavorite(selectedMonster.index) && "text-yellow-400 fill-yellow-400", !isFavorite(selectedMonster.index) && "text-muted-foreground/70")}/>
                                     </Button>
                                 </TooltipTrigger><TooltipContent>{isFavorite(selectedMonster.index) ? "Unfavorite" : "Favorite"}</TooltipContent></Tooltip></TooltipProvider>
-                                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><ShieldAlert className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Combat (TBD)</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={handleSendToEncounter} className="h-8 w-8" disabled={!activeCampaign}><ShieldAlert className="h-5 w-5"/></Button>
+                                </TooltipTrigger><TooltipContent>Send to Current Encounter</TooltipContent></Tooltip></TooltipProvider>
                                 <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" disabled className="h-8 w-8"><MapPin className="h-5 w-5"/></Button></TooltipTrigger><TooltipContent>Add to Location (TBD)</TooltipContent></Tooltip></TooltipProvider>
                             </>
                         )}
@@ -1178,3 +1212,34 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     </Sheet>
   );
 }
+
+
+// Helper for buttonVariants if used locally
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
