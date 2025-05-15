@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ interface CombinedToolDrawerProps {
   onOpenChange: (open: boolean) => void;
   defaultTab: string;
   rollLog: RollLogEntry[];
-  onInternalRoll: (rollData: Omit<RollLogEntry, 'id'>, idToUpdate?: string) => void;
+  onInternalRoll: (rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, idToUpdate?: string) => void;
   getNewRollId: () => string;
   onClearRollLog: () => void;
 }
@@ -283,7 +283,10 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        <div className="flex flex-col h-full pr-8"> 
+        <div className="flex flex-col h-full pr-8">
+          <SheetHeader className="p-4 border-b bg-primary text-primary-foreground shrink-0">
+            <SheetTitle className="text-xl">DM Tools</SheetTitle>
+          </SheetHeader>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
             <div className="p-4 border-b shrink-0 bg-primary text-primary-foreground">
               <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
