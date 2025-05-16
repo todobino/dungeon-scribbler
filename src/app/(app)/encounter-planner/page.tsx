@@ -27,7 +27,7 @@ interface CurrentEncounterData {
 type DuplicateNameAction = "overwrite" | "rename" | "append";
 
 export default function EncounterPlannerPage() {
-  const { activeCampaign, isLoadingCampaigns } = useCampaign();
+  const { activeCampaign, isLoadingCampaigns, encounterUpdateKey } = useCampaign();
   const { toast } = useToast();
 
   const [encounterMonsters, setEncounterMonsters] = useState<EncounterMonster[]>([]);
@@ -94,7 +94,7 @@ export default function EncounterPlannerPage() {
       setCurrentEncounterTitle("New Encounter");
     }
     setIsLoadingEncounter(false);
-  }, [activeCampaign, isLoadingCampaigns, getEncounterStorageKey]);
+  }, [activeCampaign, isLoadingCampaigns, getEncounterStorageKey, encounterUpdateKey]); // Added encounterUpdateKey
 
   // Save Current Encounter
   useEffect(() => {
