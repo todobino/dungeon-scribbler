@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +10,15 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Renamed Dialog sub-components to avoid conflict
+import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; // For favorite display
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -100,14 +100,14 @@ export function CombinedToolDrawer({
       const errorEntryData: Omit<RollLogEntry, 'id'> = {
         inputText: notationToParse, resultText: "Error", detailText: parsed.error, isRolling: false,
       };
-      onInternalRoll(errorEntryData, entryId); // Pass entryId to update
+      onInternalRoll(errorEntryData, entryId); 
       return;
     }
     if (parsed.sides <= 0 || parsed.count <= 0) {
       const errorEntryData: Omit<RollLogEntry, 'id'> = {
         inputText: notationToParse, resultText: "Error", detailText: "Dice sides and count must be positive.", isRolling: false,
       };
-      onInternalRoll(errorEntryData, entryId); // Pass entryId to update
+      onInternalRoll(errorEntryData, entryId); 
       return;
     }
 
@@ -224,13 +224,13 @@ export function CombinedToolDrawer({
   const handleRollAllPlayerInitiatives = () => {
     if (availablePartyMembers.length === 0) return;
     const newCombatantsFromParty: Combatant[] = availablePartyMembers.map(player => ({
-      id: `${combatUniqueId}-player-${player.id}-${Date.now()}`, name: player.name, initiative: rollDie(20) + (player.initiativeModifier || 0), type: 'player', color: player.color, playerId: player.id,
+      id: `${combatUniqueId}-player-${player.id}-${Date.now()}`, name: player.name, initiative: rollDie(20) + (player.initiativeModifier || 0), type: 'player', color: player.color, playerId: player.id, ac: player.armorClass
     }));
     setCombatants(prev => [...prev, ...newCombatantsFromParty]);
     if (currentTurnIndex === null && (combatants.length === 0 && newCombatantsFromParty.length > 0)) setCurrentTurnIndex(0);
   };
 
-  // --- Add Friendly Logic (moved from AddFriendlyDrawer) ---
+  // --- Add Friendly Logic ---
   const handleSaveFriendly = () => {
     const initiativeValue = parseInt(friendlyInitiativeInput);
     if (isNaN(initiativeValue) || friendlyInitiativeInput.trim() === "") return;
@@ -266,11 +266,10 @@ export function CombinedToolDrawer({
     setCombatants(prev => [...prev, newCombatant]);
     if (currentTurnIndex === null && (combatants.length === 0 || [newCombatant].length > 0)) setCurrentTurnIndex(0);
     
-    // Reset form state for Add Friendly
     setSelectedPlayerToAdd(null);
     setAllyNameInput("");
     setFriendlyInitiativeInput("");
-    setShowAddFriendlySection(false); // Close the section
+    setShowAddFriendlySection(false); 
   };
 
   const handleRollFriendlyInitiative = () => {
@@ -282,8 +281,8 @@ export function CombinedToolDrawer({
     setFriendlyInitiativeInput((rollDie(20) + mod).toString());
   };
 
-  // --- Add Enemy Logic (moved from AddEnemyDrawer) ---
-  useEffect(() => { // For loading saved encounters when Add Enemy section is shown
+  // --- Add Enemy Logic ---
+  useEffect(() => { 
     if (showAddEnemySection && activeCampaign && activeAddEnemyTab === "load-encounter" && savedEncountersForCombat.length === 0) {
       setIsLoadingSavedEncounters(true);
       try {
@@ -298,7 +297,7 @@ export function CombinedToolDrawer({
     }
   }, [showAddEnemySection, activeCampaign, activeAddEnemyTab, savedEncountersForCombat.length]);
 
-  useEffect(() => { // For loading favorites list when favorite dialog is to be shown
+  useEffect(() => { 
     if (isFavoriteMonsterDialogOpen) {
       try {
         const storedFavorites = localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY);
@@ -366,11 +365,10 @@ export function CombinedToolDrawer({
     setCombatants(prev => [...prev, ...newEnemies]);
     if (currentTurnIndex === null && (combatants.length === 0 || newEnemies.length > 0)) setCurrentTurnIndex(0);
     
-    // Reset Add Enemy form state
     setEnemyName(""); setEnemyInitiativeInput(""); setEnemyQuantityInput("1");
     setRollEnemyInitiativeFlag(false); setRollGroupInitiativeFlag(false);
     setEnemyAC(""); setEnemyHP("");
-    setShowAddEnemySection(false); // Close the section
+    setShowAddEnemySection(false); 
   };
 
   const handleLoadSavedEncounterToCombat = () => {
@@ -401,7 +399,7 @@ export function CombinedToolDrawer({
     if (currentTurnIndex === null && (combatants.length === 0 || newEnemiesFromEncounter.length > 0)) setCurrentTurnIndex(0);
     
     setSelectedSavedEncounterId(undefined);
-    setShowAddEnemySection(false); // Close the section
+    setShowAddEnemySection(false); 
   };
 
   const selectedEncounterDetails = selectedSavedEncounterId ? savedEncountersForCombat.find(e => e.id === selectedSavedEncounterId) : null;
@@ -411,9 +409,8 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
-          <DialogTitle>DM Tools</DialogTitle>
+          <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
@@ -535,10 +532,10 @@ export function CombinedToolDrawer({
                   {/* Inline Add Enemy Section */}
                   {showAddEnemySection && (
                     <div className="p-4 border-b bg-card">
-                      <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-4 -mt-4 mb-4">
-                        <DialogTitle className="text-primary-foreground flex items-center"><ShieldAlert className="mr-2 h-5 w-5"/>Add Enemies</DialogTitle>
-                        <DialogDescription className="text-primary-foreground/80">Add individual enemies or load a pre-saved encounter.</DialogDescription>
-                      </DialogHeader>
+                      <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-4 -mt-4 mb-4">
+                        <UIDialogTitle className="text-primary-foreground flex items-center"><ShieldAlert className="mr-2 h-5 w-5"/>Add Enemies</UIDialogTitle>
+                        <UIDialogDescription className="text-primary-foreground/80">Add individual enemies or load a pre-saved encounter.</UIDialogDescription>
+                      </UIDialogHeader>
                       <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 flex flex-col flex-grow min-h-0">
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
@@ -664,10 +661,10 @@ export function CombinedToolDrawer({
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Select Favorite Monster</DialogTitle>
-          <DialogDescription>Choose from your Monster Mash favorites.</DialogDescription>
-        </DialogHeader>
+        <UIDialogHeader>
+          <UIDialogTitle>Select Favorite Monster</UIDialogTitle>
+          <UIDialogDescription>Choose from your Monster Mash favorites.</UIDialogDescription>
+        </UIDialogHeader>
         <ScrollArea className="h-[calc(100%-80px)] mt-4 max-h-[60vh]">
             {favoritesList.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No favorites found.</p>
