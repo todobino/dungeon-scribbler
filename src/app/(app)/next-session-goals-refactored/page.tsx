@@ -10,7 +10,7 @@ import { PlusCircle, ClipboardList, Zap, Brain, HelpCircle, Edit3, Trash2, Chevr
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; // Renamed for clarity
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
@@ -18,9 +18,9 @@ import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   REFACTORED_GOALS_KEY_PREFIX, 
-  REFACTORED_PLOT_POINTS_KEY_PREFIX, // Renamed for clarity from PLOT_POINTS_STORAGE_KEY
-  REFACTORED_CURRENT_SESSION_KEY_PREFIX, // Renamed for clarity from CURRENT_SESSION_STORAGE_KEY
-  REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX // Renamed for clarity from FULL_CAMPAIGN_SUMMARY_STORAGE_KEY
+  REFACTORED_PLOT_POINTS_KEY_PREFIX,
+  REFACTORED_CURRENT_SESSION_KEY_PREFIX,
+  REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX
 } from "@/lib/constants";
 
 interface Goal {
@@ -65,7 +65,7 @@ export default function NextSessionGoalsRefactoredPage() {
 
   useEffect(() => {
     if (isLoadingCampaigns) {
-      setIsLoadingData(true);
+      setIsLoadingData(true); 
       return;
     }
 
@@ -208,7 +208,7 @@ export default function NextSessionGoalsRefactoredPage() {
 
   const renderFormattedDetails = (details?: string) => {
     if (!details || details.trim() === "") {
-      return <p className="text-sm text-muted-foreground italic">No details added yet. Click <Edit3 className="inline h-3 w-3 align-text-bottom"/> to add some.</p>;
+      return <p className="text-sm text-muted-foreground italic py-2">No details added yet. Click <Edit3 className="inline h-3 w-3 align-text-bottom"/> to add some.</p>;
     }
     const lines = details.split('\n').map(line => line.trim());
     const elements: JSX.Element[] = [];
@@ -244,7 +244,6 @@ export default function NextSessionGoalsRefactoredPage() {
   const handleOpenLogGoalDialog = (goal: Goal) => {
     let formattedDetails = "";
     if (goal.details && goal.details.trim()) {
-      // Replace literal '\n' from textarea with actual newlines for the log
       formattedDetails = `\n\nDetails:\n${goal.details.replace(/\\n/g, '\n').trim()}`;
     }
     setLogGoalDialogData({
@@ -487,16 +486,16 @@ export default function NextSessionGoalsRefactoredPage() {
 
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
-          <UIAlertDialogHeader>
-            <UIAlertDialogTitle>Are you sure?</UIAlertDialogTitle>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the goal and all its details and generated ideas.
             </AlertDialogDescription>
-          </UIAlertDialogHeader>
-          <UIAlertDialogFooter>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setGoalToDeleteId(null); setIsDeleteConfirmOpen(false); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({variant: "destructive"})}>Delete Goal</AlertDialogAction>
-          </UIAlertDialogFooter>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -505,7 +504,7 @@ export default function NextSessionGoalsRefactoredPage() {
           <DialogHeader>
             <DialogTitle>Log Goal as Completed</DialogTitle>
             <DialogDescription>
-              Review and edit the text that will be added to the Adventure Recap for Session {localStorage.getItem(getCampaignSpecificKey(REFACTORED_CURRENT_SESSION_KEY_PREFIX)!) || 1}.
+              Review and edit the text that will be added to the Adventure Recap for Session {activeCampaign && localStorage.getItem(getCampaignSpecificKey(REFACTORED_CURRENT_SESSION_KEY_PREFIX)!) || 1}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
@@ -526,39 +525,6 @@ export default function NextSessionGoalsRefactoredPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-        <DialogContent className="max-w-lg">
-            <DialogHeader>
-                <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: Next Session Goals</DialogTitle>
-                <DialogDescription>Outline and develop plot beats for upcoming sessions.</DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh] pr-3">
-            <div className="text-sm text-muted-foreground space-y-3 py-4">
-                <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" (in the card header or footer) to open a dialog and input a new plot beat or objective.</p>
-                <p>2. For each goal in the list:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                    <li>Click the <ChevronDown className="inline h-4 w-4 align-text-bottom data-[state=open]:rotate-180 data-[state=closed]:rotate-0 mr-0.5 transition-transform duration-200" /> icon or the goal text to expand/collapse and view its formatted read-only details.</li>
-                    <li>Click the <Edit3 className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon (on the right) to enter full edit mode for that goal. The icon will change to <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/>.</li>
-                </ul>
-                <p>3. When a goal is in <strong className="text-foreground">edit mode</strong> (expanded, and <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon visible):</p>
-                <ul className="list-disc pl-5 space-y-1">
-                    <li>Use the "Details / Description" textarea to add notes, bullet points, or scene descriptions. Changes are auto-saved.</li>
-                    <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Generate Interaction Ideas" for AI suggestions based on the goal and its details.</li>
-                    <li>Click the <PlusSquare className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon next to a generated idea to append it to the details textarea (auto-saved).</li>
-                    <li>Click "<ClipboardCheck className="inline h-4 w-4 align-text-bottom mr-0.5"/> Log as Completed" to open a dialog where you can review and edit the text before adding this goal to the "Adventure Recap" log for the current session. This also removes the goal from this list.</li>
-                    <li>Click "<Trash2 className="inline h-4 w-4 align-text-bottom mr-0.5"/> Delete Goal" to remove it (confirmation required).</li>
-                </ul>
-                <p>4. Click the <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon (when in edit mode) to return to the read-only formatted view of the details for that goal (it remains expanded).</p>
-                <p>5. All goals and their details are saved per campaign to your browser's local storage.</p>
-            </div>
-            </ScrollArea>
-            <DialogFooter>
-                <DialogClose asChild>
-                    <Button>Close</Button>
-                </DialogClose>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -567,7 +533,37 @@ export function NextSessionGoalsHelpContent() {
     // This component is not directly used in the page, 
     // but its content was moved to the Dialog with id "isHelpDialogOpen"
     // It can be removed if the main page structure is stable
-    return null;
+    return (
+    <>
+      <DialogHeader>
+          <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary"/>How to Use: Next Session Goals</DialogTitle>
+          <DialogDescription>Outline and develop plot beats for upcoming sessions.</DialogDescription>
+      </DialogHeader>
+      <ScrollArea className="max-h-[60vh] pr-3">
+      <div className="text-sm text-muted-foreground space-y-3 py-4">
+          <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" (in the card header or footer) to open a dialog and input a new plot beat or objective.</p>
+          <p>2. For each goal in the list:</p>
+          <ul className="list-disc pl-5 space-y-1">
+              <li>Click the <ChevronDown className="inline h-4 w-4 align-text-bottom data-[state=open]:rotate-180 data-[state=closed]:rotate-0 mr-0.5 transition-transform duration-200" /> icon or the goal text to expand/collapse and view its formatted read-only details.</li>
+              <li>Click the <Edit3 className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon (on the right) to enter full edit mode for that goal. The icon will change to <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/>.</li>
+          </ul>
+          <p>3. When a goal is in <strong className="text-foreground">edit mode</strong> (expanded, and <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon visible):</p>
+          <ul className="list-disc pl-5 space-y-1">
+              <li>Use the "Details / Description" textarea to add notes, bullet points, or scene descriptions. Changes are auto-saved.</li>
+              <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5"/> Generate Interaction Ideas" for AI suggestions based on the goal and its details.</li>
+              <li>Click the <PlusSquare className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon next to a generated idea to append it to the details textarea (auto-saved).</li>
+              <li>Click "<ClipboardCheck className="inline h-4 w-4 align-text-bottom mr-0.5"/> Log as Completed" to open a dialog where you can review and edit the text before adding this goal to the "Adventure Recap" log for the current session. This also removes the goal from this list.</li>
+              <li>Click "<Trash2 className="inline h-4 w-4 align-text-bottom mr-0.5"/> Delete Goal" to remove it (confirmation required).</li>
+          </ul>
+          <p>4. Click the <Eye className="inline h-4 w-4 align-text-bottom mr-0.5"/> icon (when in edit mode) to return to the read-only formatted view of the details for that goal (it remains expanded).</p>
+          <p>5. All goals and their details are saved per campaign to your browser's local storage.</p>
+      </div>
+      </ScrollArea>
+      <DialogFooter>
+          <DialogClose asChild>
+              <Button>Close</Button>
+          </DialogClose>
+      </DialogFooter>
+    </>
+    );
 }
-
-    
