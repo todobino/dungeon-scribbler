@@ -31,6 +31,8 @@ interface CampaignContextType {
   incrementPartyLevel: () => Promise<void>;
   setPartyLevel: (targetLevel: number) => Promise<void>;
   getCampaignById: (id: string) => Campaign | undefined;
+  encounterUpdateKey: number;
+  notifyEncounterUpdate: () => void;
 }
 
 const CampaignContext = createContext<CampaignContextType | undefined>(undefined);
@@ -43,6 +45,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const [activeCampaignParty, setActiveCampaignParty] = useState<PlayerCharacter[]>([]);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
   const [isLoadingParty, setIsLoadingParty] = useState(false);
+  const [encounterUpdateKey, setEncounterUpdateKey] = useState(0);
 
   useEffect(() => {
     try {
@@ -137,7 +140,6 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const deleteCampaign = useCallback(async (campaignIdToDelete: string) => {
     setCampaigns(prev => prev.filter(c => c.id !== campaignIdToDelete));
     
-    // Clear associated localStorage for the deleted campaign
     CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES.forEach(prefix => {
       try {
         localStorage.removeItem(`${prefix}${campaignIdToDelete}`);
@@ -145,15 +147,10 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         console.error(`Error removing ${prefix}${campaignIdToDelete} from localStorage:`, error);
       }
     });
-    // Also remove campaign wizard draft if it was for this campaign (though drafts are usually global)
     try {
-      // Campaign wizard draft is typically global (`CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX}current`),
-      // but if a specific campaign's draft was stored, it would need a different key.
-      // For now, assuming the global draft key, or no specific cleanup needed for campaign wizard drafts tied to deleted campaigns.
     } catch (error) {
        console.error(`Error removing draft for campaign ${campaignIdToDelete} from localStorage:`, error);
     }
-
 
     if (activeCampaignId === campaignIdToDelete) {
       setActiveCampaignIdState(campaigns.length > 1 ? campaigns.find(c => c.id !== campaignIdToDelete)?.id || null : null);
@@ -220,6 +217,10 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     );
   }, [activeCampaignId]);
 
+  const notifyEncounterUpdate = useCallback(() => {
+    setEncounterUpdateKey(prevKey => prevKey + 1);
+  }, []);
+
   const activeCampaign = activeCampaignId ? campaigns.find(c => c.id === activeCampaignId) || null : null;
 
   return (
@@ -237,7 +238,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       deleteCharacterFromActiveCampaign,
       incrementPartyLevel,
       setPartyLevel,
-      getCampaignById
+      getCampaignById,
+      encounterUpdateKey,
+      notifyEncounterUpdate
     }}>
       {children}
     </CampaignContext.Provider>

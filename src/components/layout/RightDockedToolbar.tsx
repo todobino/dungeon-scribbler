@@ -20,7 +20,8 @@ import {
 import type { RollLogEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen } from "lucide-react";
+import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, VenetianMask } from "lucide-react";
+import { useCampaign } from "@/contexts/campaign-context";
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
@@ -28,6 +29,8 @@ export function RightDockedToolbar() {
   
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
+  const { notifyEncounterUpdate } = useCampaign();
+
 
   const addRollToLog = useCallback((rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, entryIdToUpdate?: string) => {
     const idToUse = entryIdToUpdate || getNewRollId();
@@ -116,7 +119,7 @@ export function RightDockedToolbar() {
                   </TooltipContent>
                 </Tooltip>
                 {item.id === COMBAT_TRACKER_TAB_ID && <Separator className="my-0.5 bg-border/70" />}
-                {item.id === STATUS_CONDITIONS_DRAWER_ID && <Separator className="my-0.5 bg-border/70" />}
+                {item.id === MONSTER_MASH_DRAWER_ID && <Separator className="my-0.5 bg-border/70" />}
                 {item.id === SPELLBOOK_DRAWER_ID && item.id !== TOOLBAR_ITEMS[TOOLBAR_ITEMS.length -1].id && <Separator className="my-0.5 bg-border/70" />}
               </React.Fragment>
             );
@@ -138,6 +141,7 @@ export function RightDockedToolbar() {
       <MonsterMashDrawer
         open={openDrawerId === MONSTER_MASH_DRAWER_ID}
         onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
+        onEncounterUpdated={notifyEncounterUpdate}
       />
       <StatusConditionsDrawer
         open={openDrawerId === STATUS_CONDITIONS_DRAWER_ID}

@@ -50,6 +50,7 @@ const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
 interface MonsterMashDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEncounterUpdated?: () => void;
 }
 
 type SortKey = "name" | "cr";
@@ -98,8 +99,7 @@ const CR_SLIDER_MAX = 30;
 
 const snapCRValue = (rawValue: number): number => {
   if (rawValue <= 0) return 0;
-  if (rawValue < 0.125) return 0; 
-  if (rawValue < (0.125 + 0.25) / 2) return 0.125; 
+  if (rawValue < (0.125 + 0.25) / 2 && rawValue > 0) return 0.125; // Snap to 1/8 if between 0 and ~0.1875
   if (rawValue < (0.25 + 0.5) / 2) return 0.25;   
   if (rawValue < (0.5 + 0.75) / 2) return 0.5;    
   if (rawValue < (0.75 + 1) / 2) return 0.75;   
@@ -157,7 +157,7 @@ const monsterDetailToFormData = (monster: MonsterDetail): HomebrewMonsterFormDat
 };
 
 
-export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps) {
+export function MonsterMashDrawer({ open, onOpenChange, onEncounterUpdated }: MonsterMashDrawerProps) {
   const { activeCampaign } = useCampaign();
   const { toast } = useToast();
   const [allMonstersData, setAllMonstersData] = useState<MonsterSummaryWithCR[]>([]);
@@ -212,7 +212,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
      if (minCRSlider !== CR_SLIDER_MIN || maxCRSlider !== CR_SLIDER_MAX) {
         tempFiltered = tempFiltered.filter(monster => {
             const monsterCRNum = monster.cr;
-            if (monsterCRNum === undefined || monsterCRNum === -1) return false; // Actively filter out if CR is unknown and slider is active
+            if (monsterCRNum === undefined || monsterCRNum === -1) return false;
             return monsterCRNum >= minCRSlider && monsterCRNum <= maxCRSlider;
         });
     }
@@ -309,7 +309,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
             }
         } catch (e) {
             console.error("Error loading cached index:", e);
-            localStorage.removeItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY); // Clear potentially corrupted cache
+            localStorage.removeItem(MONSTER_MASH_FULL_INDEX_STORAGE_KEY); 
             fetchAndCacheFullMonsterIndex(); 
         }
     }
@@ -364,7 +364,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       fetchMonsterDetail(pendingMonsterFetchArgs.index, pendingMonsterFetchArgs.source || 'api');
     }
     setPendingMonsterFetchArgs(null);
-  }, [pendingMonsterFetchArgs]); // Removed fetchMonsterDetail from dependencies
+  }, [pendingMonsterFetchArgs]); 
 
   const handleUnsavedChangesDialogChoice = (choice: 'save' | 'discard' | 'cancel') => {
     setIsUnsavedChangesDialogOpen(false);
@@ -510,7 +510,17 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   const isFavorite = (monsterIndex: string) => favorites.some(f => f.index === monsterIndex);
 
- useEffect(() => {
+  const handleHomebrewFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setHomebrewFormData(prev => ({ ...prev, [name]: value }));
+    if(!isHomebrewFormDirty && isCreatingHomebrew) setIsHomebrewFormDirty(true);
+  };
+  const handleHomebrewSelectChange = (name: keyof HomebrewMonsterFormData, value: string) => {
+    setHomebrewFormData(prev => ({ ...prev, [name]: value }));
+     if(!isHomebrewFormDirty && isCreatingHomebrew) setIsHomebrewFormDirty(true);
+  };
+
+  useEffect(() => {
     if (!isCreatingHomebrew) {
       setIsHomebrewFormDirty(false);
       return;
@@ -527,17 +537,6 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       if (isHomebrewFormDirty) setIsHomebrewFormDirty(false);
     }
   }, [homebrewFormData, initialEditFormData, initialHomebrewFormData, isCreatingHomebrew, editingHomebrewIndex, isHomebrewFormDirty]);
-
-
-  const handleHomebrewFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setHomebrewFormData(prev => ({ ...prev, [name]: value }));
-    if(!isHomebrewFormDirty && isCreatingHomebrew) setIsHomebrewFormDirty(true);
-  };
-  const handleHomebrewSelectChange = (name: keyof HomebrewMonsterFormData, value: string) => {
-    setHomebrewFormData(prev => ({ ...prev, [name]: value }));
-     if(!isHomebrewFormDirty && isCreatingHomebrew) setIsHomebrewFormDirty(true);
-  };
 
   const handleSaveHomebrewMonster = () => {
     if (!homebrewFormData.name.trim()) { setError("Homebrew monster name is required."); return; }
@@ -760,26 +759,25 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
       const storedEncounter = localStorage.getItem(encounterKey);
       if (storedEncounter) {
         const parsedData = JSON.parse(storedEncounter);
-        // Validate structure
         if (typeof parsedData.title === 'string' && Array.isArray(parsedData.monsters)) {
           currentEncounter = parsedData;
         } else {
-          console.warn("Encounter data in localStorage is malformed. Resetting.");
+          console.warn("Encounter data in localStorage is malformed. Resetting for campaign: " + activeCampaign.name);
           currentEncounter = { title: "New Encounter", monsters: [] };
         }
       } else {
         currentEncounter = { title: "New Encounter", monsters: [] };
       }
     } catch (error) {
-      console.error("Error parsing encounter data from localStorage:", error);
+      console.error("Error parsing encounter data from localStorage for campaign: " + activeCampaign.name, error);
       currentEncounter = { title: "New Encounter", monsters: [] };
       toast({ title: "Storage Error", description: "Could not load current encounter from storage. Resetting.", variant: "destructive" });
     }
     
     const monsterToAdd: EncounterMonster = {
-      id: `${selectedMonster.index}-${Date.now()}`, // More unique ID
+      id: `${selectedMonster.index}-${Date.now()}`,
       name: selectedMonster.name,
-      quantity: 1, // Default quantity
+      quantity: 1,
       cr: formatCRDisplay(selectedMonster.challenge_rating),
       ac: selectedMonster.armor_class && selectedMonster.armor_class.length > 0 ? selectedMonster.armor_class[0].value.toString() : undefined,
       hp: selectedMonster.hit_points?.toString(),
@@ -790,12 +788,14 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     try {
       localStorage.setItem(encounterKey, JSON.stringify(currentEncounter));
       toast({ title: "Monster Sent!", description: `${selectedMonster.name} added to the current encounter draft for "${activeCampaign.name}".` });
+      if (onEncounterUpdated) {
+        onEncounterUpdated();
+      }
     } catch (error) {
-      console.error("Error saving updated encounter data to localStorage:", error);
+      console.error("Error saving updated encounter data to localStorage for campaign: " + activeCampaign.name, error);
       toast({ title: "Storage Error", description: "Could not save monster to encounter. Check console.", variant: "destructive" });
     }
   };
-
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -826,7 +826,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                 </TooltipProvider>
             </SheetHeader>
 
-            <div className="flex flex-1 min-h-0 border-t relative"> 
+            <div className="flex flex-1 min-h-0 border-t"> 
                 <div className="w-1/5 min-w-[200px] max-w-[280px] bg-card border-r flex flex-col overflow-y-auto">
                     <Accordion type="multiple" defaultValue={["favorites-section", "homebrew-section"]} className="w-full">
                     <AccordionItem value="favorites-section">
@@ -1129,7 +1129,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                                 <div><Label htmlFor="hb-image">Image URL (Optional)</Label><Input id="hb-image" name="image_url" value={homebrewFormData.image_url || ""} onChange={handleHomebrewFormChange} /></div>
 
                             <div className="flex gap-2 mt-4 items-center">
-                                    {(isCreatingHomebrew && !editingHomebrewIndex) && ( 
+                                    {isCreatingHomebrew && !editingHomebrewIndex && ( 
                                         <Button onClick={handleSaveHomebrewMonster}>
                                             <Save className="mr-2 h-4 w-4"/>Save New Monster
                                         </Button>
