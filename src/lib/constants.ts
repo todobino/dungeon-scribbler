@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2 } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -36,6 +36,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
+  { label: 'Random Tables', href: '/random-tables', icon: Dice5, disabled: false },
+
 ];
 
 export const STORY_NAV_ITEMS: NavItem[] = [
@@ -51,7 +53,7 @@ export const WORLD_NAV_ITEMS: NavItem[] = [
 ];
 
 export const ADVANCED_NAV_ITEMS: NavItem[] = [
-  { label: 'Campaign Wizard', href: '/campaign-wizard', icon: DraftingCompass, isAdvanced: true, isGenAI: true, disabled: false },
+  { label: 'Campaign Wizard', href: '/campaign-wizard', icon: DraftingCompassIcon, isAdvanced: true, isGenAI: true, disabled: false },
   { label: 'Quest Web', href: '/quest-web', icon: Landmark, isAdvanced: true, disabled: true },
   { label: 'Improvisation Asst.', href: '/improvisation-assistant', icon: Wand2, isAdvanced: true, isGenAI: true, disabled: true },
   { label: 'Backstory Integrator', href: '/backstory-integrator', icon: ShieldQuestion, isAdvanced: true, isGenAI: true, disabled: true },
@@ -185,44 +187,50 @@ export const POWER_BALANCE_OPTIONS: CampaignOption[] = [
   { value: "Power Vacuum", description: "A recent collapse of authority has left a void, with various groups scrambling to fill it." }
 ];
 
-const SHARED_PREFIX = "adventureArchitect_";
+export const SHARED_DATA_PREFIX = "adventureArchitect_";
 
-export const CAMPAIGNS_STORAGE_KEY = `${SHARED_PREFIX}Campaigns`;
-export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = `${SHARED_PREFIX}ActiveCampaignId`;
-export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Party_`;
-export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Factions_`;
-export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Locations_`;
-export const NPCS_STORAGE_KEY = `${SHARED_PREFIX}Npcs_Global`;
+export const CAMPAIGNS_STORAGE_KEY = `${SHARED_DATA_PREFIX}Campaigns`;
+export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = `${SHARED_DATA_PREFIX}ActiveCampaignId`;
 
-export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_PREFIX}CampaignWizardDraft_`;
-export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}Encounter_`;
-export const SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX = `${SHARED_PREFIX}SavedEncounters_`;
+// Campaign-specific prefixes
+export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Party_`;
+export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Factions_`;
+export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Locations_`; // Currently unused page
+export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Maps_`;
+export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Encounter_`;
+export const SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}SavedEncounters_`;
+export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}JournalNotes_`; // Page removed, but key might be in old data
 
-
-// Adventure Recap Page Keys
-export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_PlotPoints_`;
-export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_CurrentSession_`;
-export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionSummaries_`;
-export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SessionViewModes_`;
-export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_FullCampaignSummary_`;
-export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = `${SHARED_PREFIX}AdventureRecap_SummaryDetailLevel_`;
+// Adventure Recap Page Keys (Refactored)
+export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_PlotPoints_`;
+export const REFACTORED_CURRENT_SESSION_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_CurrentSession_`;
+export const REFACTORED_SESSION_SUMMARIES_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_SessionSummaries_`;
+export const REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_SessionViewModes_`;
+export const REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_FullCampaignSummary_`;
+export const REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_SummaryDetailLevel_`;
 
 // Next Session Goals (Refactored) Page Keys
-export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_PREFIX}NextSessionGoals_RefactoredGoals_`;
+export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_DATA_PREFIX}NextSessionGoals_RefactoredGoals_`;
 
-// Monster Mash Feature Key
-export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Favorites`;
-export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_FullIndexWithCR`;
-export const MONSTER_MASH_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}MonsterMash_Homebrew`;
+// Campaign Wizard Draft
+export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_DATA_PREFIX}CampaignWizardDraft_`;
+
+// Global NPC list (not campaign-specific)
+export const NPCS_STORAGE_KEY = `${SHARED_DATA_PREFIX}Npcs_Global`;
+
+// Monster Mash Feature Keys
+export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_DATA_PREFIX}MonsterMash_Favorites`;
+export const MONSTER_MASH_FULL_INDEX_STORAGE_KEY = `${SHARED_DATA_PREFIX}MonsterMash_FullIndexWithCR`;
+export const MONSTER_MASH_HOMEBREW_STORAGE_KEY = `${SHARED_DATA_PREFIX}MonsterMash_Homebrew`;
 
 // Spellbook Feature Key
-export const SPELLBOOK_HOMEBREW_STORAGE_KEY = `${SHARED_PREFIX}Spellbook_Homebrew`;
+export const SPELLBOOK_HOMEBREW_STORAGE_KEY = `${SHARED_DATA_PREFIX}Spellbook_Homebrew`;
 
 
 // Monster Mash Homebrew Form Options
 export const MONSTER_TYPES: string[] = [
   "Aberration", "Beast", "Celestial", "Construct", "Dragon", "Elemental",
-  "Fey", "Fiend", "Giant", "Humanoid", "Monstrosity", "Ooze", "Plant", "Undead"
+  "Fey", "Fiend", "Giant", "Humanoid", "Monstrosity", "Ooze", "Plant", "Undead", "Other"
 ];
 
 export const MONSTER_SIZES: string[] = [
@@ -237,11 +245,29 @@ export const MONSTER_ALIGNMENTS: string[] = [
   "Lawful Good", "Neutral Good", "Chaotic Good",
   "Lawful Neutral", "True Neutral", "Chaotic Neutral",
   "Lawful Evil", "Neutral Evil", "Chaotic Evil",
-  "Unaligned", "Any Alignment", "Varies"
+  "Unaligned", "Any Alignment", "Varies", "Any Non-Good", "Any Non-Lawful", "Any Non-Chaotic", "Any Non-Evil"
 ];
 
 // Spellbook Homebrew Form Options
 export const SPELL_SCHOOLS: string[] = [
     "Abjuration", "Conjuration", "Divination", "Enchantment",
     "Evocation", "Illusion", "Necromancy", "Transmutation"
+];
+
+// List of all campaign-specific local storage key prefixes for easy cleanup
+export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
+  PARTY_STORAGE_KEY_PREFIX,
+  FACTIONS_STORAGE_KEY_PREFIX,
+  LOCATIONS_STORAGE_KEY_PREFIX,
+  MAPS_STORAGE_KEY_PREFIX,
+  ENCOUNTER_STORAGE_KEY_PREFIX,
+  SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX,
+  JOURNAL_NOTES_STORAGE_KEY_PREFIX,
+  REFACTORED_PLOT_POINTS_KEY_PREFIX,
+  REFACTORED_CURRENT_SESSION_KEY_PREFIX,
+  REFACTORED_SESSION_SUMMARIES_KEY_PREFIX,
+  REFACTORED_SESSION_VIEW_MODES_KEY_PREFIX,
+  REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX,
+  REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX,
+  REFACTORED_GOALS_KEY_PREFIX,
 ];

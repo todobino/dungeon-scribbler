@@ -3,19 +3,58 @@
 
 import { useState } from "react";
 import { useCampaign, type Campaign } from "@/contexts/campaign-context";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Library, CheckCircle, Users, PlusCircle, DraftingCompass } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Library, CheckCircle, Users, PlusCircle, DraftingCompass, Trash2, History } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function CampaignManagementPage() {
-  const { campaigns, activeCampaign, setActiveCampaignId, isLoadingCampaigns } = useCampaign();
+  const { campaigns, activeCampaign, setActiveCampaignId, isLoadingCampaigns, deleteCampaign } = useCampaign();
+  const { toast } = useToast();
+
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [isDeleteConfirm1Open, setIsDeleteConfirm1Open] = useState(false);
+  const [isDeleteConfirm2Open, setIsDeleteConfirm2Open] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+
+  const handleOpenDeleteDialog1 = (campaign: Campaign) => {
+    setCampaignToDelete(campaign);
+    setIsDeleteConfirm1Open(true);
+  };
+
+  const handleConfirmDelete1 = () => {
+    setIsDeleteConfirm1Open(false);
+    setIsDeleteConfirm2Open(true);
+    setDeleteConfirmInput(""); 
+  };
+
+  const handleFinalDelete = async () => {
+    if (campaignToDelete && deleteConfirmInput === "DELETE") {
+      try {
+        await deleteCampaign(campaignToDelete.id);
+        toast({ title: "Campaign Deleted", description: `"${campaignToDelete.name}" and all its data have been removed.` });
+      } catch (error) {
+        console.error("Error deleting campaign:", error);
+        toast({ title: "Error Deleting Campaign", description: "Could not remove the campaign.", variant: "destructive" });
+      }
+    } else if (deleteConfirmInput !== "DELETE") {
+      toast({ title: "Incorrect Confirmation", description: "Please type DELETE to confirm.", variant: "destructive" });
+      return; 
+    }
+    setIsDeleteConfirm2Open(false);
+    setCampaignToDelete(null);
+    setDeleteConfirmInput("");
+  };
 
   if (isLoadingCampaigns) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Manage Campaigns</h1>
         <Card>
           <CardHeader>
             <CardTitle>Loading campaigns...</CardTitle>
@@ -29,12 +68,7 @@ export default function CampaignManagementPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Manage Campaigns</h1>
-        {/* Button removed from here, "Create New Campaign" will be handled by empty state or wizard link */}
-      </div>
-
+    <div className="space-y-6 w-full">
       {activeCampaign && (
         <Card className="bg-primary/10 border-primary shadow-lg">
           <CardHeader>
@@ -46,14 +80,14 @@ export default function CampaignManagementPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">{activeCampaign.name}</p>
-             <Link href="/party-manager">
+             <Link href="/party-manager" passHref>
                 <Button variant="outline" className="mt-4 mr-2">
                     <Users className="mr-2 h-4 w-4" /> Go to Party Manager
                 </Button>
             </Link>
-             <Link href="/campaign-wizard">
+             <Link href="/story-so-far-refactored" passHref>
                 <Button variant="outline" className="mt-4">
-                    <DraftingCompass className="mr-2 h-4 w-4" /> New Campaign Wizard
+                    <History className="mr-2 h-4 w-4" /> View Adventure Recap
                 </Button>
             </Link>
           </CardContent>
@@ -77,7 +111,7 @@ export default function CampaignManagementPage() {
               </Button>
             </div>
           ) : (
-            <ScrollArea className="max-h-[400px]">
+            <ScrollArea className="max-h-[calc(100vh-20rem)]"> {/* Adjusted max-h for better scroll */}
               <ul className="space-y-3">
                 {campaigns.map((campaign) => (
                   <li key={campaign.id}>
@@ -87,13 +121,23 @@ export default function CampaignManagementPage() {
                     >
                       <CardContent className="p-4 flex justify-between items-center">
                         <span className="font-medium text-lg">{campaign.name}</span>
-                        {activeCampaign?.id === campaign.id ? (
-                          <Badge variant="default">Active</Badge>
-                        ) : (
-                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setActiveCampaignId(campaign.id); }}>
-                            Set Active
+                        <div className="flex items-center gap-2">
+                          {activeCampaign?.id === campaign.id ? (
+                            <Badge variant="default">Active</Badge>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setActiveCampaignId(campaign.id); }}>
+                              Set Active
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog1(campaign); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        )}
+                        </div>
                       </CardContent>
                     </Card>
                   </li>
@@ -112,6 +156,63 @@ export default function CampaignManagementPage() {
            )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog 1 */}
+      <AlertDialog open={isDeleteConfirm1Open} onOpenChange={setIsDeleteConfirm1Open}>
+        <UIAlertDialogContent>
+          <UIAlertDialogHeader>
+            <UIAlertDialogTitle>Delete Campaign "{campaignToDelete?.name}"?</UIAlertDialogTitle>
+            <UIAlertDialogDescription>
+              This action cannot be undone. This will permanently delete the campaign and ALL associated data (characters, NPCs, factions, adventure logs, maps, encounters, etc.).
+            </UIAlertDialogDescription>
+          </UIAlertDialogHeader>
+          <UIAlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setIsDeleteConfirm1Open(false); setCampaignToDelete(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete1}
+              className={cn(buttonVariants({ variant: "destructive" }))}
+            >
+              Delete
+            </AlertDialogAction>
+          </UIAlertDialogFooter>
+        </UIAlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog 2 (Type DELETE) */}
+      <Dialog open={isDeleteConfirm2Open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setCampaignToDelete(null);
+          setDeleteConfirmInput("");
+        }
+        setIsDeleteConfirm2Open(isOpen);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion of "{campaignToDelete?.name}"</DialogTitle>
+            <DialogDescription>
+              To permanently delete this campaign and all its data, please type "DELETE" in the box below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder="DELETE"
+              className="border-destructive focus-visible:ring-destructive"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsDeleteConfirm2Open(false); setCampaignToDelete(null); setDeleteConfirmInput(""); }}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={handleFinalDelete}
+              disabled={deleteConfirmInput !== "DELETE"}
+            >
+              Confirm Permanent Deletion
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

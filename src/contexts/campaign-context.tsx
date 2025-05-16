@@ -8,7 +8,8 @@ import type { DndClass } from '@/lib/constants';
 import { 
   CAMPAIGNS_STORAGE_KEY, 
   ACTIVE_CAMPAIGN_ID_STORAGE_KEY, 
-  PARTY_STORAGE_KEY_PREFIX 
+  PARTY_STORAGE_KEY_PREFIX,
+  CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES
 } from '@/lib/constants';
 
 
@@ -23,6 +24,7 @@ interface CampaignContextType {
   isLoadingParty: boolean;
   addCampaign: (name: string) => Promise<Campaign>;
   setActiveCampaignId: (id: string | null) => void;
+  deleteCampaign: (campaignId: string) => Promise<void>;
   addCharacterToActiveCampaign: (characterData: CharacterFormData) => Promise<void>;
   updateCharacterInActiveCampaign: (character: PlayerCharacter) => Promise<void>;
   deleteCharacterFromActiveCampaign: (characterId: string) => Promise<void>;
@@ -132,6 +134,33 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setActiveCampaignIdState(id);
   }, []);
   
+  const deleteCampaign = useCallback(async (campaignIdToDelete: string) => {
+    setCampaigns(prev => prev.filter(c => c.id !== campaignIdToDelete));
+    
+    // Clear associated localStorage for the deleted campaign
+    CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES.forEach(prefix => {
+      try {
+        localStorage.removeItem(`${prefix}${campaignIdToDelete}`);
+      } catch (error) {
+        console.error(`Error removing ${prefix}${campaignIdToDelete} from localStorage:`, error);
+      }
+    });
+    // Also remove campaign wizard draft if it was for this campaign (though drafts are usually global)
+    try {
+      // Campaign wizard draft is typically global (`CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX}current`),
+      // but if a specific campaign's draft was stored, it would need a different key.
+      // For now, assuming the global draft key, or no specific cleanup needed for campaign wizard drafts tied to deleted campaigns.
+    } catch (error) {
+       console.error(`Error removing draft for campaign ${campaignIdToDelete} from localStorage:`, error);
+    }
+
+
+    if (activeCampaignId === campaignIdToDelete) {
+      setActiveCampaignIdState(campaigns.length > 1 ? campaigns.find(c => c.id !== campaignIdToDelete)?.id || null : null);
+    }
+  }, [activeCampaignId, campaigns]);
+
+
   const getCampaignById = useCallback((id: string) => {
     return campaigns.find(c => c.id === id);
   }, [campaigns]);
@@ -202,6 +231,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       isLoadingParty, 
       addCampaign, 
       setActiveCampaignId,
+      deleteCampaign,
       addCharacterToActiveCampaign,
       updateCharacterInActiveCampaign,
       deleteCharacterFromActiveCampaign,
