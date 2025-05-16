@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Dice5, UserPlus, Users } from "lucide-react"; // Changed ChevronRight to ChevronLeft
+import { ChevronRight, Dice5, UserPlus, Users } from "lucide-react"; // Changed ChevronLeft to ChevronRight
 import type { PlayerCharacter, Combatant } from "@/lib/types";
 import { rollDie } from "@/lib/dice-utils";
 
@@ -42,6 +42,10 @@ export function AddFriendlyDrawer({
     if (isNaN(initiativeValue) || friendlyInitiativeInput.trim() === "") return;
 
     let name: string, playerId: string | undefined, color: string | undefined;
+    let ac: number | undefined;
+    let initiativeModifier: number | undefined;
+
+
     if (isAllyMode) {
       if (!allyNameInput.trim()) return;
       name = allyNameInput.trim();
@@ -50,6 +54,8 @@ export function AddFriendlyDrawer({
       name = selectedPlayerToAdd.name;
       playerId = selectedPlayerToAdd.id;
       color = selectedPlayerToAdd.color;
+      ac = selectedPlayerToAdd.armorClass;
+      initiativeModifier = selectedPlayerToAdd.initiativeModifier;
     }
 
     const newCombatant: Combatant = {
@@ -59,6 +65,8 @@ export function AddFriendlyDrawer({
       type: 'player',
       color,
       playerId,
+      ac,
+      initiativeModifier
     };
     onAddFriendly(newCombatant);
     // Reset form state
@@ -84,9 +92,9 @@ export function AddFriendlyDrawer({
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="left" className="w-[380px] sm:w-[450px] flex flex-col p-0" hideCloseButton={true}>
-        <div className="flex flex-col h-full pl-8"> {/* Changed pr-8 to pl-8 */}
-          <SheetHeader className="p-4 border-b bg-primary text-primary-foreground">
+      <SheetContent side="right" className="w-[380px] sm:w-[450px] flex flex-col p-0" hideCloseButton={true}> {/* Changed side to "right" */}
+        <div className="flex flex-col h-full pr-8"> {/* Changed pl-8 to pr-8 */}
+          <SheetHeader className="p-4 border-b bg-primary text-primary-foreground -mr-6"> {/* Adjusted margin for right opening */}
             <SheetTitle className="text-primary-foreground flex items-center">
               {isAllyMode ? <UserPlus className="mr-2 h-5 w-5"/> : <Users className="mr-2 h-5 w-5"/>}
               {isAllyMode ? "Add Ally" : "Add Player Character"}
@@ -146,7 +154,7 @@ export function AddFriendlyDrawer({
                 />
                 {(isAllyMode || selectedPlayerToAdd) && (
                    <Button onClick={handleRollFriendlyInitiative} variant="outline" size="sm" className="shrink-0">
-                    <Dice5 className="mr-1 h-4 w-4"/> Roll (d20{(!isAllyMode && selectedPlayerToAdd && selectedPlayerToAdd.initiativeModifier) ? `+${selectedPlayerToAdd.initiativeModifier}` : ''})
+                    <Dice5 className="mr-1 h-4 w-4"/> Roll (d20{(!isAllyMode && selectedPlayerToAdd && selectedPlayerToAdd.initiativeModifier) ? `${selectedPlayerToAdd.initiativeModifier >= 0 ? '+' : ''}${selectedPlayerToAdd.initiativeModifier}` : ''})
                    </Button>
                 )}
               </div>
@@ -164,10 +172,10 @@ export function AddFriendlyDrawer({
         </div>
         <button
           onClick={handleClose}
-          className="absolute top-0 left-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]" /* Changed right-0 to left-0 */
+          className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]" /* Changed left-0 to right-0 */
           aria-label="Close Add Friendly Drawer"
         >
-          <ChevronLeft className="h-6 w-6" /> {/* Changed ChevronRight to ChevronLeft */}
+          <ChevronRight className="h-6 w-6" /> {/* Changed ChevronLeft to ChevronRight */}
         </button>
       </SheetContent>
     </Sheet>
