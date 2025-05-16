@@ -2,15 +2,15 @@
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
-import { Sheet, SheetContent, SheetHeader as UISheetHeader, SheetTitle as UISheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader as MainSheetHeader, SheetTitle as MainSheetTitle } from "@/components/ui/sheet"; // Aliased to avoid conflict with internal Dialogs
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
@@ -18,7 +18,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; // Assuming this is exported
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -204,7 +204,7 @@ export function CombinedToolDrawer({
     const amountStr = damageInputs[combatantId]; if (!amountStr) return;
     const amount = parseInt(amountStr); if (isNaN(amount) || amount <= 0) return;
     setCombatants(prevCombatants => prevCombatants.map(combatant => {
-      if (combatant.id === combatantId && (combatant.hp !== undefined || (combatant.type === 'player' && !combatant.playerId))) {
+      if (combatant.id === combatantId && (combatant.hp !== undefined )) { // Removed (combatant.type === 'player' && !combatant.playerId) as currentHp handles this
         let newHp = combatant.currentHp ?? combatant.hp!;
         newHp = type === 'damage' ? Math.max(0, newHp - amount) : Math.min(combatant.hp!, newHp + amount);
         return { ...combatant, currentHp: newHp };
@@ -263,6 +263,8 @@ export function CombinedToolDrawer({
       color = selectedPlayerToAdd.color;
       ac = selectedPlayerToAdd.armorClass;
       initiativeModifier = selectedPlayerToAdd.initiativeModifier;
+      // Allies added this way do not have HP from this form, only players do via their main character sheet
+      hp = undefined; 
     }
 
     const newCombatant: Combatant = {
@@ -396,7 +398,7 @@ export function CombinedToolDrawer({
     encounter.monsters.forEach((monster: EncounterMonster, monsterIndex: number) => {
       for (let i = 0; i < monster.quantity; i++) {
         const combatantName = monster.quantity > 1 ? `${monster.name} ${i + 1}` : monster.name;
-        const initiativeValue = rollDie(20);
+        const initiativeValue = rollDie(20); // Roll initiative for each
         const acValue = monster.ac ? parseInt(monster.ac) : undefined;
         const hpValue = monster.hp ? parseInt(monster.hp) : undefined;
 
@@ -424,7 +426,7 @@ export function CombinedToolDrawer({
     if (combatant.type === 'enemy') {
       setSelectedCombatantId(prevId => prevId === combatant.id ? null : combatant.id);
     } else {
-      setSelectedCombatantId(null); // Players/Allies cannot be "selected" for damage controls for now
+      setSelectedCombatantId(null); 
     }
   };
 
@@ -434,9 +436,9 @@ export function CombinedToolDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
         {/* Visually hidden header for accessibility */}
-        <UISheetHeader className="sr-only">
-          <UISheetTitle>DM Tools</UISheetTitle>
-        </UISheetHeader>
+        <MainSheetHeader className="sr-only">
+          <MainSheetTitle>DM Tools</MainSheetTitle>
+        </MainSheetHeader>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
             <div className="p-4 border-b shrink-0 bg-primary text-primary-foreground">
@@ -583,9 +585,9 @@ export function CombinedToolDrawer({
                             </Button>
                           </div>
                           <Input id="enemy-name-inline" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} />
-                          <div className="grid grid-cols-2 gap-3">
-                            <div><Label htmlFor="enemy-ac-inline">AC (Optional)</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
-                            <div><Label htmlFor="enemy-hp-inline">HP (Optional)</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
+                           <div className="grid grid-cols-2 gap-3">
+                            <div><Label htmlFor="enemy-ac-inline">AC</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
+                            <div><Label htmlFor="enemy-hp-inline">HP</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
                           </div>
                           <div className="flex items-end gap-3">
                             <div className="w-20">
@@ -665,25 +667,16 @@ export function CombinedToolDrawer({
                                     <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
                                     <div>
                                         <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
-                                        {c.type === 'player' ? (
-                                          <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             AC: {c.ac ?? 'N/A'}
-                                            {c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? null : null; })()}
-                                            {!c.playerId && c.hp !== undefined && <span className="ml-1">| HP: {c.currentHp ?? c.hp}/{c.hp}</span>}
+                                            {c.type === 'player' && c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? null : null; })()}
+                                            {(c.type === 'enemy' || (c.type === 'player' && !c.playerId)) && c.hp !== undefined && <span className="ml-1">| HP: {c.currentHp ?? c.hp}/{c.hp}</span>}
                                           </p>
-                                        ) : (
-                                          <p className="text-xs text-muted-foreground">
-                                            AC: {c.ac ?? 'N/A'} | HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}
-                                          </p>
-                                        )}
                                     </div>
                                   </div>
                                   <div className="flex items-center">
                                     {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
                                         <BookOpen className="h-4 w-4 text-muted-foreground mr-1" />
-                                    )}
-                                    {c.type !== 'enemy' && ( /* Only show main trash for players/allies if not selected for damage */
-                                      c.id !== selectedCombatantId && <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); removeCombatant(c.id);}}><Trash2 className="h-4 w-4" /></Button>
                                     )}
                                   </div>
                               </div>
@@ -735,11 +728,11 @@ export function CombinedToolDrawer({
 
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
-      <UIDialogContent className="max-w-md min-h-[480px] flex flex-col">
-        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
-          <UIDialogTitle className="text-primary-foreground">Select Favorite Monster</UIDialogTitle>
-          <UIDialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</UIDialogDescription>
-        </UIDialogHeader>
+      <DialogContent className="max-w-md min-h-[480px] flex flex-col">
+        <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
+          <DialogTitle className="text-primary-foreground">Select Favorite Monster</DialogTitle>
+          <DialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</DialogDescription>
+        </DialogHeader>
         <ScrollArea className="mt-4 flex-grow">
             {favoritesList.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No favorites found.</p>
@@ -758,7 +751,7 @@ export function CombinedToolDrawer({
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
         </DialogFooter>
-      </UIDialogContent>
+      </DialogContent>
     </Dialog>
     </>
   );
