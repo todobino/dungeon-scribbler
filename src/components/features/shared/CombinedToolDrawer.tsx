@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef, useCallback } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle as UISheetTitle } from "@/components/ui/sheet"; // Renamed SheetTitle to avoid conflict
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; // Updated import
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; // Aliased to avoid conflict
-import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert, VenetianMask } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
@@ -20,7 +20,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; // Assuming this is exported
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
@@ -28,7 +28,6 @@ import Image from "next/image";
 // Helper functions for detail display (adapted from MonsterMashDrawer)
 const formatDetailArmorClass = (acArray: MonsterDetail["armor_class"] | undefined): string => {
   if (!acArray || acArray.length === 0) return "N/A";
-  // Ensure acArray[0] is an object with value and type
   if (typeof acArray[0] === 'object' && acArray[0] !== null && 'value' in acArray[0] && 'type' in acArray[0]) {
     const mainAc = acArray[0] as { value: number; type: string; desc?: string };
     let str = `${mainAc.value} (${mainAc.type})`;
@@ -37,7 +36,7 @@ const formatDetailArmorClass = (acArray: MonsterDetail["armor_class"] | undefine
     }
     return str;
   }
-  return "N/A"; // Fallback if structure is unexpected
+  return "N/A"; 
 };
 
 type DetailActionType = MonsterAction | SpecialAbility | LegendaryAction;
@@ -96,12 +95,12 @@ interface CombinedToolDrawerProps {
   onInternalRoll: (rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, idToUpdate?: string) => void;
   getNewRollId: () => string;
   onClearRollLog: () => void;
-  combatants: Combatant[]; // Now passed as prop
-  onAddCombatant: (combatant: Combatant) => void; // Now passed as prop
-  onAddCombatants: (newCombatants: Combatant[]) => void; // Now passed as prop
-  onRemoveCombatant: (combatantId: string) => void; // Now passed as prop
-  onUpdateCombatantHp: (combatantId: string, newHp: number) => void; // Now passed as prop
-  onEndCombat: () => void; // Now passed as prop
+  combatants: Combatant[];
+  onAddCombatant: (combatant: Combatant) => void;
+  onAddCombatants: (newCombatants: Combatant[]) => void;
+  onRemoveCombatant: (combatantId: string) => void;
+  onUpdateCombatantHp: (combatantId: string, newHp: number) => void;
+  onEndCombat: () => void;
 }
 
 type RollMode = "normal" | "advantage" | "disadvantage";
@@ -157,7 +156,7 @@ export function CombinedToolDrawer({
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
-  const [enemyCR, setEnemyCR] = useState<string>(""); // Added for CR input
+  const [enemyCR, setEnemyCR] = useState<string>("");
   const [isFavoriteMonsterDialogOpen, setIsFavoriteMonsterDialogOpen] = useState(false);
   const [favoritesList, setFavoritesList] = useState<FavoriteMonster[]>([]);
   const [savedEncountersForCombat, setSavedEncountersForCombat] = useState<SavedEncounter[]>([]);
@@ -167,7 +166,7 @@ export function CombinedToolDrawer({
   const [combatantToDelete, setCombatantToDelete] = useState<Combatant | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   
-  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null); // For Hit/Heal controls
+  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
   
   const [isMonsterDetailDialogOpen, setIsMonsterDetailDialogOpen] = useState(false);
   const [selectedMonsterForDetailDialog, setSelectedMonsterForDetailDialog] = useState<Combatant | null>(null);
@@ -559,10 +558,9 @@ export function CombinedToolDrawer({
       setSelectedCombatantId(prevId => prevId === combatant.id ? null : combatant.id);
       if (selectedMonsterForDetailDialog?.id === combatant.id && isMonsterDetailDialogOpen) {
         setIsMonsterDetailDialogOpen(false);
-        // setSelectedMonsterForDetailDialog(null); // Don't nullify here, detail dialog might still be open
       }
     } else {
-      setSelectedCombatantId(null); // Deselect if a player card is clicked for actions (if any were implemented)
+      setSelectedCombatantId(null);
     }
   };
 
@@ -596,9 +594,9 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        <UISheetHeader className="sr-only">
-          <DialogTitle>DM Tools</DialogTitle>
-        </UISheetHeader>
+        <SheetHeader className="sr-only">
+          <SheetTitle>DM Tools</SheetTitle>
+        </SheetHeader>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2 flex flex-col flex-grow min-h-0">
             <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
@@ -703,8 +701,8 @@ export function CombinedToolDrawer({
                   <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                    <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
                   </div>
                 </>
                 )}
@@ -724,8 +722,8 @@ export function CombinedToolDrawer({
               )}
 
               {showAddEnemySection && (
-              <div className="px-4 pb-4 border-b bg-card shrink-0">
-                <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow">
+              <div className="px-4 pb-4 border-b bg-card shrink-0 flex flex-col flex-grow min-h-0">
+                <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow min-h-0">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
                   <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Saved Encounter</TabsTrigger>
@@ -775,7 +773,7 @@ export function CombinedToolDrawer({
                   <p className="text-sm text-muted-foreground text-center py-4 flex-grow">No saved encounters found for this campaign.</p>
                   ) : (
                   <>
-                    <div>
+                    <div className="shrink-0">
                     <Label htmlFor="saved-encounter-select-inline">Select Saved Encounter</Label>
                     <Select value={selectedSavedEncounterId} onValueChange={setSelectedSavedEncounterId}>
                       <SelectTrigger id="saved-encounter-select-inline" className="mt-1"><SelectValue placeholder="Choose an encounter..." /></SelectTrigger>
@@ -786,7 +784,7 @@ export function CombinedToolDrawer({
                     </div>
                     {selectedEncounterDetails && (
                     <div className="mt-2 flex-grow flex flex-col min-h-0">
-                      <Label className="font-medium">Monsters in "{selectedEncounterDetails.title}":</Label>
+                      <Label className="font-medium shrink-0">Monsters in "{selectedEncounterDetails.title}":</Label>
                       <ScrollArea className="mt-1 border rounded-md p-2 bg-muted/30 flex-grow">
                       <ul className="text-sm space-y-1">
                         {selectedEncounterDetails.monsters.map(monster => (
@@ -801,7 +799,7 @@ export function CombinedToolDrawer({
                       </ScrollArea>
                     </div>
                     )}
-                    <div className="mt-auto pt-4">
+                    <div className="mt-auto pt-4 shrink-0">
                     <Button onClick={handleLoadSavedEncounterToCombat} disabled={!selectedSavedEncounterId} className="w-full">Add Encounter to Combat</Button>
                     </div>
                   </>
@@ -888,11 +886,11 @@ export function CombinedToolDrawer({
 
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
-      <DialogContent className="max-w-md min-h-[480px] flex flex-col">
-        <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
-          <DialogTitle className="text-primary-foreground">Select Favorite Monster</DialogTitle>
-          <DialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</DialogDescription>
-        </DialogHeader>
+      <UIDialogContent className="max-w-md min-h-[480px] flex flex-col">
+        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
+          <UIDialogTitle className="text-primary-foreground">Select Favorite Monster</UIDialogTitle>
+          <UIDialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</UIDialogDescription>
+        </UIDialogHeader>
         <ScrollArea className="mt-4 flex-grow">
             {favoritesList.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No favorites found.</p>
@@ -911,12 +909,12 @@ export function CombinedToolDrawer({
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
         </DialogFooter>
-      </DialogContent>
+      </UIDialogContent>
     </Dialog>
 
     {/* Delete Combatant Confirmation Dialog */}
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <AlertDialogContent>
+        <UIAlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle>
             <AlertDialogDescription>
@@ -929,21 +927,21 @@ export function CombinedToolDrawer({
               Remove
             </AlertDialogAction>
           </UIAlertDialogFooter>
-        </AlertDialogContent>
+        </UIAlertDialogContent>
       </AlertDialog>
 
     {/* Full Monster Detail Dialog (for Combat Tracker) */}
       <Dialog open={isMonsterDetailDialogOpen} onOpenChange={setIsMonsterDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedMonsterForDetailDialog?.name || "Monster Details"}</DialogTitle>
+          <UIDialogHeader>
+            <UIDialogTitle>{selectedMonsterForDetailDialog?.name || "Monster Details"}</UIDialogTitle>
             <DialogClose asChild>
               <Button variant="ghost" size="icon" className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
                 <XCircle className="h-4 w-4" />
                 <span className="sr-only">Close</span>
               </Button>
             </DialogClose>
-          </DialogHeader>
+          </UIDialogHeader>
           <ScrollArea className="max-h-[70vh] p-1 pr-3">
             {isLoadingFullEnemyDetailsFor === selectedMonsterForDetailDialog?.id ? (
               <div className="flex items-center justify-center p-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -982,7 +980,7 @@ export function CombinedToolDrawer({
                     {renderDetailActions(detail.actions, "Actions")}
                     {renderDetailActions(detail.legendary_actions, "Legendary Actions")}
 
-                    {detail.image && (<div className="mt-2"><Image src={`${DND5E_API_BASE_URL}${detail.image}`} alt={detail.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${detail.type} monster`} /></div>)}
+                    {detail.image && (<div className="mt-2"><Image src={`${DND5E_API_BASE_URL}${detail.image}`} alt={detail.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${detail.type} monster`}/></div>)}
                   </div>
                 );
               })()
@@ -995,4 +993,3 @@ export function CombinedToolDrawer({
     </>
   );
 }
-
