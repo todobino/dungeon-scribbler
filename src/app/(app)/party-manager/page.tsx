@@ -256,16 +256,6 @@ export default function PartyManagerPage() {
         </div>
       </div>
 
-      {activeCampaignParty.length === 0 && (
-         <Card className="text-center py-12 border-dashed">
-          <CardHeader>
-            <Users className="mx-auto h-16 w-16 text-muted-foreground" />
-            <CardTitle className="mt-4">Your Party is Empty</CardTitle>
-            <CardDescription>Click the card below to add your first character.</CardDescription>
-          </CardHeader>
-        </Card>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {activeCampaignParty.map((char) => (
           <Card 
@@ -470,3 +460,4 @@ export default function PartyManagerPage() {
     </div>
   );
 }
+
