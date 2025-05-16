@@ -172,7 +172,8 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   const [isHomebrewFormDirty, setIsHomebrewFormDirty] = useState(false);
   const [isUnsavedChangesDialogOpen, setIsUnsavedChangesDialogOpen] = useState(false);
-  const [pendingMonsterFetchArgs, setPendingMonsterFetchArgs] = useState<{ index: string; source?: 'api' | 'homebrew' } | null>(null);
+  const [pendingMonsterFetchArgs, setPendingMonsterFetchArgs] = useState<{ index: string; source?: 'api' | 'homebrew', type?: 'create_new' } | null>(null);
+
 
   const [isDeleteHomebrewConfirmOpen, setIsDeleteHomebrewConfirmOpen] = useState(false);
   const [monsterToDeleteIndex, setMonsterToDeleteIndex] = useState<string | null>(null);
@@ -211,7 +212,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
      if (minCRSlider !== CR_SLIDER_MIN || maxCRSlider !== CR_SLIDER_MAX) {
         tempFiltered = tempFiltered.filter(monster => {
             const monsterCRNum = monster.cr;
-            if (monsterCRNum === undefined || monsterCRNum === -1) return false;
+            if (monsterCRNum === undefined || monsterCRNum === -1) return false; // Actively filter out if CR is unknown and slider is active
             return monsterCRNum >= minCRSlider && monsterCRNum <= maxCRSlider;
         });
     }
@@ -357,10 +358,10 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
 
   const proceedWithPendingAction = useCallback(() => {
-    if (pendingMonsterFetchArgs?.index) {
+    if (pendingMonsterFetchArgs?.type === 'create_new') {
+       handleOpenCreateHomebrewForm(true);
+    } else if (pendingMonsterFetchArgs?.index) {
       fetchMonsterDetail(pendingMonsterFetchArgs.index, pendingMonsterFetchArgs.source || 'api');
-    } else if (pendingMonsterFetchArgs?.type === 'create_new') {
-       handleOpenCreateHomebrewForm(true); // Pass skipDirtyCheck = true
     }
     setPendingMonsterFetchArgs(null);
   }, [pendingMonsterFetchArgs]); // Removed fetchMonsterDetail from dependencies
@@ -369,7 +370,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     setIsUnsavedChangesDialogOpen(false);
     if (choice === 'save') {
       handleSaveHomebrewMonster(); 
-      setTimeout(() => { // Ensure save completes before proceeding
+      setTimeout(() => { 
         proceedWithPendingAction();
       }, 100);
     } else if (choice === 'discard') {
@@ -395,7 +396,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     };
 
     if (!skipDirtyCheck && isCreatingHomebrew && isHomebrewFormDirty) {
-        setPendingMonsterFetchArgs({ type: 'create_new' } as any); // Type assertion if 'type' is needed
+        setPendingMonsterFetchArgs({ type: 'create_new' } as any);
         setIsUnsavedChangesDialogOpen(true);
     } else {
         action();
@@ -461,6 +462,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
     const existingFav = favorites.find(f => f.index === monsterToToggle.index);
     if (existingFav) {
       setFavorites(favorites.filter(f => f.index !== monsterToToggle.index));
+      toast({ title: "Unfavorited", description: `${monsterToToggle.name} removed from favorites.` });
     } else {
       let monsterDetailToSave: MonsterDetail;
 
@@ -482,7 +484,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
       const crNum = crToNumber(monsterDetailToSave.challenge_rating);
       if (crNum === undefined || crNum === -1) { 
-         setError(`CR value invalid for ${monsterDetailToSave.name}. Cannot add to favorites.`); return;
+         toast({ title: "Favorite Failed", description: `CR value invalid for ${monsterDetailToSave.name}. Cannot add to favorites.`, variant: "destructive" }); return;
       }
 
       let acValue, acType;
@@ -502,6 +504,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
         hpValue: monsterDetailToSave.hit_points
       };
       setFavorites(prevFavs => [...prevFavs, newFavorite]);
+      toast({ title: "Favorited!", description: `${monsterDetailToSave.name} added to favorites.` });
     }
   };
 
@@ -742,53 +745,57 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
 
   const handleSendToEncounter = () => {
     if (!selectedMonster) {
-      toast({ title: "Error", description: "No monster selected.", variant: "destructive" });
+      toast({ title: "No Monster Selected", description: "Please select a monster to send.", variant: "destructive" });
       return;
     }
     if (!activeCampaign) {
-      toast({ title: "Error", description: "No active campaign selected.", variant: "destructive" });
+      toast({ title: "No Active Campaign", description: "Please select an active campaign first.", variant: "destructive" });
       return;
     }
 
     const encounterKey = `${ENCOUNTER_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
-    
+    let currentEncounter: { title: string; monsters: EncounterMonster[] };
+
     try {
       const storedEncounter = localStorage.getItem(encounterKey);
-      let currentEncounter: { title: string; monsters: EncounterMonster[] };
-
       if (storedEncounter) {
-        try {
-          currentEncounter = JSON.parse(storedEncounter);
-          if (!currentEncounter.monsters || !Array.isArray(currentEncounter.monsters)) {
-            currentEncounter.monsters = [];
-          }
-          if (typeof currentEncounter.title !== 'string') {
-            currentEncounter.title = "New Encounter";
-          }
-        } catch (parseError) {
+        const parsedData = JSON.parse(storedEncounter);
+        // Validate structure
+        if (typeof parsedData.title === 'string' && Array.isArray(parsedData.monsters)) {
+          currentEncounter = parsedData;
+        } else {
+          console.warn("Encounter data in localStorage is malformed. Resetting.");
           currentEncounter = { title: "New Encounter", monsters: [] };
         }
       } else {
         currentEncounter = { title: "New Encounter", monsters: [] };
       }
+    } catch (error) {
+      console.error("Error parsing encounter data from localStorage:", error);
+      currentEncounter = { title: "New Encounter", monsters: [] };
+      toast({ title: "Storage Error", description: "Could not load current encounter from storage. Resetting.", variant: "destructive" });
+    }
+    
+    const monsterToAdd: EncounterMonster = {
+      id: `${selectedMonster.index}-${Date.now()}`, // More unique ID
+      name: selectedMonster.name,
+      quantity: 1, // Default quantity
+      cr: formatCRDisplay(selectedMonster.challenge_rating),
+      ac: selectedMonster.armor_class && selectedMonster.armor_class.length > 0 ? selectedMonster.armor_class[0].value.toString() : undefined,
+      hp: selectedMonster.hit_points?.toString(),
+    };
+    
+    currentEncounter.monsters.push(monsterToAdd);
 
-      const monsterToAdd: EncounterMonster = {
-        id: `${selectedMonster.index}-${Date.now()}`,
-        name: selectedMonster.name,
-        quantity: 1,
-        cr: formatCRDisplay(selectedMonster.challenge_rating),
-        ac: selectedMonster.armor_class && selectedMonster.armor_class.length > 0 ? selectedMonster.armor_class[0].value.toString() : undefined,
-        hp: selectedMonster.hit_points?.toString(),
-      };
-      
-      currentEncounter.monsters.push(monsterToAdd);
+    try {
       localStorage.setItem(encounterKey, JSON.stringify(currentEncounter));
-      toast({ title: "Monster Sent!", description: `${selectedMonster.name} added to current encounter draft for campaign "${activeCampaign.name}".` });
-    } catch (e) {
-      console.error("Error sending monster to encounter:", e);
-      toast({ title: "Error", description: "Could not send monster to encounter. Check console.", variant: "destructive" });
+      toast({ title: "Monster Sent!", description: `${selectedMonster.name} added to the current encounter draft for "${activeCampaign.name}".` });
+    } catch (error) {
+      console.error("Error saving updated encounter data to localStorage:", error);
+      toast({ title: "Storage Error", description: "Could not save monster to encounter. Check console.", variant: "destructive" });
     }
   };
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -1122,7 +1129,7 @@ export function MonsterMashDrawer({ open, onOpenChange }: MonsterMashDrawerProps
                                 <div><Label htmlFor="hb-image">Image URL (Optional)</Label><Input id="hb-image" name="image_url" value={homebrewFormData.image_url || ""} onChange={handleHomebrewFormChange} /></div>
 
                             <div className="flex gap-2 mt-4 items-center">
-                                    {(!editingHomebrewIndex) && ( 
+                                    {(isCreatingHomebrew && !editingHomebrewIndex) && ( 
                                         <Button onClick={handleSaveHomebrewMonster}>
                                             <Save className="mr-2 h-4 w-4"/>Save New Monster
                                         </Button>
