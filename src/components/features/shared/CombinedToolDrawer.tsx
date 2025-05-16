@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader as UISheetHeader, SheetTitle as UISheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen } from "lucide-react";
+import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster } from "@/lib/types";
@@ -424,7 +424,7 @@ export function CombinedToolDrawer({
     if (combatant.type === 'enemy') {
       setSelectedCombatantId(prevId => prevId === combatant.id ? null : combatant.id);
     } else {
-      setSelectedCombatantId(null); // Players cannot be "selected" for damage controls
+      setSelectedCombatantId(null); // Players/Allies cannot be "selected" for damage controls for now
     }
   };
 
@@ -433,9 +433,10 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        <SheetHeader className="sr-only">
-          <SheetTitle>DM Tools</SheetTitle>
-        </SheetHeader>
+        {/* Visually hidden header for accessibility */}
+        <UISheetHeader className="sr-only">
+          <UISheetTitle>DM Tools</UISheetTitle>
+        </UISheetHeader>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
             <div className="p-4 border-b shrink-0 bg-primary text-primary-foreground">
@@ -546,14 +547,8 @@ export function CombinedToolDrawer({
                             <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
                           </div>
                           <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label htmlFor="ally-ac-inline">AC (Optional)</Label>
-                              <Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} />
-                            </div>
-                            <div>
-                              <Label htmlFor="ally-hp-inline">HP (Optional)</Label>
-                              <Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} />
-                            </div>
+                            <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                            <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
                           </div>
                         </>
                       )}
@@ -575,7 +570,7 @@ export function CombinedToolDrawer({
                   {/* Inline Add Enemy Section */}
                   {showAddEnemySection && (
                     <div className="p-4 border-b bg-card">
-                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 flex flex-col flex-grow min-h-[350px]">
+                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 min-h-[350px] flex flex-col">
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
                           <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger>
@@ -584,7 +579,7 @@ export function CombinedToolDrawer({
                           <div className="flex items-center justify-between">
                             <Label htmlFor="enemy-name-inline">Enemy Name</Label>
                             <Button variant="ghost" size="icon" onClick={() => setIsFavoriteMonsterDialogOpen(true)} className="h-7 w-7">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <Star className="h-4 w-4 text-amber-400 hover:text-amber-500"/>
                             </Button>
                           </div>
                           <Input id="enemy-name-inline" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} />
@@ -599,10 +594,10 @@ export function CombinedToolDrawer({
                             </div>
                             <div className="flex items-center space-x-2 pb-1">
                                 <Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} />
-                                <Label htmlFor="roll-group-initiative-inline" className="cursor-pointer">Group</Label>
+                                <Label htmlFor="roll-group-initiative-inline" className="cursor-pointer text-sm">Group</Label>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2 pt-1"><Switch id="roll-enemy-initiative-inline" checked={rollEnemyInitiativeFlag} onCheckedChange={setRollEnemyInitiativeFlag} /><Label htmlFor="roll-enemy-initiative-inline" className="cursor-pointer">{rollGroupInitiativeFlag ? "Roll for Group?" : "Roll for each Enemy?"}</Label></div>
+                          <div className="flex items-center space-x-2 pt-1"><Switch id="roll-enemy-initiative-inline" checked={rollEnemyInitiativeFlag} onCheckedChange={setRollEnemyInitiativeFlag} /><Label htmlFor="roll-enemy-initiative-inline" className="cursor-pointer text-sm">{rollGroupInitiativeFlag ? "Roll for Group?" : "Roll for each Enemy?"}</Label></div>
                           <div><Label htmlFor="enemy-initiative-input-inline">{rollEnemyInitiativeFlag ? "Initiative Modifier" : "Fixed Initiative Value"}{rollGroupInitiativeFlag ? " (for group)" : ""}</Label><Input id="enemy-initiative-input-inline" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type={rollEnemyInitiativeFlag ? "text" : "number"} /></div>
                           <div className="mt-auto pt-4">
                             <Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim() || (rollEnemyInitiativeFlag ? false : !enemyInitiativeInput.trim())} className="w-full">Add to Combat</Button>
@@ -672,10 +667,9 @@ export function CombinedToolDrawer({
                                         <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
                                         {c.type === 'player' ? (
                                           <p className="text-xs text-muted-foreground">
-                                            {availablePartyMembers.length === 0 && !c.playerId ? 'Ally' : 'Player'}
-                                            {c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null; })()}
-                                            {!c.playerId && c.ac !== undefined && <span className="ml-1">(AC: {c.ac})</span>}
-                                            {!c.playerId && c.hp !== undefined && <span className="ml-1">(HP: {c.currentHp ?? c.hp}/{c.hp})</span>}
+                                            AC: {c.ac ?? 'N/A'}
+                                            {c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? null : null; })()}
+                                            {!c.playerId && c.hp !== undefined && <span className="ml-1">| HP: {c.currentHp ?? c.hp}/{c.hp}</span>}
                                           </p>
                                         ) : (
                                           <p className="text-xs text-muted-foreground">
@@ -688,15 +682,27 @@ export function CombinedToolDrawer({
                                     {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
                                         <BookOpen className="h-4 w-4 text-muted-foreground mr-1" />
                                     )}
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); removeCombatant(c.id);}}><Trash2 className="h-4 w-4" /></Button>
+                                    {c.type !== 'enemy' && ( /* Only show main trash for players/allies if not selected for damage */
+                                      c.id !== selectedCombatantId && <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); removeCombatant(c.id);}}><Trash2 className="h-4 w-4" /></Button>
+                                    )}
                                   </div>
                               </div>
                               
-                              {c.type === 'player' && !c.playerId && c.hp !== undefined && selectedCombatantId === c.id && ( 
-                                 <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Down (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </>
-                               )}
                               {c.type === 'enemy' && c.hp !== undefined && c.id === selectedCombatantId && ( 
-                                <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </> 
+                                <> 
+                                  {c.currentHp !== undefined && c.currentHp === 0 ? ( 
+                                    <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> 
+                                  ) : ( 
+                                    <div className="flex items-center justify-between gap-1.5 pt-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
+                                        <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
+                                        <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
+                                      </div>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); removeCombatant(c.id);}}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                  )} 
+                                </>
                                )}
                               </li>
                           ))}
@@ -729,7 +735,7 @@ export function CombinedToolDrawer({
 
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
-      <DialogContent className="max-w-md min-h-[480px] flex flex-col">
+      <UIDialogContent className="max-w-md min-h-[480px] flex flex-col">
         <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
           <UIDialogTitle className="text-primary-foreground">Select Favorite Monster</UIDialogTitle>
           <UIDialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</UIDialogDescription>
@@ -752,7 +758,7 @@ export function CombinedToolDrawer({
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
         </DialogFooter>
-      </DialogContent>
+      </UIDialogContent>
     </Dialog>
     </>
   );
