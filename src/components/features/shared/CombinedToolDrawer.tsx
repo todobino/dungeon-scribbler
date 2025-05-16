@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef, useCallback } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle as UISheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle as UISheetTitle } from "@/components/ui/sheet"; // Renamed SheetTitle to avoid conflict
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,39 +11,19 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; // Aliased to avoid conflict
+import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert, VenetianMask } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster, MonsterDetail, ArmorClass, SpecialAbility, MonsterAction, LegendaryAction } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
-import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY } from "@/lib/constants";
+import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; // Assuming this is exported
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
-const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
-
-
-interface CombinedToolDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  defaultTab: string;
-  rollLog: RollLogEntry[];
-  onInternalRoll: (rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, idToUpdate?: string) => void;
-  getNewRollId: () => string;
-  onClearRollLog: () => void;
-  combatants: Combatant[];
-  onAddCombatant: (combatant: Combatant) => void;
-  onAddCombatants: (newCombatants: Combatant[]) => void;
-  onRemoveCombatant: (combatantId: string) => void;
-  onUpdateCombatantHp: (combatantId: string, newHp: number) => void;
-  onEndCombat: () => void;
-}
-
-type RollMode = "normal" | "advantage" | "disadvantage";
 
 // Helper functions for detail display (adapted from MonsterMashDrawer)
 const formatDetailArmorClass = (acArray: MonsterDetail["armor_class"] | undefined): string => {
@@ -108,17 +88,35 @@ const renderDetailActions = (actions: DetailActionType[] | string | undefined, l
 };
 
 
+interface CombinedToolDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  defaultTab: string;
+  rollLog: RollLogEntry[];
+  onInternalRoll: (rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, idToUpdate?: string) => void;
+  getNewRollId: () => string;
+  onClearRollLog: () => void;
+  combatants: Combatant[]; // Now passed as prop
+  onAddCombatant: (combatant: Combatant) => void; // Now passed as prop
+  onAddCombatants: (newCombatants: Combatant[]) => void; // Now passed as prop
+  onRemoveCombatant: (combatantId: string) => void; // Now passed as prop
+  onUpdateCombatantHp: (combatantId: string, newHp: number) => void; // Now passed as prop
+  onEndCombat: () => void; // Now passed as prop
+}
+
+type RollMode = "normal" | "advantage" | "disadvantage";
+
 export function CombinedToolDrawer({
   open,
   onOpenChange,
   defaultTab,
-  rollLog,
+  rollLog = [],
   onInternalRoll,
   getNewRollId,
   onClearRollLog,
-  combatants = [], // Default to empty array
+  combatants = [], 
   onAddCombatant,
-  onAddCombatants,
+  onAddCombatants, 
   onRemoveCombatant,
   onUpdateCombatantHp,
   onEndCombat
@@ -159,6 +157,7 @@ export function CombinedToolDrawer({
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
+  const [enemyCR, setEnemyCR] = useState<string>(""); // Added for CR input
   const [isFavoriteMonsterDialogOpen, setIsFavoriteMonsterDialogOpen] = useState(false);
   const [favoritesList, setFavoritesList] = useState<FavoriteMonster[]>([]);
   const [savedEncountersForCombat, setSavedEncountersForCombat] = useState<SavedEncounter[]>([]);
@@ -272,6 +271,7 @@ export function CombinedToolDrawer({
       setRollGroupInitiativeFlag(false);
       setEnemyAC("");
       setEnemyHP("");
+      setEnemyCR("");
       setActiveAddEnemyTab("single-enemy");
       setSelectedSavedEncounterId(undefined);
       setIsMonsterDetailDialogOpen(false);
@@ -449,6 +449,7 @@ export function CombinedToolDrawer({
     setEnemyName(fav.name);
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
+    setEnemyCR(formatCRDisplay(fav.cr));
     setIsFavoriteMonsterDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled where possible.`});
   };
@@ -503,7 +504,8 @@ export function CombinedToolDrawer({
         hp: hpValue,
         currentHp: hpValue,
         initiativeModifier: initMod,
-        monsterIndex: matchedFavorite?.index 
+        monsterIndex: matchedFavorite?.index,
+        cr: enemyCR || undefined,
       });
     }
     onAddCombatants(newEnemies);
@@ -512,7 +514,7 @@ export function CombinedToolDrawer({
     setEnemyName(""); setEnemyInitiativeInput(""); setEnemyQuantityInput("1");
     setEnemyInitiativeModifierInput("0");
     setRollGroupInitiativeFlag(false);
-    setEnemyAC(""); setEnemyHP("");
+    setEnemyAC(""); setEnemyHP(""); setEnemyCR("");
     setShowAddEnemySection(false);
   };
 
@@ -557,10 +559,10 @@ export function CombinedToolDrawer({
       setSelectedCombatantId(prevId => prevId === combatant.id ? null : combatant.id);
       if (selectedMonsterForDetailDialog?.id === combatant.id && isMonsterDetailDialogOpen) {
         setIsMonsterDetailDialogOpen(false);
-        setSelectedMonsterForDetailDialog(null);
+        // setSelectedMonsterForDetailDialog(null); // Don't nullify here, detail dialog might still be open
       }
     } else {
-      setSelectedCombatantId(null);
+      setSelectedCombatantId(null); // Deselect if a player card is clicked for actions (if any were implemented)
     }
   };
 
@@ -594,10 +596,9 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        {/* Visually hidden header for accessibility */}
-        <SheetHeader className="sr-only">
-          <UISheetTitle>DM Tools</UISheetTitle>
-        </SheetHeader>
+        <UISheetHeader className="sr-only">
+          <DialogTitle>DM Tools</DialogTitle>
+        </UISheetHeader>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2 flex flex-col flex-grow min-h-0">
             <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
@@ -702,8 +703,8 @@ export function CombinedToolDrawer({
                   <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                    <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
                   </div>
                 </>
                 )}
@@ -723,13 +724,13 @@ export function CombinedToolDrawer({
               )}
 
               {showAddEnemySection && (
-              <div className="p-4 border-b bg-card shrink-0">
-                <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 flex flex-col flex-grow min-h-0">
+              <div className="px-4 pb-4 border-b bg-card shrink-0">
+                <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
                   <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Saved Encounter</TabsTrigger>
                 </TabsList>
-                <TabsContent value="single-enemy" className="space-y-3 pt-3 flex-grow flex flex-col">
+                <TabsContent value="single-enemy" className="space-y-3 mt-4 flex-grow flex flex-col">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="enemy-name-inline">Enemy Name</Label>
                     <Button variant="ghost" size="icon" onClick={() => setIsFavoriteMonsterDialogOpen(true)} className="h-7 w-7">
@@ -767,7 +768,7 @@ export function CombinedToolDrawer({
                   <Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim()} className="w-full">Add to Combat</Button>
                   </div>
                 </TabsContent>
-                <TabsContent value="load-encounter" className="pt-3 flex-grow flex flex-col min-h-0">
+                <TabsContent value="load-encounter" className="mt-4 flex-grow flex flex-col min-h-0">
                   {isLoadingSavedEncounters ? (
                   <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
                   ) : savedEncountersForCombat.length === 0 ? (
@@ -830,6 +831,7 @@ export function CombinedToolDrawer({
                                   <p className="text-xs text-muted-foreground">
                                     AC: {c.ac ?? 'N/A'}
                                     {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
+                                    {(c.cr) && <span className="ml-1">| CR: {c.cr}</span>}
                                   </p>
                               </div>
                             </div>
@@ -994,4 +996,3 @@ export function CombinedToolDrawer({
   );
 }
 
-    
