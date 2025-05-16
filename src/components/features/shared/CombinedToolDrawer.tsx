@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Renamed Dialog sub-components to avoid conflict
+import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
@@ -73,6 +73,9 @@ export function CombinedToolDrawer({
   const [selectedPlayerToAdd, setSelectedPlayerToAdd] = useState<PlayerCharacter | null>(null);
   const [allyNameInput, setAllyNameInput] = useState<string>("");
   const [friendlyInitiativeInput, setFriendlyInitiativeInput] = useState<string>("");
+  const [allyACInput, setAllyACInput] = useState<string>("");
+  const [allyHPInput, setAllyHPInput] = useState<string>("");
+
 
   // State moved from AddEnemyDrawer
   const [activeAddEnemyTab, setActiveAddEnemyTab] = useState("single-enemy");
@@ -237,6 +240,7 @@ export function CombinedToolDrawer({
 
     let name: string, playerId: string | undefined, color: string | undefined;
     let ac: number | undefined;
+    let hp: number | undefined;
     let initiativeModifier: number | undefined;
 
     const isAllyMode = availablePartyMembers.length === 0;
@@ -244,6 +248,8 @@ export function CombinedToolDrawer({
     if (isAllyMode) {
       if (!allyNameInput.trim()) return;
       name = allyNameInput.trim();
+      ac = allyACInput.trim() === "" ? undefined : parseInt(allyACInput);
+      hp = allyHPInput.trim() === "" ? undefined : parseInt(allyHPInput);
     } else {
       if (!selectedPlayerToAdd) return;
       name = selectedPlayerToAdd.name;
@@ -261,6 +267,8 @@ export function CombinedToolDrawer({
       color,
       playerId,
       ac,
+      hp, 
+      currentHp: hp,
       initiativeModifier
     };
     setCombatants(prev => [...prev, newCombatant]);
@@ -269,6 +277,8 @@ export function CombinedToolDrawer({
     setSelectedPlayerToAdd(null);
     setAllyNameInput("");
     setFriendlyInitiativeInput("");
+    setAllyACInput("");
+    setAllyHPInput("");
     setShowAddFriendlySection(false); 
   };
 
@@ -409,6 +419,7 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
+        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
@@ -479,11 +490,19 @@ export function CombinedToolDrawer({
               <TabsContent value={COMBAT_TRACKER_TAB_ID} className="data-[state=active]:flex flex-col h-full">
                   <div className="p-4 flex flex-col gap-2 border-b shrink-0">
                       <div className="flex gap-2">
-                          <Button onClick={() => { setShowAddFriendlySection(p => !p); setShowAddEnemySection(false); }} variant="outline" className="flex-1">
+                          <Button 
+                            onClick={() => { setShowAddFriendlySection(p => !p); setShowAddEnemySection(false); }} 
+                            variant={showAddFriendlySection ? "secondary" : "outline"} 
+                            className="flex-1"
+                          >
                               {availablePartyMembers.length === 0 ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
                               {addPlayerButtonLabel}
                           </Button>
-                          <Button onClick={() => { setShowAddEnemySection(p => !p); setShowAddFriendlySection(false); }} variant="outline" className="flex-1">
+                          <Button 
+                            onClick={() => { setShowAddEnemySection(p => !p); setShowAddFriendlySection(false); }} 
+                            variant={showAddEnemySection ? "secondary" : "outline"} 
+                            className="flex-1"
+                          >
                               <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
                           </Button>
                       </div>
@@ -497,7 +516,6 @@ export function CombinedToolDrawer({
                   {/* Inline Add Friendly Section */}
                   {showAddFriendlySection && (
                     <div className="p-4 space-y-3 border-b bg-card">
-                      <h3 className="text-lg font-semibold">Add Friendly Combatant</h3>
                       {availablePartyMembers.length > 0 ? (
                         <div>
                           <Label htmlFor="player-select-inline">Player Character</Label>
@@ -509,10 +527,22 @@ export function CombinedToolDrawer({
                           </Select>
                         </div>
                       ) : (
-                        <div>
-                          <Label htmlFor="ally-name-inline">Ally Name</Label>
-                          <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} placeholder="e.g., Sir Reginald" />
-                        </div>
+                        <>
+                          <div>
+                            <Label htmlFor="ally-name-inline">Ally Name</Label>
+                            <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} placeholder="e.g., Sir Reginald" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label htmlFor="ally-ac-inline">AC (Optional)</Label>
+                              <Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} placeholder="e.g., 15" />
+                            </div>
+                            <div>
+                              <Label htmlFor="ally-hp-inline">HP (Optional)</Label>
+                              <Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} placeholder="e.g., 30" />
+                            </div>
+                          </div>
+                        </>
                       )}
                        <div>
                         <Label htmlFor="friendly-initiative-inline">Initiative</Label>
@@ -532,11 +562,7 @@ export function CombinedToolDrawer({
                   {/* Inline Add Enemy Section */}
                   {showAddEnemySection && (
                     <div className="p-4 border-b bg-card">
-                      <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-4 -mt-4 mb-4">
-                        <UIDialogTitle className="text-primary-foreground flex items-center"><ShieldAlert className="mr-2 h-5 w-5"/>Add Enemies</UIDialogTitle>
-                        <UIDialogDescription className="text-primary-foreground/80">Add individual enemies or load a pre-saved encounter.</UIDialogDescription>
-                      </UIDialogHeader>
-                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 flex flex-col flex-grow min-h-0">
+                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 min-h-[350px] flex flex-col">
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
                           <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger>
@@ -617,6 +643,7 @@ export function CombinedToolDrawer({
                                       <p className="text-xs text-muted-foreground">
                                       {c.type === 'player' ? (availablePartyMembers.length === 0 && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
                                       {c.type === 'player' && c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null; })()}
+                                      {c.type === 'player' && !c.playerId && c.ac !== undefined && <span className="ml-1">(AC: {c.ac})</span>}
                                       </p>
                                   </div>
                                   </div>
@@ -629,6 +656,9 @@ export function CombinedToolDrawer({
                                   </div>
                               )}
                               {c.type === 'enemy' && c.hp !== undefined && ( <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </> )}
+                              {c.type === 'player' && !c.playerId && c.hp !== undefined && ( /* HP/Damage for generic allies */
+                                 <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Down (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </>
+                               )}
                               </li>
                           ))}
                           </ul>
@@ -688,3 +718,4 @@ export function CombinedToolDrawer({
     </>
   );
 }
+
