@@ -355,8 +355,8 @@ export function CombinedToolDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
         <div className="flex flex-col h-full pr-8"> 
-          <SheetHeader className="sr-only">
-            <SheetTitle>DM Tools</SheetTitle>
+          <SheetHeader className="sr-only bg-primary text-primary-foreground p-4 rounded-t-md">
+            <SheetTitle className="text-primary-foreground">DM Tools</SheetTitle>
           </SheetHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
@@ -508,33 +508,35 @@ export function CombinedToolDrawer({
     </UIDialog>
     
     <UIDialog open={isAddEnemyDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) handleEnemyDialogClose(); else setIsAddEnemyDialogOpen(isOpen); }}>
-      <UIDialogContent className="max-w-lg">
-        <UIDialogHeader>
-          <UIDialogTitle>Add Enemies</UIDialogTitle>
-          <UIDialogDescription>Add a single enemy/group or load a saved encounter.</UIDialogDescription>
+      <UIDialogContent className="max-w-lg min-h-[480px]">
+        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-6 mb-4">
+            <UIDialogTitle className="text-primary-foreground">Add Enemies</UIDialogTitle>
+            <UIDialogDescription className="text-primary-foreground/80">
+                Add a single enemy/group or load a saved encounter.
+            </UIDialogDescription>
         </UIDialogHeader>
-        <Tabs value={enemyDialogActiveTab} onValueChange={setEnemyDialogActiveTab} className="pt-2">
+        <Tabs value={enemyDialogActiveTab} onValueChange={setEnemyDialogActiveTab} className="pt-2 min-h-[350px] flex flex-col">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
             <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger>
           </TabsList>
-          <TabsContent value="single-enemy" className="space-y-3 pt-4">
+          <TabsContent value="single-enemy" className="space-y-3 pt-4 flex-grow flex flex-col">
             <div><Label htmlFor="enemy-name">Enemy Name</Label><Input id="enemy-name" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} placeholder="e.g., Goblin" /></div>
             <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="enemy-ac">AC (Optional)</Label><Input id="enemy-ac" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} placeholder="e.g., 13" /></div><div><Label htmlFor="enemy-hp">HP (Optional)</Label><Input id="enemy-hp" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} placeholder="e.g., 7" /></div></div>
             <div><Label htmlFor="enemy-quantity">Quantity</Label><Input id="enemy-quantity" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} placeholder="1" min="1" /></div>
             <div className="flex items-center space-x-2 pt-2"><Switch id="roll-group-initiative" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} /><Label htmlFor="roll-group-initiative" className="cursor-pointer">Roll initiative as a group?</Label></div>
             <div className="flex items-center space-x-2 pt-1"><Switch id="roll-enemy-initiative" checked={rollEnemyInitiativeFlag} onCheckedChange={setRollEnemyInitiativeFlag} /><Label htmlFor="roll-enemy-initiative" className="cursor-pointer">{rollGroupInitiativeFlag ? "Roll for Group?" : "Roll for each Enemy?"}</Label></div>
             <div><Label htmlFor="enemy-initiative-input">{rollEnemyInitiativeFlag ? "Initiative Modifier (e.g., +2 or -1)" : "Fixed Initiative Value"}{rollGroupInitiativeFlag ? " (for group)" : ""}</Label><Input id="enemy-initiative-input" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} placeholder={rollEnemyInitiativeFlag ? "e.g., 2 or -1" : "e.g., 12"} type={rollEnemyInitiativeFlag ? "text" : "number"} /></div>
-            <UIDialogFooter className="pt-3">
+            <UIDialogFooter className="pt-3 mt-auto">
               <Button variant="outline" onClick={handleEnemyDialogClose}>Cancel</Button>
               <Button onClick={handleAddSingleEnemy} disabled={!enemyName.trim() || !enemyInitiativeInput.trim()}>Add to Combat</Button>
             </UIDialogFooter>
           </TabsContent>
-          <TabsContent value="load-encounter" className="space-y-3 pt-4">
+          <TabsContent value="load-encounter" className="space-y-3 pt-4 flex-grow flex flex-col">
             {isLoadingSavedEncounters ? (
-              <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin" /></div>
+              <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
             ) : savedEncountersForCombat.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No saved encounters found for this campaign.</p>
+              <p className="text-sm text-muted-foreground text-center py-4 flex-grow">No saved encounters found for this campaign.</p>
             ) : (
               <>
                 <div>
@@ -551,9 +553,9 @@ export function CombinedToolDrawer({
                   </Select>
                 </div>
                 {selectedEncounterDetails && (
-                  <div className="mt-2">
+                  <div className="mt-2 flex-grow flex flex-col">
                     <Label className="font-medium">Monsters in "{selectedEncounterDetails.title}":</Label>
-                    <ScrollArea className="h-32 mt-1 border rounded-md p-2 bg-muted/30">
+                    <ScrollArea className="h-32 mt-1 border rounded-md p-2 bg-muted/30 flex-grow">
                       <ul className="text-sm space-y-1">
                         {selectedEncounterDetails.monsters.map(monster => (
                           <li key={monster.id}>
@@ -569,7 +571,7 @@ export function CombinedToolDrawer({
                     </ScrollArea>
                   </div>
                 )}
-                <UIDialogFooter className="pt-3">
+                <UIDialogFooter className="pt-3 mt-auto">
                   <Button variant="outline" onClick={handleEnemyDialogClose}>Cancel</Button>
                   <Button onClick={handleLoadSavedEncounterToCombat} disabled={!selectedSavedEncounterId}>Add Encounter to Combat</Button>
                 </UIDialogFooter>
@@ -582,6 +584,3 @@ export function CombinedToolDrawer({
     </>
   );
 }
-
-
-    
