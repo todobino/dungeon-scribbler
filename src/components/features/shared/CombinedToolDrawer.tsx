@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; // Aliased to avoid naming conflict
 import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
@@ -19,7 +19,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; // Assuming this is exported
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -35,7 +35,7 @@ interface CombinedToolDrawerProps {
   // Props for Combat Tracker
   combatants: Combatant[];
   onAddCombatant: (combatant: Combatant) => void;
-  onAddCombatants: (combatants: Combatant[]) => void;
+  onAddCombatants: (newCombatants: Combatant[]) => void;
   onRemoveCombatant: (combatantId: string) => void;
   onUpdateCombatantHp: (combatantId: string, newHp: number) => void;
   onEndCombat: () => void;
@@ -48,11 +48,13 @@ export function CombinedToolDrawer({
   open,
   onOpenChange,
   defaultTab,
+  // Dice Roller Props
   rollLog,
   onInternalRoll,
   getNewRollId,
   onClearRollLog,
-  combatants = [],
+  // Combat Tracker Props
+  combatants = [], // Default to empty array if undefined
   onAddCombatant,
   onAddCombatants,
   onRemoveCombatant,
@@ -75,6 +77,7 @@ export function CombinedToolDrawer({
   const combatantRefs = useRef<Map<string, HTMLLIElement | null>>(new Map());
 
   const [activeTab, setActiveTab] = useState(defaultTab);
+  
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab, open]);
@@ -100,7 +103,6 @@ export function CombinedToolDrawer({
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
-  const [enemyCR, setEnemyCR] = useState<string>(""); // Added for Add Enemy form
   const [isFavoriteMonsterDialogOpen, setIsFavoriteMonsterDialogOpen] = useState(false);
   const [favoritesList, setFavoritesList] = useState<FavoriteMonster[]>([]);
   const [savedEncountersForCombat, setSavedEncountersForCombat] = useState<SavedEncounter[]>([]);
@@ -204,12 +206,27 @@ export function CombinedToolDrawer({
       setShowAddEnemySection(false);
       setSelectedCombatantId(null);
       setExpandedEnemyDetailsId(null);
+      // Reset combat tracker specific form states when drawer closes
+      setSelectedPlayerToAdd(null);
+      setAllyNameInput("");
+      setFriendlyInitiativeInput("");
+      setAllyACInput("");
+      setAllyHPInput("");
+      setEnemyName("");
+      setEnemyInitiativeInput("");
+      setEnemyInitiativeModifierInput("0");
+      setEnemyQuantityInput("1");
+      setRollGroupInitiativeFlag(false);
+      setEnemyAC("");
+      setEnemyHP("");
+      setActiveAddEnemyTab("single-enemy");
+      setSelectedSavedEncounterId(undefined);
     }
   }, [open]);
 
   // --- Combat Tracker Logic ---
   useEffect(() => {
-    if (currentTurnIndex !== null && combatants.length > 0 && combatants[currentTurnIndex]) {
+    if (currentTurnIndex !== null && combatants && combatants.length > 0 && combatants[currentTurnIndex]) {
         const activeCombatantId = combatants[currentTurnIndex]?.id;
         if (activeCombatantId) {
             const activeElement = combatantRefs.current.get(activeCombatantId);
@@ -248,7 +265,7 @@ export function CombinedToolDrawer({
       setCurrentTurnIndex(null);
     } else if (currentTurnIndex !== null) {
       const combatantToRemoveIndex = combatants.findIndex(c => c.id === id);
-      if(combatantToRemoveIndex !== -1) { // Ensure combatant was found before trying to update index
+      if(combatantToRemoveIndex !== -1) {
         if (combatantToRemoveIndex === currentTurnIndex) {
           setCurrentTurnIndex(currentTurnIndex >= combatants.length - 1 ? (combatants.length - 1 > 0 ? 0 : null) : currentTurnIndex % (combatants.length -1));
         } else if (combatantToRemoveIndex < currentTurnIndex) {
@@ -262,14 +279,17 @@ export function CombinedToolDrawer({
     setCombatantToDelete(null);
   };
 
-  const nextTurn = () => { if (combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex + 1) % combatants.length); };
-  const prevTurn = () => { if (combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex - 1 + combatants.length) % combatants.length); };
+  const nextTurn = () => { if (!combatants || combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex + 1) % combatants.length); };
+  const prevTurn = () => { if (!combatants || combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex - 1 + combatants.length) % combatants.length); };
+  
   const handleEndCombatLocal = () => { 
     onEndCombat(); 
     setCurrentTurnIndex(null); 
     setSelectedCombatantId(null); 
     setExpandedEnemyDetailsId(null); 
     setDamageInputs({}); 
+    setShowAddFriendlySection(false);
+    setShowAddEnemySection(false);
   };
 
   const handleRollAllPlayerInitiatives = () => {
@@ -277,7 +297,9 @@ export function CombinedToolDrawer({
     const newCombatantsFromParty: Combatant[] = availablePartyMembers.map(player => ({
       id: `${combatUniqueId}-player-${player.id}-${Date.now()}`, name: player.name, initiative: rollDie(20) + (player.initiativeModifier || 0), type: 'player', color: player.color, playerId: player.id, ac: player.armorClass, initiativeModifier: player.initiativeModifier
     }));
-    onAddCombatants(newCombatantsFromParty);
+    if (typeof onAddCombatants === 'function') {
+        onAddCombatants(newCombatantsFromParty);
+    }
     if (currentTurnIndex === null && (combatants.length === 0 && newCombatantsFromParty.length > 0)) setCurrentTurnIndex(0);
   };
 
@@ -307,7 +329,7 @@ export function CombinedToolDrawer({
       color = selectedPlayerToAdd.color;
       ac = selectedPlayerToAdd.armorClass;
       initiativeModifier = selectedPlayerToAdd.initiativeModifier;
-      hp = undefined;
+      hp = undefined; // Players don't get HP set here, assume tracked elsewhere
     }
 
     const newCombatant: Combatant = {
@@ -322,7 +344,9 @@ export function CombinedToolDrawer({
       currentHp: hp,
       initiativeModifier
     };
-    onAddCombatant(newCombatant);
+    if (typeof onAddCombatant === 'function') {
+        onAddCombatant(newCombatant);
+    }
     if (currentTurnIndex === null && combatants.length + 1 > 0) setCurrentTurnIndex(0);
 
     setSelectedPlayerToAdd(null);
@@ -375,6 +399,8 @@ export function CombinedToolDrawer({
     setEnemyName(fav.name);
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
+    // Note: FavoriteMonster doesn't store initiative mod, so it's not pre-filled.
+    // If it did, you could setEnemyInitiativeModifierInput(fav.dexMod.toString()) or similar
     setIsFavoriteMonsterDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled where possible.`});
   };
@@ -382,7 +408,7 @@ export function CombinedToolDrawer({
   const parseModifierString = (modStr: string): number => {
     modStr = modStr.trim();
     if (modStr === "") return 0;
-    if (modStr === "+") return 0;
+    if (modStr === "+") return 0; // Treat '+' as 0 if no number follows
     const num = parseInt(modStr);
     return isNaN(num) ? 0 : num;
   };
@@ -426,17 +452,18 @@ export function CombinedToolDrawer({
         hp: hpValue,
         currentHp: hpValue,
         initiativeModifier: initMod,
-        monsterIndex: favoritesList.find(f => f.name === enemyName)?.index,
-        cr: enemyCR
+        monsterIndex: favoritesList.find(f => f.name === enemyName)?.index 
       });
     }
-    onAddCombatants(newEnemies);
+    if (typeof onAddCombatants === 'function') {
+        onAddCombatants(newEnemies);
+    }
     if (currentTurnIndex === null && combatants.length + newEnemies.length > 0) setCurrentTurnIndex(0);
 
     setEnemyName(""); setEnemyInitiativeInput(""); setEnemyQuantityInput("1");
     setEnemyInitiativeModifierInput("0");
     setRollGroupInitiativeFlag(false);
-    setEnemyAC(""); setEnemyHP(""); setEnemyCR("");
+    setEnemyAC(""); setEnemyHP("");
     setShowAddEnemySection(false);
   };
 
@@ -452,7 +479,7 @@ export function CombinedToolDrawer({
         const initiativeValue = rollDie(20) + (monster.initiativeModifier || 0);
         const acValue = monster.ac ? parseInt(monster.ac) : undefined;
         const hpValue = monster.hp ? parseInt(monster.hp) : undefined;
-
+        
         newEnemiesFromEncounter.push({
           id: `${combatUniqueId}-enemy-${monster.name.replace(/\s+/g, '')}-${Date.now()}-${monsterIndex}-${i}`,
           name: combatantName,
@@ -463,11 +490,13 @@ export function CombinedToolDrawer({
           currentHp: isNaN(hpValue!) ? undefined : hpValue,
           cr: monster.cr,
           initiativeModifier: monster.initiativeModifier,
-          monsterIndex: favoritesList.find(f => f.name === monster.name)?.index
+          monsterIndex: favoritesList.find(f => f.name === monster.name)?.index 
         });
       }
     });
-    onAddCombatants(newEnemiesFromEncounter);
+    if (typeof onAddCombatants === 'function') {
+        onAddCombatants(newEnemiesFromEncounter);
+    }
      if (currentTurnIndex === null && combatants.length + newEnemiesFromEncounter.length > 0) setCurrentTurnIndex(0);
 
     setSelectedSavedEncounterId(undefined);
@@ -521,6 +550,7 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
+        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
@@ -586,8 +616,7 @@ export function CombinedToolDrawer({
             </TabsContent>
 
             <TabsContent value={COMBAT_TRACKER_TAB_ID} className="data-[state=active]:flex flex-col flex-grow min-h-0">
-              <div className="p-4 flex flex-col gap-2 border-b shrink-0">
-                <div className="flex gap-2">
+              <div className="p-4 flex gap-2 border-b shrink-0">
                   <Button
                     onClick={() => { setShowAddFriendlySection(p => !p); setShowAddEnemySection(false); setSelectedCombatantId(null); setExpandedEnemyDetailsId(null);}}
                     variant={showAddFriendlySection ? "secondary" : "outline"}
@@ -603,13 +632,15 @@ export function CombinedToolDrawer({
                   >
                     <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
                   </Button>
-                </div>
-                {availablePartyMembers.length > 0 && (
-                  <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full">
-                    <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
-                  </Button>
-                )}
               </div>
+               {availablePartyMembers.length > 0 && (
+                <div className="p-4 border-b shrink-0">
+                    <Button onClick={handleRollAllPlayerInitiatives} variant="outline" className="w-full">
+                        <Dice5 className="mr-2 h-4 w-4"/> Roll All Player Initiatives
+                    </Button>
+                </div>
+                )}
+
 
               {/* Inline Add Friendly Section */}
               {showAddFriendlySection && (
@@ -701,7 +732,7 @@ export function CombinedToolDrawer({
                   <Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim()} className="w-full">Add to Combat</Button>
                   </div>
                 </TabsContent>
-                <TabsContent value="load-encounter" className="pt-3 flex-grow flex flex-col">
+                <TabsContent value="load-encounter" className="pt-3 flex-grow flex flex-col min-h-0">
                   {isLoadingSavedEncounters ? (
                   <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
                   ) : savedEncountersForCombat.length === 0 ? (
@@ -743,82 +774,83 @@ export function CombinedToolDrawer({
                 </Tabs>
               </div>
               )}
-                <div className="p-4 flex-grow flex flex-col min-h-0">
-                    <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
-                    <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
-                        {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
-                        <ul className="space-y-1.5">
-                        {combatants.map((c, index) => (
-                            <li
-                            key={c.id}
-                            ref={(el) => combatantRefs.current.set(c.id, el)}
-                            className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'} ${c.type === 'enemy' ? 'cursor-pointer hover:bg-muted/70' : ''}`}
-                            style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
-                            onClick={() => handleCombatantCardClick(c)}
-                            >
-                            <div className="flex items-start justify-between w-full">
-                                <div className="flex items-center">
-                                <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
-                                <div>
-                                    <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                    AC: {c.ac ?? 'N/A'}
-                                    {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp}/{c.hp}</span>}
-                                    </p>
-                                </div>
-                                </div>
-                                {c.type === 'enemy' && (c.monsterIndex || c.ac || c.hp) && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); toggleEnemyDetails(c); }}>
-                                    <BookOpen className="h-4 w-4" />
-                                </Button>
-                                )}
+              <div className="p-4 flex-grow flex flex-col min-h-0"> {/* Main container for combat list */}
+                <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
+                <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
+                    {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
+                    <ul className="space-y-1.5">
+                    {combatants.map((c, index) => (
+                        <li
+                        key={c.id}
+                        ref={(el) => combatantRefs.current.set(c.id, el)}
+                        className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'} ${c.type === 'enemy' ? 'cursor-pointer hover:bg-muted/70' : ''}`}
+                        style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
+                        onClick={() => handleCombatantCardClick(c)}
+                        >
+                        <div className="flex items-start justify-between w-full">
+                            <div className="flex items-center">
+                            <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
+                            <div>
+                                <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                AC: {c.ac ?? 'N/A'}
+                                {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp}/{c.hp}</span>}
+                                </p>
                             </div>
-
-                            {/* Expanded Details for Enemy */}
-                            {c.type === 'enemy' && c.id === expandedEnemyDetailsId && (
-                                <div className="p-2 border-t mt-1.5 text-xs bg-background/50 rounded-b-md max-h-48 overflow-y-auto">
-                                {isLoadingFullEnemyDetailsFor === c.id ? (
-                                    <div className="flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
-                                ) : c.monsterIndex && fullEnemyDetailsCache[c.monsterIndex] ? (
-                                    <>
-                                    <p><strong>CR:</strong> {formatCRDisplay(fullEnemyDetailsCache[c.monsterIndex]?.challenge_rating) || 'N/A'}</p>
-                                    <p><strong>Type:</strong> {fullEnemyDetailsCache[c.monsterIndex]?.type || 'N/A'}</p>
-                                    <p><strong>Senses:</strong> {typeof fullEnemyDetailsCache[c.monsterIndex]?.senses === 'string' ? fullEnemyDetailsCache[c.monsterIndex]?.senses : Object.entries(fullEnemyDetailsCache[c.monsterIndex]?.senses || {}).map(([k,v]) => `${k.replace(/_/g, " ")} ${v}`).join(', ') || 'N/A'}</p>
-                                    </>
-                                ) : (
-                                    <>
-                                    <p><strong>AC:</strong> {c.ac ?? 'N/A'}</p>
-                                    <p><strong>HP:</strong> {c.currentHp ?? c.hp ?? 'N/A'} / {c.hp ?? 'N/A'}</p>
-                                    <p><strong>CR:</strong> {c.cr ? formatCRDisplay(c.cr) : 'N/A'}</p>
-                                    {c.monsterIndex && <p className="text-muted-foreground italic mt-1">Full API details not loaded yet.</p>}
-                                    {!c.monsterIndex && <p className="text-muted-foreground italic mt-1">No detailed API data available for quick view.</p>}
-                                    </>
-                                )}
-                                </div>
+                            </div>
+                            {c.type === 'enemy' && (c.monsterIndex || c.ac || c.hp) && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); toggleEnemyDetails(c); }}>
+                                <BookOpen className="h-4 w-4" />
+                            </Button>
                             )}
+                        </div>
 
-
-                            {c.type === 'enemy' && c.hp !== undefined && c.id === selectedCombatantId && (
-                            <>
-                            {c.currentHp !== undefined && c.currentHp === 0 ? (
-                                <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>
+                        {/* Expanded Details for Enemy */}
+                        {c.type === 'enemy' && c.id === expandedEnemyDetailsId && (
+                            <div className="p-2 border-t mt-1.5 text-xs bg-background/50 rounded-b-md max-h-48 overflow-y-auto">
+                            {isLoadingFullEnemyDetailsFor === c.id ? (
+                                <div className="flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                            ) : c.monsterIndex && fullEnemyDetailsCache[c.monsterIndex] ? (
+                                <>
+                                <p><strong>CR:</strong> {formatCRDisplay(fullEnemyDetailsCache[c.monsterIndex]?.challenge_rating) || 'N/A'}</p>
+                                <p><strong>Type:</strong> {fullEnemyDetailsCache[c.monsterIndex]?.type || 'N/A'}</p>
+                                <p><strong>Senses:</strong> {typeof fullEnemyDetailsCache[c.monsterIndex]?.senses === 'string' ? fullEnemyDetailsCache[c.monsterIndex]?.senses : Object.entries(fullEnemyDetailsCache[c.monsterIndex]?.senses || {}).map(([k,v]) => `${k.replace(/_/g, " ")} ${v}`).join(', ') || 'N/A'}</p>
+                                {/* Add more details here as needed */}
+                                </>
                             ) : (
-                                <div className="flex items-center justify-between gap-1.5 pt-1">
-                                <div className="flex items-center gap-1.5">
-                                    <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
-                                    <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
-                                    <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); handleOpenDeleteConfirm(c);}}><Trash2 className="h-4 w-4" /></Button>
-                                </div>
+                                <>
+                                <p><strong>AC:</strong> {c.ac ?? 'N/A'}</p>
+                                <p><strong>HP:</strong> {c.currentHp ?? c.hp ?? 'N/A'} / {c.hp ?? 'N/A'}</p>
+                                <p><strong>CR:</strong> {c.cr ? formatCRDisplay(c.cr) : 'N/A'}</p>
+                                {c.monsterIndex && <p className="text-muted-foreground italic mt-1">Full API details not loaded yet.</p>}
+                                {!c.monsterIndex && <p className="text-muted-foreground italic mt-1">No detailed API data available for quick view.</p>}
+                                </>
                             )}
-                            </>
-                            )}
-                            </li>
-                        ))}
-                        </ul>
-                    </ScrollArea>
-                </div>
+                            </div>
+                        )}
+
+
+                        {c.type === 'enemy' && c.hp !== undefined && c.id === selectedCombatantId && (
+                        <>
+                        {c.currentHp !== undefined && c.currentHp === 0 ? (
+                            <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>
+                        ) : (
+                            <div className="flex items-center justify-between gap-1.5 pt-1">
+                            <div className="flex items-center gap-1.5">
+                                <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
+                                <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
+                                <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); handleOpenDeleteConfirm(c);}}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                        )}
+                        </>
+                        )}
+                        </li>
+                    ))}
+                    </ul>
+                </ScrollArea>
+              </div>
               {combatants.length > 0 && (
               <div className="p-4 space-y-2 border-t shrink-0">
                 <div className="flex gap-2">
@@ -890,4 +922,3 @@ export function CombinedToolDrawer({
     </>
   );
 }
-

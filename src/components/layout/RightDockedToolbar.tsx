@@ -17,38 +17,38 @@ import {
   DICE_ROLLER_TAB_ID, 
   COMBAT_TRACKER_TAB_ID 
 } from "@/lib/constants";
-import type { RollLogEntry } from "@/lib/types";
+import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, VenetianMask } from "lucide-react";
+import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, VenetianMask } from "lucide-react"; // Ensured all icons are imported
 import { useCampaign } from "@/contexts/campaign-context";
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
+  const { notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
   
+  // State lifted from CombinedToolDrawer for Dice Roller
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
-  const { notifyEncounterUpdate } = useCampaign();
-
 
   const addRollToLog = useCallback((rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, entryIdToUpdate?: string) => {
     const idToUse = entryIdToUpdate || getNewRollId();
     setRollLog(prevLog => {
+      const newEntryBase = {
+        ...rollData,
+        id: idToUse,
+        isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
+      };
       if (entryIdToUpdate && prevLog.find(entry => entry.id === entryIdToUpdate)) {
         return prevLog.map(entry => 
             entry.id === entryIdToUpdate 
-            ? {...entry, ...rollData, isRolling: false } 
+            ? newEntryBase 
             : entry
         );
       } else {
-        const newEntry: RollLogEntry = {
-            id: idToUse,
-            ...rollData,
-            isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
-        };
-        const updatedLog = [newEntry, ...prevLog];
-        return updatedLog.slice(0, 10);
+        const updatedLog = [newEntryBase, ...prevLog];
+        return updatedLog.slice(0, 10); // Keep last 10 rolls
       }
     });
   }, [getNewRollId]);
@@ -56,6 +56,39 @@ export function RightDockedToolbar() {
   const handleClearRollLog = useCallback(() => {
     setRollLog([]);
   }, []);
+
+  // State lifted from CombinedToolDrawer for Combat Tracker
+  const [combatants, setCombatants] = useState<Combatant[]>([]);
+
+  const handleAddCombatant = useCallback((combatant: Combatant) => {
+    setCombatants(prevCombatants => 
+        [...prevCombatants, combatant].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
+    );
+  }, []);
+
+  const handleAddCombatants = useCallback((newCombatants: Combatant[]) => {
+    setCombatants(prevCombatants => 
+        [...prevCombatants, ...newCombatants].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
+    );
+  }, []);
+  
+  const handleRemoveCombatant = useCallback((combatantId: string) => {
+    setCombatants(prevCombatants => prevCombatants.filter(c => c.id !== combatantId));
+  }, []);
+
+  const handleUpdateCombatantHp = useCallback((combatantId: string, newHp: number) => {
+    setCombatants(prevCombatants =>
+      prevCombatants.map(c =>
+        c.id === combatantId ? { ...c, currentHp: newHp } : c
+      )
+    );
+  }, []);
+
+  const handleEndCombat = useCallback(() => {
+    setCombatants([]);
+    // Potentially reset other combat-related states if they were also lifted, e.g., currentTurnIndex
+  }, []);
+
 
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
@@ -95,9 +128,12 @@ export function RightDockedToolbar() {
                                 (openDrawerId === STATUS_CONDITIONS_DRAWER_ID && item.id === STATUS_CONDITIONS_DRAWER_ID) ||
                                 (openDrawerId === SPELLBOOK_DRAWER_ID && item.id === SPELLBOOK_DRAWER_ID);
             
+            let isCombatActiveIcon = item.id === COMBAT_TRACKER_TAB_ID && combatants.length > 0;
+
             let finalButtonCn = cn(
               buttonBaseCn,
-              isActiveTool && "bg-primary/20 text-primary ring-2 ring-primary"
+              isActiveTool && "bg-primary/20 text-primary ring-2 ring-primary",
+              isCombatActiveIcon && "animate-pulse ring-2 ring-destructive bg-destructive/20 text-destructive"
             );
             
             return (
@@ -133,10 +169,18 @@ export function RightDockedToolbar() {
             if(!isOpen) setOpenDrawerId(null);
         }}
         defaultTab={activeCombinedTab}
+        // Props for Dice Roller
         rollLog={rollLog}
-        onInternalRoll={(data, entryIdToUpdate) => addRollToLog(data, entryIdToUpdate)}
+        onInternalRoll={addRollToLog}
         getNewRollId={getNewRollId}
         onClearRollLog={handleClearRollLog}
+        // Props for Combat Tracker
+        combatants={combatants}
+        onAddCombatant={handleAddCombatant}
+        onAddCombatants={handleAddCombatants}
+        onRemoveCombatant={handleRemoveCombatant}
+        onUpdateCombatantHp={handleUpdateCombatantHp}
+        onEndCombat={handleEndCombat}
       />
       <MonsterMashDrawer
         open={openDrawerId === MONSTER_MASH_DRAWER_ID}
