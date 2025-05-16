@@ -1,6 +1,9 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2, User } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2, User, ArrowUpDown } from 'lucide-react';
+
+export const APP_NAME = "Adventure Architect";
+export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co"; // Defined and exported
 
 export interface NavItem {
   label: string;
@@ -12,15 +15,13 @@ export interface NavItem {
   isGenAI?: boolean;
 }
 
-export const APP_NAME = "Adventure Architect";
-
 // Toolbar IDs - DEFINE THESE FIRST
-export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
-export const DICE_ROLLER_TAB_ID = "dice-roller"; // Used by CombinedToolDrawer
-export const COMBAT_TRACKER_TAB_ID = "combat-tracker"; // Used by CombinedToolDrawer
+export const DICE_ROLLER_TAB_ID = "dice-roller";
+export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
 export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const SPELLBOOK_DRAWER_ID = "spellbook";
+export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
 
 
 // Toolbar items
@@ -33,7 +34,6 @@ export const TOOLBAR_ITEMS = [
 ];
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Current Campaign', href: '/campaign-management', icon: Library },
   { label: 'Party Manager', href: '/party-manager', icon: User },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
@@ -195,11 +195,11 @@ export const ACTIVE_CAMPAIGN_ID_STORAGE_KEY = `${SHARED_DATA_PREFIX}ActiveCampai
 // Campaign-specific prefixes
 export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Party_`;
 export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Factions_`;
-export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Locations_`; // Currently unused page
+export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Locations_`;
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Maps_`;
+export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}JournalNotes_`;
 export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}CurrentEncounter_`;
 export const SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}SavedEncounters_`;
-export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}JournalNotes_`; // Page removed, but key might be in old data
 
 // Adventure Recap Page Keys (Refactored)
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_PlotPoints_`;
@@ -260,9 +260,9 @@ export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
   FACTIONS_STORAGE_KEY_PREFIX,
   LOCATIONS_STORAGE_KEY_PREFIX,
   MAPS_STORAGE_KEY_PREFIX,
+  JOURNAL_NOTES_STORAGE_KEY_PREFIX,
   ENCOUNTER_STORAGE_KEY_PREFIX,
   SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX,
-  JOURNAL_NOTES_STORAGE_KEY_PREFIX,
   REFACTORED_PLOT_POINTS_KEY_PREFIX,
   REFACTORED_CURRENT_SESSION_KEY_PREFIX,
   REFACTORED_SESSION_SUMMARIES_KEY_PREFIX,

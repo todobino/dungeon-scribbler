@@ -8,13 +8,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle, ChevronRight, ShieldQuestion } from "lucide-react";
 import type { ConditionSummary, ConditionDetail } from "@/lib/types";
+import { DND5E_API_BASE_URL } from "@/lib/constants";
 
 interface StatusConditionsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
 
 export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsDrawerProps) {
   const [conditions, setConditions] = useState<ConditionSummary[]>([]);
@@ -50,7 +49,6 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
 
   const fetchConditionDetail = async (conditionIndex: string) => {
     if (conditionDetails[conditionIndex]) {
-      // Already fetched, ensure it's the open item
       if (openAccordionItem !== conditionIndex) {
          setOpenAccordionItem(conditionIndex);
       }
@@ -65,7 +63,6 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
       }
       const data: ConditionDetail = await response.json();
       setConditionDetails(prev => ({ ...prev, [conditionIndex]: data }));
-      // No need to setOpenAccordionItem here, onValueChange handles it
     } catch (err: any) {
       setError(err.message || `Could not load details for ${conditionIndex}.`);
     } finally {
@@ -74,10 +71,10 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
   };
 
   const handleAccordionChange = (value: string) => {
-    // value is the index of the item being opened, or empty string if all are closed/current one is closed
-    setOpenAccordionItem(value || null);
-    if (value && !conditionDetails[value] && !isLoadingDetail[value]) {
-      fetchConditionDetail(value);
+    const newOpenItem = value === openAccordionItem ? null : value;
+    setOpenAccordionItem(newOpenItem);
+    if (newOpenItem && !conditionDetails[newOpenItem] && !isLoadingDetail[newOpenItem]) {
+      fetchConditionDetail(newOpenItem);
     }
   };
 
@@ -117,7 +114,7 @@ export function StatusConditionsDrawer({ open, onOpenChange }: StatusConditionsD
                   type="single"
                   collapsible
                   className="w-full p-2"
-                  value={openAccordionItem || ""} // Ensure value is always a string
+                  value={openAccordionItem || ""}
                   onValueChange={handleAccordionChange}
                 >
                   {conditions.map((condition) => (

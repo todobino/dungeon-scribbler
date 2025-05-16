@@ -14,17 +14,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Loader2, AlertTriangle, ChevronRight, BookOpen, Search, PlusCircle, Dna, Edit3, Trash2, Save } from "lucide-react";
 import type { SpellSummary, SpellDetail, HomebrewSpellFormData } from "@/lib/types";
-import { SPELLBOOK_HOMEBREW_STORAGE_KEY, SPELL_SCHOOLS } from "@/lib/constants";
+import { SPELLBOOK_HOMEBREW_STORAGE_KEY, SPELL_SCHOOLS, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 
 interface SpellbookDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
 
 const initialHomebrewSpellFormData: HomebrewSpellFormData = {
   name: "",
@@ -639,4 +637,3 @@ const buttonVariants = cva(
     },
   }
 );
-
