@@ -9,15 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog as UIDialog, DialogContent as UIDialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter as UIDialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, ChevronsRightIcon, Skull, Loader2, Swords, FolderOpen } from "lucide-react";
+import { Dice5, Zap, Trash2, ChevronRight, ListOrdered, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AddFriendlyDrawer } from "@/components/features/combat-tracker/AddFriendlyDrawer";
+import { AddEnemyDrawer } from "@/components/features/combat-tracker/AddEnemyDrawer";
 
 
 interface CombinedToolDrawerProps {
@@ -51,25 +52,10 @@ export function CombinedToolDrawer({
   const { activeCampaign, activeCampaignParty } = useCampaign();
   const [combatants, setCombatants] = useState<Combatant[]>([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState<number | null>(null);
-  const combatUniqueId = useId();
-  const [isAddFriendlyDialogOpen, setIsAddFriendlyDialogOpen] = useState(false);
-  const [selectedPlayerToAdd, setSelectedPlayerToAdd] = useState<PlayerCharacter | null>(null);
-  const [allyNameInput, setAllyNameInput] = useState<string>("");
-  const [friendlyInitiativeInput, setFriendlyInitiativeInput] = useState<string>("");
-  
-  const [isAddEnemyDialogOpen, setIsAddEnemyDialogOpen] = useState(false);
-  const [enemyDialogActiveTab, setEnemyDialogActiveTab] = useState("single-enemy");
-  const [enemyName, setEnemyName] = useState("");
-  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>("");
-  const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
-  const [rollEnemyInitiativeFlag, setRollEnemyInitiativeFlag] = useState<boolean>(false);
-  const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
-  const [enemyAC, setEnemyAC] = useState<string>("");
-  const [enemyHP, setEnemyHP] = useState<string>("");
+  const combatUniqueId = useId(); // Keep this for generating combatant IDs
 
-  const [savedEncountersForCombat, setSavedEncountersForCombat] = useState<SavedEncounter[]>([]);
-  const [selectedSavedEncounterId, setSelectedSavedEncounterId] = useState<string | undefined>(undefined);
-  const [isLoadingSavedEncounters, setIsLoadingSavedEncounters] = useState(false);
+  const [isAddFriendlyDrawerOpen, setIsAddFriendlyDrawerOpen] = useState(false);
+  const [isAddEnemyDrawerOpen, setIsAddEnemyDrawerOpen] = useState(false);
   
   const [damageInputs, setDamageInputs] = useState<Record<string, string>>({});
   const combatantRefs = useRef<Map<string, HTMLLIElement | null>>(new Map());
@@ -179,136 +165,20 @@ export function CombinedToolDrawer({
     }
   }, [currentTurnIndex, combatants]);
 
-  const parseModifierString = (modStr: string): number => {
-    modStr = modStr.trim();
-    if (modStr === "") return 0;
-    const num = parseInt(modStr);
-    return isNaN(num) ? 0 : num;
-  };
-  const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
-  const isAllyMode = availablePartyMembers.length === 0;
-
-  const handleAddFriendly = () => {
-    const initiativeValue = parseInt(friendlyInitiativeInput);
-    if (isNaN(initiativeValue) || friendlyInitiativeInput.trim() === "") return;
-    let name: string, playerId: string | undefined, color: string | undefined;
-    if (isAllyMode) {
-      if (!allyNameInput.trim()) return;
-      name = allyNameInput.trim();
-    } else {
-      if (!selectedPlayerToAdd) return;
-      if (combatants.find(c => c.playerId === selectedPlayerToAdd.id)) return;
-      name = selectedPlayerToAdd.name; playerId = selectedPlayerToAdd.id; color = selectedPlayerToAdd.color;
-    }
-    const newCombatant: Combatant = {
-      id: `${combatUniqueId}-${isAllyMode ? 'ally' : 'player'}-${playerId || name.replace(/\s+/g, '')}-${Date.now()}`,
-      name, initiative: initiativeValue, type: 'player', color, playerId,
-    };
+  const handleAddFriendlyFromDrawer = (newCombatant: Combatant) => {
     setCombatants(prev => [...prev, newCombatant]);
     if (currentTurnIndex === null && (combatants.length === 0 || [newCombatant].length > 0)) setCurrentTurnIndex(0);
-    setIsAddFriendlyDialogOpen(false); setSelectedPlayerToAdd(null); setAllyNameInput(""); setFriendlyInitiativeInput("");
+    setIsAddFriendlyDrawerOpen(false);
   };
 
-  const handleRollFriendlyInitiative = () => {
-    let mod = 0;
-    if (!isAllyMode && selectedPlayerToAdd) mod = selectedPlayerToAdd.initiativeModifier || 0;
-    setFriendlyInitiativeInput((rollDie(20) + mod).toString());
-  };
-
-  const handleAddSingleEnemy = () => {
-    if (!enemyName.trim()) {
-      return;
-    }
-    const quantity = parseInt(enemyQuantityInput) || 1; if (quantity <= 0) return;
-    const acValue = enemyAC.trim() === "" ? undefined : parseInt(enemyAC);
-    const hpValue = enemyHP.trim() === "" ? undefined : parseInt(enemyHP);
-    if (enemyAC.trim() !== "" && (isNaN(acValue!) || acValue! < 0)) return;
-    if (enemyHP.trim() !== "" && (isNaN(hpValue!) || hpValue! <= 0)) return;
-
-    const newEnemies: Combatant[] = [];
-    let groupInitiativeValue: number | undefined;
-    if (rollGroupInitiativeFlag) {
-      groupInitiativeValue = rollEnemyInitiativeFlag ? rollDie(20) + parseModifierString(enemyInitiativeInput) : parseInt(enemyInitiativeInput);
-      if (isNaN(groupInitiativeValue)) return;
-    }
-    for (let i = 0; i < quantity; i++) {
-      let initiativeValue: number;
-      const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
-      if (rollGroupInitiativeFlag && groupInitiativeValue !== undefined) {
-        initiativeValue = groupInitiativeValue;
-      } else {
-        initiativeValue = rollEnemyInitiativeFlag ? rollDie(20) + parseModifierString(enemyInitiativeInput) : parseInt(enemyInitiativeInput);
-        if (isNaN(initiativeValue)) return;
-      }
-      newEnemies.push({
-        id: `${combatUniqueId}-enemy-${Date.now()}-${i}`, name: currentEnemyName, initiative: initiativeValue, type: 'enemy', ac: acValue, hp: hpValue, currentHp: hpValue,
-      });
-    }
+  const handleAddEnemiesFromDrawer = (newEnemies: Combatant[]) => {
     setCombatants(prev => [...prev, ...newEnemies]);
     if (currentTurnIndex === null && (combatants.length === 0 || newEnemies.length > 0)) setCurrentTurnIndex(0);
-    handleEnemyDialogClose();
+    setIsAddEnemyDrawerOpen(false);
   };
-
-  const handleLoadSavedEncounterToCombat = () => {
-    if (!selectedSavedEncounterId) return;
-    const encounter = savedEncountersForCombat.find(e => e.id === selectedSavedEncounterId);
-    if (!encounter) return;
-
-    const newEnemiesFromEncounter: Combatant[] = [];
-    encounter.monsters.forEach((monster: EncounterMonster) => {
-      for (let i = 0; i < monster.quantity; i++) {
-        const combatantName = monster.quantity > 1 ? `${monster.name} ${i + 1}` : monster.name;
-        const initiativeValue = rollDie(20); // Roll d20 for initiative for each monster
-        const acValue = monster.ac ? parseInt(monster.ac) : undefined;
-        const hpValue = monster.hp ? parseInt(monster.hp) : undefined;
-
-        newEnemiesFromEncounter.push({
-          id: `${combatUniqueId}-enemy-${monster.name.replace(/\s+/g, '')}-${Date.now()}-${i}`,
-          name: combatantName,
-          initiative: initiativeValue,
-          type: 'enemy',
-          ac: isNaN(acValue!) ? undefined : acValue,
-          hp: isNaN(hpValue!) ? undefined : hpValue,
-          currentHp: isNaN(hpValue!) ? undefined : hpValue,
-        });
-      }
-    });
-
-    setCombatants(prev => [...prev, ...newEnemiesFromEncounter]);
-    if (currentTurnIndex === null && (combatants.length === 0 || newEnemiesFromEncounter.length > 0)) setCurrentTurnIndex(0);
-    handleEnemyDialogClose();
-  };
-
-
-  const handleEnemyDialogClose = () => {
-    setIsAddEnemyDialogOpen(false); 
-    setEnemyName(""); 
-    setEnemyInitiativeInput(""); 
-    setEnemyQuantityInput("1"); 
-    setRollEnemyInitiativeFlag(false); 
-    setRollGroupInitiativeFlag(false); 
-    setEnemyAC(""); 
-    setEnemyHP("");
-    setSelectedSavedEncounterId(undefined);
-    setSavedEncountersForCombat([]);
-    setEnemyDialogActiveTab("single-enemy");
-  };
-
-  useEffect(() => {
-    if (isAddEnemyDialogOpen && activeCampaign && enemyDialogActiveTab === "load-encounter") {
-      setIsLoadingSavedEncounters(true);
-      try {
-        const storageKey = `${SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
-        const storedEncounters = localStorage.getItem(storageKey);
-        setSavedEncountersForCombat(storedEncounters ? JSON.parse(storedEncounters) : []);
-      } catch (error) {
-        console.error("Error loading saved encounters for combat tracker:", error);
-        setSavedEncountersForCombat([]);
-      }
-      setIsLoadingSavedEncounters(false);
-    }
-  }, [isAddEnemyDialogOpen, activeCampaign, enemyDialogActiveTab]);
-
+  
+  const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
+  const addPlayerButtonLabel = availablePartyMembers.length > 0 ? "Add Player" : "Add Ally";
 
   const handleDamageInputChange = (combatantId: string, value: string) => setDamageInputs(prev => ({ ...prev, [combatantId]: value }));
   const handleApplyDamage = (combatantId: string, type: 'damage' | 'heal') => {
@@ -345,9 +215,6 @@ export function CombinedToolDrawer({
     setCombatants(prev => [...prev, ...newCombatantsFromParty]);
     if (currentTurnIndex === null && (combatants.length === 0 && newCombatantsFromParty.length > 0)) setCurrentTurnIndex(0);
   };
-  const addPlayerButtonLabel = availablePartyMembers.length > 0 ? "Add Player" : "Add Ally";
-
-  const selectedEncounterDetails = selectedSavedEncounterId ? savedEncountersForCombat.find(e => e.id === selectedSavedEncounterId) : null;
 
 
   return (
@@ -356,7 +223,7 @@ export function CombinedToolDrawer({
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
         <div className="flex flex-col h-full pr-8"> 
           <SheetHeader className="sr-only bg-primary text-primary-foreground p-4 rounded-t-md">
-            <SheetTitle className="text-primary-foreground">DM Tools</SheetTitle>
+            <SheetTitle className="text-primary-foreground sr-only">DM Tools</SheetTitle>
           </SheetHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
@@ -425,11 +292,11 @@ export function CombinedToolDrawer({
               <TabsContent value={COMBAT_TRACKER_TAB_ID} className="data-[state=active]:flex flex-col h-full">
                   <div className="p-4 flex flex-col gap-2 border-b shrink-0">
                       <div className="flex gap-2">
-                          <Button onClick={() => setIsAddFriendlyDialogOpen(true)} variant="outline" className="flex-1">
-                              {isAllyMode ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
+                          <Button onClick={() => setIsAddFriendlyDrawerOpen(true)} variant="outline" className="flex-1">
+                              {availablePartyMembers.length === 0 ? <UserPlus className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
                               {addPlayerButtonLabel}
                           </Button>
-                          <Button onClick={() => setIsAddEnemyDialogOpen(true)} variant="outline" className="flex-1">
+                          <Button onClick={() => setIsAddEnemyDrawerOpen(true)} variant="outline" className="flex-1">
                               <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
                           </Button>
                       </div>
@@ -452,7 +319,7 @@ export function CombinedToolDrawer({
                                   <div>
                                       <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
                                       <p className="text-xs text-muted-foreground">
-                                      {c.type === 'player' ? (isAllyMode && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
+                                      {c.type === 'player' ? (availablePartyMembers.length === 0 && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
                                       {c.type === 'player' && c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null; })()}
                                       </p>
                                   </div>
@@ -495,92 +362,24 @@ export function CombinedToolDrawer({
       </SheetContent>
     </Sheet>
 
-    {/* Dialogs for Combat Tracker */}
-    <UIDialog open={isAddFriendlyDialogOpen} onOpenChange={setIsAddFriendlyDialogOpen}>
-      <UIDialogContent>
-        <UIDialogHeader><UIDialogTitle>{isAllyMode ? "Add Ally" : "Add Player"}</UIDialogTitle><UIDialogDescription>{isAllyMode ? "Enter name & initiative." : "Select player & enter/roll initiative."}</UIDialogDescription></UIDialogHeader>
-        <div className="py-4 space-y-3">
-          {isAllyMode ? ( <div><Label htmlFor="ally-name">Ally Name</Label><Input id="ally-name" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} placeholder="e.g., Sir Reginald" /></div> ) : ( <div><Label htmlFor="player-select">Player Character</Label>{availablePartyMembers.length > 0 ? ( <Select value={selectedPlayerToAdd?.id || ""} onValueChange={(value) => setSelectedPlayerToAdd(activeCampaignParty.find(p => p.id === value) || null)}><SelectTrigger id="player-select" className="mt-1"><SelectValue placeholder="Select a player" /></SelectTrigger><SelectContent>{availablePartyMembers.map(p => (<SelectItem key={p.id} value={p.id}>{p.name} - {p.race} {p.class}</SelectItem>))}</SelectContent></Select> ) : (<p className="text-sm text-muted-foreground mt-1">All party members added.</p>)}</div> )}
-          <div><Label htmlFor="friendly-initiative">Initiative</Label><div className="flex gap-2 items-center"><Input id="friendly-initiative" type="number" value={friendlyInitiativeInput} onChange={(e) => setFriendlyInitiativeInput(e.target.value)} placeholder="e.g., 15" className="flex-grow" />{(!isAllyMode && selectedPlayerToAdd) && (<Button onClick={handleRollFriendlyInitiative} variant="outline" size="sm" className="shrink-0"><Dice5 className="mr-1 h-4 w-4"/> Roll (d20 +{selectedPlayerToAdd.initiativeModifier || 0})</Button>)}{isAllyMode && (<Button onClick={handleRollFriendlyInitiative} variant="outline" size="sm" className="shrink-0"><Dice5 className="mr-1 h-4 w-4"/> Roll (d20)</Button>)}</div></div>
-        </div>
-        <UIDialogFooter><Button variant="outline" onClick={() => {setIsAddFriendlyDialogOpen(false); setSelectedPlayerToAdd(null); setAllyNameInput(""); setFriendlyInitiativeInput("");}}>Cancel</Button><Button onClick={handleAddFriendly} disabled={(!isAllyMode && !selectedPlayerToAdd) || (isAllyMode && !allyNameInput.trim()) || !friendlyInitiativeInput.trim()}>{isAllyMode ? "Add Ally" : "Add Player"}</Button></UIDialogFooter>
-      </UIDialogContent>
-    </UIDialog>
-    
-    <UIDialog open={isAddEnemyDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) handleEnemyDialogClose(); else setIsAddEnemyDialogOpen(isOpen); }}>
-      <UIDialogContent className="max-w-lg min-h-[480px]">
-        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-6 mb-4">
-            <UIDialogTitle className="text-primary-foreground">Add Enemies</UIDialogTitle>
-            <UIDialogDescription className="text-primary-foreground/80">
-                Add a single enemy/group or load a saved encounter.
-            </UIDialogDescription>
-        </UIDialogHeader>
-        <Tabs value={enemyDialogActiveTab} onValueChange={setEnemyDialogActiveTab} className="pt-2 min-h-[350px] flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
-            <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger>
-          </TabsList>
-          <TabsContent value="single-enemy" className="space-y-3 pt-4 flex-grow flex flex-col">
-            <div><Label htmlFor="enemy-name">Enemy Name</Label><Input id="enemy-name" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} placeholder="e.g., Goblin" /></div>
-            <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="enemy-ac">AC (Optional)</Label><Input id="enemy-ac" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} placeholder="e.g., 13" /></div><div><Label htmlFor="enemy-hp">HP (Optional)</Label><Input id="enemy-hp" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} placeholder="e.g., 7" /></div></div>
-            <div><Label htmlFor="enemy-quantity">Quantity</Label><Input id="enemy-quantity" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} placeholder="1" min="1" /></div>
-            <div className="flex items-center space-x-2 pt-2"><Switch id="roll-group-initiative" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} /><Label htmlFor="roll-group-initiative" className="cursor-pointer">Roll initiative as a group?</Label></div>
-            <div className="flex items-center space-x-2 pt-1"><Switch id="roll-enemy-initiative" checked={rollEnemyInitiativeFlag} onCheckedChange={setRollEnemyInitiativeFlag} /><Label htmlFor="roll-enemy-initiative" className="cursor-pointer">{rollGroupInitiativeFlag ? "Roll for Group?" : "Roll for each Enemy?"}</Label></div>
-            <div><Label htmlFor="enemy-initiative-input">{rollEnemyInitiativeFlag ? "Initiative Modifier (e.g., +2 or -1)" : "Fixed Initiative Value"}{rollGroupInitiativeFlag ? " (for group)" : ""}</Label><Input id="enemy-initiative-input" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} placeholder={rollEnemyInitiativeFlag ? "e.g., 2 or -1" : "e.g., 12"} type={rollEnemyInitiativeFlag ? "text" : "number"} /></div>
-            <UIDialogFooter className="pt-3 mt-auto">
-              <Button variant="outline" onClick={handleEnemyDialogClose}>Cancel</Button>
-              <Button onClick={handleAddSingleEnemy} disabled={!enemyName.trim() || !enemyInitiativeInput.trim()}>Add to Combat</Button>
-            </UIDialogFooter>
-          </TabsContent>
-          <TabsContent value="load-encounter" className="space-y-3 pt-4 flex-grow flex flex-col">
-            {isLoadingSavedEncounters ? (
-              <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
-            ) : savedEncountersForCombat.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4 flex-grow">No saved encounters found for this campaign.</p>
-            ) : (
-              <>
-                <div>
-                  <Label htmlFor="saved-encounter-select">Select Saved Encounter</Label>
-                  <Select value={selectedSavedEncounterId} onValueChange={setSelectedSavedEncounterId}>
-                    <SelectTrigger id="saved-encounter-select" className="mt-1">
-                      <SelectValue placeholder="Choose an encounter..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {savedEncountersForCombat.map(enc => (
-                        <SelectItem key={enc.id} value={enc.id}>{enc.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedEncounterDetails && (
-                  <div className="mt-2 flex-grow flex flex-col">
-                    <Label className="font-medium">Monsters in "{selectedEncounterDetails.title}":</Label>
-                    <ScrollArea className="h-32 mt-1 border rounded-md p-2 bg-muted/30 flex-grow">
-                      <ul className="text-sm space-y-1">
-                        {selectedEncounterDetails.monsters.map(monster => (
-                          <li key={monster.id}>
-                            {monster.name} (x{monster.quantity})
-                            <span className="text-xs text-muted-foreground ml-1">
-                              {monster.cr && `CR:${monster.cr} `}
-                              {monster.ac && `AC:${monster.ac} `}
-                              {monster.hp && `HP:${monster.hp}`}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </ScrollArea>
-                  </div>
-                )}
-                <UIDialogFooter className="pt-3 mt-auto">
-                  <Button variant="outline" onClick={handleEnemyDialogClose}>Cancel</Button>
-                  <Button onClick={handleLoadSavedEncounterToCombat} disabled={!selectedSavedEncounterId}>Add Encounter to Combat</Button>
-                </UIDialogFooter>
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
-      </UIDialogContent>
-    </UIDialog>
+    <AddFriendlyDrawer
+        open={isAddFriendlyDrawerOpen}
+        onOpenChange={setIsAddFriendlyDrawerOpen}
+        onAddFriendly={handleAddFriendlyFromDrawer}
+        activeCampaignParty={activeCampaignParty}
+        combatants={combatants}
+        combatUniqueId={combatUniqueId}
+    />
+
+    <AddEnemyDrawer
+        open={isAddEnemyDrawerOpen}
+        onOpenChange={setIsAddEnemyDrawerOpen}
+        onAddEnemies={handleAddEnemiesFromDrawer}
+        activeCampaign={activeCampaign}
+        combatUniqueId={combatUniqueId}
+    />
     </>
   );
 }
+
+    
