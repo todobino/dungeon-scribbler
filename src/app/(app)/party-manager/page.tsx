@@ -2,7 +2,7 @@
 "use client";
 
 import type { PlayerCharacter } from "@/lib/types";
-import type { DndClass, PredefinedColor } from "@/lib/constants";
+import type { DndClass } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,6 @@ import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { CharacterDetailsDialog } from "@/components/features/party-manager/character-details-dialog";
 import { LevelDiscrepancyDialog } from "@/components/features/party-manager/level-discrepancy-dialog";
-import { useToast } from "@/hooks/use-toast";
 
 
 export default function PartyManagerPage() {
@@ -34,7 +33,6 @@ export default function PartyManagerPage() {
     incrementPartyLevel,
     setPartyLevel
   } = useCampaign();
-  const { toast } = useToast();
 
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -76,44 +74,34 @@ export default function PartyManagerPage() {
           return; 
         } else {
           await updateCharacterInActiveCampaign({ ...editingCharacter, ...characterFormData });
-          // toast({ title: "Character Updated", description: `${characterFormData.name} has been updated.` });
         }
-      } else { // Adding new character
+      } else { 
         let dataToAdd = { ...characterFormData };
         if (linkedPartyLevel && activeCampaignParty.length > 0) {
-          dataToAdd.level = activeCampaignParty[0].level; // Ensure new char has party level
+          dataToAdd.level = activeCampaignParty[0].level; 
         }
         await addCharacterToActiveCampaign(dataToAdd);
-        // toast({ title: "Character Added", description: `${dataToAdd.name} has been added to the party.` });
       }
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
       setIsFormDialogOpen(false);
-    } else {
-      // toast({ title: "Missing Information", description: "Please fill in Name, Class, and Race.", variant: "destructive"});
     }
   };
 
   const handleLevelSyncConfirmation = async (syncAll: boolean) => {
     if (!levelSyncDetails || !editingCharacter) return; 
 
-    const { characterId, newLevel, allFormData } = levelSyncDetails;
+    const { newLevel, allFormData } = levelSyncDetails;
 
     if (syncAll) {
-      // toast({ title: "Syncing Party Levels...", description: `Updating all characters to Level ${newLevel}.` });
       try {
-        await setPartyLevel(newLevel); // Use new context function
-        // Update the specific character that triggered this, in case other form data changed
+        await setPartyLevel(newLevel); 
         await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData, level: newLevel });
-        // toast({ title: "Party Levels Synced!", description: `All characters set to Level ${newLevel}.` });
       } catch (error) {
         console.error("Error syncing party levels:", error);
-        // toast({ title: "Error Syncing Levels", description: "Could not update all characters.", variant: "destructive" });
       }
     } else {
-      // Only update this character
       await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData });
-      // toast({ title: "Character Updated", description: `${allFormData.name} has been updated to Level ${newLevel}. Other party members remain unchanged.` });
     }
 
     setIsLevelSyncDialogOpen(false);
@@ -178,33 +166,27 @@ export default function PartyManagerPage() {
   const handleDeleteCharacter = async (id: string) => {
     if (activeCampaign) {
       await deleteCharacterFromActiveCampaign(id);
-      // toast({ title: "Character Deleted", description: "The character has been removed from the party." });
     }
   };
 
   const handleLevelUpPartyButton = async () => {
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       await incrementPartyLevel();
-      // toast({ title: "Party Leveled Up!", description: "All party members have gained a level." });
-    } else {
-       // toast({ title: "Action Not Allowed", description: "Enable 'Link Party Level' and ensure there are characters in the party.", variant: "destructive" });
     }
   };
 
   const handleLinkedPartyLevelChange = (newCheckedState: boolean) => {
-    if (newCheckedState) { // Trying to turn ON
+    if (newCheckedState) { 
       if (activeCampaignParty.length > 0) {
         const uniqueLevels = [...new Set(activeCampaignParty.map(c => c.level))];
         if (uniqueLevels.length > 1) {
           setPartyUniqueLevels(uniqueLevels.sort((a,b) => a-b));
           setIsLevelDiscrepancyDialogOpen(true);
-          // Do NOT setLinkedPartyLevel(true) yet. Dialog will handle it.
-          return; // Exit early, dialog will set linkedPartyLevel
+          return; 
         }
       }
-      // No discrepancy, no party members, or party.length === 1
       setLinkedPartyLevel(true);
-    } else { // Trying to turn OFF
+    } else { 
       setLinkedPartyLevel(false);
     }
   };
@@ -213,11 +195,10 @@ export default function PartyManagerPage() {
     await setPartyLevel(selectedLevel);
     setLinkedPartyLevel(true);
     setIsLevelDiscrepancyDialogOpen(false);
-    // toast({ title: "Party Levels Synced", description: `All characters set to Level ${selectedLevel}.` });
   };
 
   const handleLevelDiscrepancyCancel = () => {
-    setLinkedPartyLevel(false); // Ensure switch reflects cancellation
+    setLinkedPartyLevel(false); 
     setIsLevelDiscrepancyDialogOpen(false);
   };
 
@@ -275,6 +256,16 @@ export default function PartyManagerPage() {
         </div>
       </div>
 
+      {activeCampaignParty.length === 0 && (
+         <Card className="text-center py-12 border-dashed">
+          <CardHeader>
+            <Users className="mx-auto h-16 w-16 text-muted-foreground" />
+            <CardTitle className="mt-4">Your Party is Empty</CardTitle>
+            <CardDescription>Click the card below to add your first character.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {activeCampaignParty.map((char) => (
           <Card 
@@ -310,7 +301,7 @@ export default function PartyManagerPage() {
               </div>
               <div className="flex items-center">
                 <ChevronsRight className="mr-2 h-5 w-5 text-primary" />
-                <span>Initiative Mod: {char.initiativeModifier !== undefined ? (char.initiativeModifier >= 0 ? `+${char.initiativeModifier}` : char.initiativeModifier) : '+0'}</span>
+                <span>Initiative Mod: {characterFormData.initiativeModifier !== undefined ? (characterFormData.initiativeModifier >= 0 ? `+${characterFormData.initiativeModifier}` : characterFormData.initiativeModifier) : '+0'}</span>
               </div>
             </CardContent>
             <CardFooter className="flex gap-2">
@@ -449,7 +440,7 @@ export default function PartyManagerPage() {
       />
 
       <AlertDialog open={isLevelSyncDialogOpen} onOpenChange={setIsLevelSyncDialogOpen}>
-        <UIDialogContent>
+        <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
             <AlertDialogDescription>
@@ -465,7 +456,7 @@ export default function PartyManagerPage() {
               Yes, sync all to Level {levelSyncDetails?.newLevel}
             </Button>
           </UIAlertDialogFooter>
-        </UIDialogContent>
+        </AlertDialogContent>
       </AlertDialog>
 
       <LevelDiscrepancyDialog
