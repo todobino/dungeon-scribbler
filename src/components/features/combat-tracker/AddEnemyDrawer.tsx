@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"; // Added SheetDescription
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronRight, Dice5, ShieldAlert, Loader2, FolderOpen } from "lucide-react";
+import { ChevronLeft, Dice5, ShieldAlert, Loader2, FolderOpen } from "lucide-react"; // Changed ChevronRight to ChevronLeft
 import type { Combatant, SavedEncounter, EncounterMonster, Campaign } from "@/lib/types";
 import { SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX } from "@/lib/constants";
-import { rollDie, parseDiceNotation } from "@/lib/dice-utils"; // Assuming parseDiceNotation is useful here
+import { rollDie, parseDiceNotation } from "@/lib/dice-utils"; 
 
 interface AddEnemyDrawerProps {
   open: boolean;
@@ -145,7 +145,6 @@ export function AddEnemyDrawer({
     setEnemyAC("");
     setEnemyHP("");
     setSelectedSavedEncounterId(undefined);
-    // Do not reset savedEncountersForCombat, let it repopulate if tab is revisited
     setActiveTab("single-enemy");
   };
 
@@ -153,13 +152,16 @@ export function AddEnemyDrawer({
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-[380px] sm:w-[450px] flex flex-col p-0" hideCloseButton={true}>
-        <div className="flex flex-col h-full pr-8">
-          <SheetHeader className="bg-primary text-primary-foreground p-4 rounded-t-md">
+      <SheetContent side="left" className="w-[380px] sm:w-[450px] flex flex-col p-0" hideCloseButton={true}>
+        <div className="flex flex-col h-full pl-8"> {/* Changed pr-8 to pl-8 */}
+          <SheetHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -ml-6 -mt-0 mb-4"> {/* Adjusted margins for header */}
             <SheetTitle className="text-primary-foreground flex items-center">
               <ShieldAlert className="mr-2 h-5 w-5"/>
               Add Enemies
             </SheetTitle>
+            <SheetDescription className="text-primary-foreground/80">
+              Add individual enemies or load a pre-saved encounter.
+            </SheetDescription>
           </SheetHeader>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2 flex flex-col flex-grow min-h-0">
             <TabsList className="grid w-full grid-cols-2 mx-4 w-auto">
@@ -226,14 +228,12 @@ export function AddEnemyDrawer({
         </div>
         <button
           onClick={handleClose}
-          className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
+          className="absolute top-0 left-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]" /* Changed right-0 to left-0 */
           aria-label="Close Add Enemy Drawer"
         >
-          <ChevronRight className="h-6 w-6" />
+          <ChevronLeft className="h-6 w-6" /> {/* Changed ChevronRight to ChevronLeft */}
         </button>
       </SheetContent>
     </Sheet>
   );
 }
-
-    
