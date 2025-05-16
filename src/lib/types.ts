@@ -79,10 +79,13 @@ export interface Combatant {
   initiative: number;
   type: 'player' | 'enemy';
   color?: string;
-  playerId?: string;
+  playerId?: string; // Link to PlayerCharacter if it's a PC
   ac?: number;
   hp?: number;
   currentHp?: number;
+  initiativeModifier?: number; // For PCs
+  cr?: string; // Optional CR for enemies
+  // Add other stats as needed, e.g., from MonsterMash for quick reference
 }
 
 export interface Faction {
