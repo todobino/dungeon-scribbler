@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, HelpCircle, Library, Users, Loader2, Trash2, Edit3 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, Library, Users, Loader2, Trash2, Edit3 } from "lucide-react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter as StandardDialogFooter } from "@/components/ui/dialog"; // Aliased to avoid conflict if AlertDialogFooter is also used directly
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -48,9 +48,9 @@ export default function StorySoFarRefactoredPage() {
   const [summaryDetailLevel, setSummaryDetailLevel] = useState<SummaryDetailLevel>("normal");
   
   const [pastPlotPointInput, setPastPlotPointInput] = useState<Record<number, string>>({});
-  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
+  const [isAdvanceSessionConfirmOpen, setIsAdvanceSessionConfirmOpen] = useState(false);
   const [isClearLogConfirm1Open, setIsClearLogConfirm1Open] = useState(false);
   const [isClearLogConfirm2Open, setIsClearLogConfirm2Open] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
@@ -238,12 +238,7 @@ export default function StorySoFarRefactoredPage() {
     const currentSessionPlotPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
 
     if (currentSessionPlotPoints.length === 0) {
-        toast({
-            title: "Cannot Advance Empty Session",
-            description: "Please add at least one plot point to the current session before advancing.",
-            variant: "destructive",
-            duration: 5000,
-        });
+        setIsAdvanceSessionConfirmOpen(true); // Open confirmation dialog
         return;
     }
 
@@ -259,6 +254,13 @@ export default function StorySoFarRefactoredPage() {
     }
     setCurrentSessionNumber(prev => prev + 1);
     clearFullCampaignSummaryCache();
+  };
+
+  const handleConfirmAdvanceEmptySession = () => {
+    if (!activeCampaign) return;
+    setCurrentSessionNumber(prev => prev + 1);
+    clearFullCampaignSummaryCache();
+    setIsAdvanceSessionConfirmOpen(false);
   };
 
   const handleGenerateFullCampaignSummary = async () => {
@@ -428,36 +430,19 @@ export default function StorySoFarRefactoredPage() {
   return (
     <TooltipProvider>
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center pb-6 mb-6 border-b shrink-0">
-        <h1 className="text-3xl font-bold">Adventure Recap</h1>
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-                <Button
-                    onClick={handleAdvanceSession}
-                    variant="outline"
-                    disabled={isGeneratingSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary || !currentSessionHasPlotPoints}
-                >
-                    {isGeneratingSessionSummary[currentSessionNumber] ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Ending Session...</> : <><ChevronRightSquare className="mr-2 h-5 w-5" /> End Session {currentSessionNumber} & Start Next</>}
-                </Button>
-            </TooltipTrigger>
-            {!currentSessionHasPlotPoints && (
-                <TooltipContent>
-                    <p>Add at least one plot point to the current session to enable ending it.</p>
-                </TooltipContent>
-            )}
-           </Tooltip>
-          <Button variant="ghost" size="icon" onClick={() => setIsHelpDialogOpen(true)} aria-label="Help with Adventure Recap">
-            <HelpCircle className="h-6 w-6" />
-          </Button>
-        </div>
-      </div>
-
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow min-h-0">
          <div className="lg:col-span-2 flex flex-col h-full">
             <Card className="flex flex-col flex-grow">
-                <CardHeader className="shrink-0">
+                <CardHeader className="shrink-0 flex flex-row justify-between items-center">
                   <CardTitle>Campaign Log</CardTitle>
+                  <Button
+                      onClick={handleAdvanceSession}
+                      variant="outline"
+                      disabled={isGeneratingSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary}
+                  >
+                      {isGeneratingSessionSummary[currentSessionNumber] ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Ending Session...</> : <><ChevronRightSquare className="mr-2 h-5 w-5" /> End Session {currentSessionNumber} & Start Next</>}
+                  </Button>
                 </CardHeader>
                 <CardContent className="p-0 flex-grow min-h-0">
                 <ScrollArea className="h-full">
@@ -657,37 +642,52 @@ export default function StorySoFarRefactoredPage() {
               rows={4}
             />
           </div>
-          <DialogFooter>
+          <StandardDialogFooter>
             <Button variant="outline" onClick={() => setIsEditPlotPointDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveEditedPlotPoint} disabled={!editedPlotPointText.trim()}>Save Changes</Button>
-          </DialogFooter>
+          </StandardDialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
-        <UIAlertDialogContent>
-          <UIAlertDialogHeader>
-            <UIAlertDialogTitle>Delete Plot Point?</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Plot Point?</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete this plot point? This action cannot be undone.
-            </UIAlertDialogDescription>
-          </UIAlertDialogHeader>
-          <UIAlertDialogFooter>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsDeletePlotPointConfirmOpen(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeletePlotPoint} className={buttonVariants({variant: "destructive"})}>Delete</AlertDialogAction>
-          </UIAlertDialogFooter>
-        </UIAlertDialogContent>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={isAdvanceSessionConfirmOpen} onOpenChange={setIsAdvanceSessionConfirmOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Advance Empty Session?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    The current session ({currentSessionNumber}) has no plot points. Are you sure you want to advance to the next session?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmAdvanceEmptySession}>Yes, Advance Session</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
       </AlertDialog>
 
       <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
-        <UIAlertDialogContent>
-          <UIAlertDialogHeader>
-            <UIAlertDialogTitle>Are you absolutely sure?</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
               This action cannot be undone. This will permanently delete ALL plot points and summaries for the campaign "{activeCampaign?.name}".
-            </UIAlertDialogDescription>
-          </UIAlertDialogHeader>
-          <UIAlertDialogFooter>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsClearLogConfirm1Open(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => { setIsClearLogConfirm1Open(false); setIsClearLogConfirm2Open(true); }}
@@ -695,8 +695,8 @@ export default function StorySoFarRefactoredPage() {
             >
               Proceed to Final Confirmation
             </AlertDialogAction>
-          </UIAlertDialogFooter>
-        </UIAlertDialogContent>
+          </AlertDialogFooter>
+        </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
@@ -720,7 +720,7 @@ export default function StorySoFarRefactoredPage() {
               className="border-destructive focus-visible:ring-destructive"
             />
           </div>
-          <DialogFooter>
+          <StandardDialogFooter>
             <Button variant="outline" onClick={() => { setIsClearLogConfirm2Open(false); setDeleteConfirmInput(""); }}>Cancel</Button>
             <Button
               variant="destructive"
@@ -729,50 +729,93 @@ export default function StorySoFarRefactoredPage() {
             >
               Confirm Deletion
             </Button>
-          </DialogFooter>
+          </StandardDialogFooter>
         </DialogContent>
       </Dialog>
 
-
-      <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary" />How to Use: Adventure Recap</DialogTitle>
-            <DialogDescription>Track your campaign's progress and generate summaries.</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-3">
-            <div className="text-sm text-muted-foreground space-y-3 py-4">
-              <p>1. Log key events as "Plot Points" for the <strong className="text-foreground">current session ({currentSessionNumber})</strong> using the input field on the right.</p>
-              <p>2. When a session ends, click "<ChevronRightSquare className="inline h-4 w-4 align-text-bottom mr-0.5" /> End Session {currentSessionNumber} & Start Next". This button is only active if the current session has at least one plot point.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>An AI summary will be automatically generated for the completed session using the selected detail level and displayed with an "episode title" format.</li>
-              </ul>
-              <p>3. <strong className="text-foreground">Past sessions</strong> default to showing their summary. Click "<List className="inline h-4 w-4 align-text-bottom mr-0.5" /> View Details" to see the original plot points. From the detail view, you can:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Hover over a plot point to see <Edit3 className="inline h-3 w-3"/> Edit and <Trash2 className="inline h-3 w-3"/> Delete icons.</li>
-                <li>Add a forgotten event to that past session using the "Add Forgotten Event..." input.</li>
-                <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5" /> Re-generate Summary" to update its summary if you've added new details or want to change the detail level.</li>
-              </ul>
-              <p>4. Use the <strong className="text-foreground">AI Story Tools</strong> on the right to:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Select the "Summary Detail Level" (Brief, Normal, Detailed) for all *newly generated* summaries (both session and full campaign).</li>
-                <li>Click "<Zap className="inline h-4 w-4 align-text-bottom mr-0.5" /> Generate Full Summary" for a recap of everything. This summary will be cached until new plot points are added or a session advances.</li>
-                <li>Click "<Trash2 className="inline h-4 w-4 align-text-bottom mr-0.5" /> Clear Entire Campaign Log" to permanently delete all plot points and summaries for the current campaign (requires double confirmation).</li>
-              </ul>
-              <p>5. All data is saved per campaign to your browser's local storage.</p>
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button>Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
     </TooltipProvider>
   );
 }
 
+export function AdventureRecapHelpContent() {
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex items-center">
+          <History className="mr-2 h-5 w-5 text-primary" />
+          How to Use: Adventure Recap
+        </DialogTitle>
+        <DialogDescription>
+          Track your campaign's progress and generate summaries.
+        </DialogDescription>
+      </DialogHeader>
+      <ScrollArea className="max-h-[60vh] pr-3">
+        <div className="text-sm text-muted-foreground space-y-3 py-4">
+          <p>
+            1. Log key events as "Plot Points" for the{' '}
+            <strong className="text-foreground">current session</strong> using the
+            input field on the right. Click "Add to Log".
+          </p>
+          <p>
+            2. When a session ends, click "End Session {`{X}`} & Start Next". This button is only active if the current session has at least one plot point. If it's empty, a confirmation will appear.
+            <ul className="list-disc pl-5 space-y-1 mt-1">
+              <li>
+                An AI summary will be automatically generated for the completed
+                session using the selected detail level and displayed with an
+                "episode title" format.
+              </li>
+            </ul>
+          </p>
+          <p>
+            3. <strong className="text-foreground">Past sessions</strong> default
+            to showing their summary. Click "View Details" to see the original
+            plot points. From the detail view, you can:
+            <ul className="list-disc pl-5 space-y-1 mt-1">
+              <li>Hover over a plot point to see Edit and Delete icons.</li>
+              <li>
+                Add a forgotten event to that past session using the "Add
+                Forgotten Event..." input.
+              </li>
+              <li>
+                Click "Re-generate Summary" to update its summary if
+                you've added new details or want to change the detail level.
+              </li>
+            </ul>
+          </p>
+          <p>
+            4. Use the <strong className="text-foreground">AI Story Tools</strong>{' '}
+            on the right to:
+            <ul className="list-disc pl-5 space-y-1 mt-1">
+              <li>
+                Select the "Summary Detail Level" (Brief, Normal, Detailed) for
+                all *newly generated* summaries (both session and full
+                campaign).
+              </li>
+              <li>
+                Click "Generate Full Summary" for a recap of everything. This
+                summary will be cached until new plot points are added or a
+                session advances.
+              </li>
+              <li>
+                Click "Clear Entire Campaign Log" to permanently delete all plot
+                points and summaries for the current campaign (requires double
+                confirmation).
+              </li>
+            </ul>
+          </p>
+          <p>
+            5. All data is saved per campaign to your browser's local storage.
+          </p>
+        </div>
+      </ScrollArea>
+      <StandardDialogFooter>
+        <DialogClose asChild>
+          <Button>Close</Button>
+        </DialogClose>
+      </StandardDialogFooter>
+    </>
+  );
+}
 
     
