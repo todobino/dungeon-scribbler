@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask, ChevronsRight } from "lucide-react";
@@ -76,7 +76,7 @@ export default function PartyManagerPage() {
           return; 
         } else {
           await updateCharacterInActiveCampaign({ ...editingCharacter, ...characterFormData });
-          toast({ title: "Character Updated", description: `${characterFormData.name} has been updated.` });
+          // toast({ title: "Character Updated", description: `${characterFormData.name} has been updated.` });
         }
       } else { // Adding new character
         let dataToAdd = { ...characterFormData };
@@ -84,13 +84,13 @@ export default function PartyManagerPage() {
           dataToAdd.level = activeCampaignParty[0].level; // Ensure new char has party level
         }
         await addCharacterToActiveCampaign(dataToAdd);
-        toast({ title: "Character Added", description: `${dataToAdd.name} has been added to the party.` });
+        // toast({ title: "Character Added", description: `${dataToAdd.name} has been added to the party.` });
       }
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
       setIsFormDialogOpen(false);
     } else {
-      toast({ title: "Missing Information", description: "Please fill in Name, Class, and Race.", variant: "destructive"});
+      // toast({ title: "Missing Information", description: "Please fill in Name, Class, and Race.", variant: "destructive"});
     }
   };
 
@@ -100,20 +100,20 @@ export default function PartyManagerPage() {
     const { characterId, newLevel, allFormData } = levelSyncDetails;
 
     if (syncAll) {
-      toast({ title: "Syncing Party Levels...", description: `Updating all characters to Level ${newLevel}.` });
+      // toast({ title: "Syncing Party Levels...", description: `Updating all characters to Level ${newLevel}.` });
       try {
         await setPartyLevel(newLevel); // Use new context function
         // Update the specific character that triggered this, in case other form data changed
         await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData, level: newLevel });
-        toast({ title: "Party Levels Synced!", description: `All characters set to Level ${newLevel}.` });
+        // toast({ title: "Party Levels Synced!", description: `All characters set to Level ${newLevel}.` });
       } catch (error) {
         console.error("Error syncing party levels:", error);
-        toast({ title: "Error Syncing Levels", description: "Could not update all characters.", variant: "destructive" });
+        // toast({ title: "Error Syncing Levels", description: "Could not update all characters.", variant: "destructive" });
       }
     } else {
       // Only update this character
       await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData });
-      toast({ title: "Character Updated", description: `${allFormData.name} has been updated to Level ${newLevel}. Other party members remain unchanged.` });
+      // toast({ title: "Character Updated", description: `${allFormData.name} has been updated to Level ${newLevel}. Other party members remain unchanged.` });
     }
 
     setIsLevelSyncDialogOpen(false);
@@ -178,16 +178,16 @@ export default function PartyManagerPage() {
   const handleDeleteCharacter = async (id: string) => {
     if (activeCampaign) {
       await deleteCharacterFromActiveCampaign(id);
-      toast({ title: "Character Deleted", description: "The character has been removed from the party." });
+      // toast({ title: "Character Deleted", description: "The character has been removed from the party." });
     }
   };
 
   const handleLevelUpPartyButton = async () => {
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       await incrementPartyLevel();
-      toast({ title: "Party Leveled Up!", description: "All party members have gained a level." });
+      // toast({ title: "Party Leveled Up!", description: "All party members have gained a level." });
     } else {
-       toast({ title: "Action Not Allowed", description: "Enable 'Link Party Level' and ensure there are characters in the party.", variant: "destructive" });
+       // toast({ title: "Action Not Allowed", description: "Enable 'Link Party Level' and ensure there are characters in the party.", variant: "destructive" });
     }
   };
 
@@ -213,7 +213,7 @@ export default function PartyManagerPage() {
     await setPartyLevel(selectedLevel);
     setLinkedPartyLevel(true);
     setIsLevelDiscrepancyDialogOpen(false);
-    toast({ title: "Party Levels Synced", description: `All characters set to Level ${selectedLevel}.` });
+    // toast({ title: "Party Levels Synced", description: `All characters set to Level ${selectedLevel}.` });
   };
 
   const handleLevelDiscrepancyCancel = () => {
@@ -252,8 +252,8 @@ export default function PartyManagerPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Party Manager for {activeCampaign.name}</h1>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+        
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto ml-auto">
           <div className="flex items-center space-x-2 p-2 border rounded-md bg-card w-full sm:w-auto justify-between">
             <Label htmlFor="link-level-switch" className="flex items-center gap-1 cursor-pointer">
               {linkedPartyLevel ? <LinkIcon className="h-4 w-4" /> : <Link2OffIcon className="h-4 w-4" />}
@@ -274,16 +274,6 @@ export default function PartyManagerPage() {
           </Button>
         </div>
       </div>
-
-      {activeCampaignParty.length === 0 && (
-         <Card className="text-center py-6 bg-muted/50">
-            <CardHeader>
-              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-              <CardTitle className="mt-3">Your Party is Empty</CardTitle>
-              <CardDescription>Add your first character using the 'Add Character' card below.</CardDescription>
-            </CardHeader>
-          </Card>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {activeCampaignParty.map((char) => (
@@ -395,7 +385,7 @@ export default function PartyManagerPage() {
                   id="level" 
                   name="level" 
                   type="number" 
-                  value={characterFormData.level} 
+                  value={characterFormData.level.toString()} 
                   onChange={handleInputChange} 
                   min="1" 
                   disabled={isLevelInputDisabled}
@@ -408,11 +398,11 @@ export default function PartyManagerPage() {
               </div>
               <div>
                 <Label htmlFor="armorClass">Armor Class</Label>
-                <Input id="armorClass" name="armorClass" type="number" value={characterFormData.armorClass} onChange={handleInputChange} />
+                <Input id="armorClass" name="armorClass" type="number" value={characterFormData.armorClass.toString()} onChange={handleInputChange} />
               </div>
               <div>
                 <Label htmlFor="initiativeModifier">Initiative Modifier</Label>
-                <Input id="initiativeModifier" name="initiativeModifier" type="number" value={characterFormData.initiativeModifier || 0} onChange={handleInputChange} placeholder="e.g., 2" />
+                <Input id="initiativeModifier" name="initiativeModifier" type="number" value={(characterFormData.initiativeModifier || 0).toString()} onChange={handleInputChange} placeholder="e.g., 2" />
               </div>
               <div>
                 <Label htmlFor="color">Character Color</Label>
@@ -459,23 +449,23 @@ export default function PartyManagerPage() {
       />
 
       <AlertDialog open={isLevelSyncDialogOpen} onOpenChange={setIsLevelSyncDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Party Level Sync</AlertDialogTitle>
+        <UIDialogContent>
+          <UIAlertDialogHeader>
+            <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
             <AlertDialogDescription>
               Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
               Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
             </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
+          </UIAlertDialogHeader>
+          <UIAlertDialogFooter>
             <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
               No, only this character
             </Button>
             <Button onClick={() => handleLevelSyncConfirmation(true)}>
               Yes, sync all to Level {levelSyncDetails?.newLevel}
             </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+          </UIAlertDialogFooter>
+        </UIDialogContent>
       </AlertDialog>
 
       <LevelDiscrepancyDialog
@@ -489,4 +479,3 @@ export default function PartyManagerPage() {
     </div>
   );
 }
-
