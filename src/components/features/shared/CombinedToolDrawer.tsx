@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+
 import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
@@ -91,10 +92,12 @@ interface CombinedToolDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultTab: string;
+  // Dice Roller Props
   rollLog: RollLogEntry[];
   onInternalRoll: (rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, idToUpdate?: string) => void;
   getNewRollId: () => string;
   onClearRollLog: () => void;
+  // Combat Tracker Props
   combatants: Combatant[];
   onAddCombatant: (combatant: Combatant) => void;
   onAddCombatants: (newCombatants: Combatant[]) => void;
@@ -109,10 +112,12 @@ export function CombinedToolDrawer({
   open,
   onOpenChange,
   defaultTab,
+  // Dice Roller Props
   rollLog = [],
   onInternalRoll,
   getNewRollId,
   onClearRollLog,
+  // Combat Tracker Props
   combatants = [], 
   onAddCombatant,
   onAddCombatants, 
@@ -448,7 +453,8 @@ export function CombinedToolDrawer({
     setEnemyName(fav.name);
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
-    setEnemyCR(formatCRDisplay(fav.cr));
+    // CR is not directly used in this form anymore, but we have it in fav.cr
+    // setEnemyCR(formatCRDisplay(fav.cr)); // If you had an enemyCR state for the form
     setIsFavoriteMonsterDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled where possible.`});
   };
@@ -456,7 +462,7 @@ export function CombinedToolDrawer({
   const parseModifierString = (modStr: string): number => {
     modStr = modStr.trim();
     if (modStr === "") return 0;
-    if (modStr === "+") return 0;
+    if (modStr === "+") return 0; 
     const num = parseInt(modStr);
     return isNaN(num) ? 0 : num;
   };
@@ -482,7 +488,7 @@ export function CombinedToolDrawer({
     for (let i = 0; i < quantity; i++) {
       let initiativeValue: number;
       const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
-
+      
       if (rollGroupInitiativeFlag && groupInitiativeValue !== undefined) {
         initiativeValue = groupInitiativeValue;
       } else if (enemyInitiativeInput.trim() !== "" && !isNaN(parseInt(enemyInitiativeInput.trim()))) {
@@ -504,7 +510,7 @@ export function CombinedToolDrawer({
         currentHp: hpValue,
         initiativeModifier: initMod,
         monsterIndex: matchedFavorite?.index,
-        cr: enemyCR || undefined,
+        cr: matchedFavorite ? formatCRDisplay(matchedFavorite.cr) : undefined, // Add CR if from favorite
       });
     }
     onAddCombatants(newEnemies);
@@ -513,7 +519,7 @@ export function CombinedToolDrawer({
     setEnemyName(""); setEnemyInitiativeInput(""); setEnemyQuantityInput("1");
     setEnemyInitiativeModifierInput("0");
     setRollGroupInitiativeFlag(false);
-    setEnemyAC(""); setEnemyHP(""); setEnemyCR("");
+    setEnemyAC(""); setEnemyHP(""); 
     setShowAddEnemySection(false);
   };
 
@@ -544,7 +550,9 @@ export function CombinedToolDrawer({
         });
       }
     });
-    onAddCombatants(newEnemiesFromEncounter);
+    if(onAddCombatants) {
+      onAddCombatants(newEnemiesFromEncounter);
+    }
      if (currentTurnIndex === null && combatants.length + newEnemiesFromEncounter.length > 0) setCurrentTurnIndex(0);
 
     setSelectedSavedEncounterId(undefined);
@@ -594,12 +602,13 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
+        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2 flex flex-col flex-grow min-h-0">
-            <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
+             <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
                 <TabsTrigger
                     value={DICE_ROLLER_TAB_ID}
                     className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground"
@@ -701,8 +710,8 @@ export function CombinedToolDrawer({
                   <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                    <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
                   </div>
                 </>
                 )}
@@ -723,7 +732,7 @@ export function CombinedToolDrawer({
 
               {showAddEnemySection && (
               <div className="px-4 pb-4 border-b bg-card shrink-0 flex flex-col flex-grow min-h-0">
-                <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow min-h-0">
+                <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
                   <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Saved Encounter</TabsTrigger>
@@ -742,14 +751,14 @@ export function CombinedToolDrawer({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                       <div><Label htmlFor="enemy-init-mod-inline">Init. Mod.</Label><Input id="enemy-init-mod-inline" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} /></div>
-                      <div>
-                          <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
-                          <div className="flex items-center gap-2">
-                            <Input id="enemy-initiative-input-inline" className="w-20" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" />
-                            <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())}>
-                                <Dice5 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                      <div className="flex items-end gap-1">
+                        <div className="flex-grow">
+                           <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
+                           <Input id="enemy-initiative-input-inline" className="w-full" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" />
+                        </div>
+                        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())}>
+                            <Dice5 className="h-4 w-4" />
+                        </Button>
                       </div>
                   </div>
                   <div className="flex items-end gap-3">
@@ -809,7 +818,7 @@ export function CombinedToolDrawer({
               </div>
               )}
               
-              <div className="p-4 flex-grow flex flex-col min-h-0">
+             <div className="p-4 flex-grow flex flex-col min-h-0">
                 <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
                 <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
                     {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
@@ -886,11 +895,11 @@ export function CombinedToolDrawer({
 
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
-      <UIDialogContent className="max-w-md min-h-[480px] flex flex-col">
-        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
-          <UIDialogTitle className="text-primary-foreground">Select Favorite Monster</UIDialogTitle>
-          <UIDialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</UIDialogDescription>
-        </UIDialogHeader>
+      <DialogContent className="max-w-md min-h-[480px] flex flex-col">
+        <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
+          <DialogTitle className="text-primary-foreground">Select Favorite Monster</DialogTitle>
+          <DialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</DialogDescription>
+        </DialogHeader>
         <ScrollArea className="mt-4 flex-grow">
             {favoritesList.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No favorites found.</p>
@@ -909,7 +918,7 @@ export function CombinedToolDrawer({
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
         </DialogFooter>
-      </UIDialogContent>
+      </DialogContent>
     </Dialog>
 
     {/* Delete Combatant Confirmation Dialog */}
@@ -917,9 +926,9 @@ export function CombinedToolDrawer({
         <UIAlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription>
               Are you sure you want to remove "{combatantToDelete?.name}" from the combat?
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel>
@@ -933,15 +942,15 @@ export function CombinedToolDrawer({
     {/* Full Monster Detail Dialog (for Combat Tracker) */}
       <Dialog open={isMonsterDetailDialogOpen} onOpenChange={setIsMonsterDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
-          <UIDialogHeader>
-            <UIDialogTitle>{selectedMonsterForDetailDialog?.name || "Monster Details"}</UIDialogTitle>
+          <DialogHeader>
+            <DialogTitle>{selectedMonsterForDetailDialog?.name || "Monster Details"}</DialogTitle>
             <DialogClose asChild>
               <Button variant="ghost" size="icon" className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
                 <XCircle className="h-4 w-4" />
                 <span className="sr-only">Close</span>
               </Button>
             </DialogClose>
-          </UIDialogHeader>
+          </DialogHeader>
           <ScrollArea className="max-h-[70vh] p-1 pr-3">
             {isLoadingFullEnemyDetailsFor === selectedMonsterForDetailDialog?.id ? (
               <div className="flex items-center justify-center p-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
