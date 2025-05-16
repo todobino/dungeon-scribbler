@@ -233,7 +233,7 @@ export default function PartyManagerPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        
+        <h1 className="text-3xl font-bold">Party Manager</h1>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto ml-auto">
           <div className="flex items-center space-x-2 p-2 border rounded-md bg-card w-full sm:w-auto justify-between">
             <Label htmlFor="link-level-switch" className="flex items-center gap-1 cursor-pointer">
@@ -460,4 +460,3 @@ export default function PartyManagerPage() {
     </div>
   );
 }
-

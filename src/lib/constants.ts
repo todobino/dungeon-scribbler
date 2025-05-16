@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2 } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2, User } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -34,10 +34,10 @@ export const TOOLBAR_ITEMS = [
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Current Campaign', href: '/campaign-management', icon: Library },
+  { label: 'Party Manager', href: '/party-manager', icon: User },
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
   { label: 'Random Tables', href: '/random-tables', icon: Dice5, disabled: false },
-
 ];
 
 export const STORY_NAV_ITEMS: NavItem[] = [
@@ -197,7 +197,7 @@ export const PARTY_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Party_`;
 export const FACTIONS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Factions_`;
 export const LOCATIONS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Locations_`; // Currently unused page
 export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Maps_`;
-export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Encounter_`;
+export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}CurrentEncounter_`;
 export const SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}SavedEncounters_`;
 export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}JournalNotes_`; // Page removed, but key might be in old data
 
