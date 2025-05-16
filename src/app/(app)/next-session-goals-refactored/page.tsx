@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, ClipboardList, Zap, Brain, HelpCircle, Edit3, Trash2, ChevronDown, Eye, PlusSquare, ClipboardCheck, Library, Users, Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter as UIDialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; // Renamed for clarity
 import { useToast } from "@/hooks/use-toast";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
@@ -18,9 +18,9 @@ import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   REFACTORED_GOALS_KEY_PREFIX, 
-  REFACTORED_PLOT_POINTS_KEY_PREFIX,
-  REFACTORED_CURRENT_SESSION_KEY_PREFIX,
-  REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX
+  REFACTORED_PLOT_POINTS_KEY_PREFIX, // Renamed for clarity from PLOT_POINTS_STORAGE_KEY
+  REFACTORED_CURRENT_SESSION_KEY_PREFIX, // Renamed for clarity from CURRENT_SESSION_STORAGE_KEY
+  REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX // Renamed for clarity from FULL_CAMPAIGN_SUMMARY_STORAGE_KEY
 } from "@/lib/constants";
 
 interface Goal {
@@ -53,7 +53,6 @@ export default function NextSessionGoalsRefactoredPage() {
   const [isGeneratingIdeasForGoal, setIsGeneratingIdeasForGoal] = useState<Record<string, boolean>>({});
   const [goalToDeleteId, setGoalToDeleteId] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [logGoalDialogData, setLogGoalDialogData] = useState<LogGoalDialogData | null>(null);
@@ -65,7 +64,10 @@ export default function NextSessionGoalsRefactoredPage() {
   }, [activeCampaign]);
 
   useEffect(() => {
-    if (isLoadingCampaigns) return;
+    if (isLoadingCampaigns) {
+      setIsLoadingData(true);
+      return;
+    }
 
     if (!activeCampaign) {
       setGoals([]);
@@ -150,6 +152,7 @@ export default function NextSessionGoalsRefactoredPage() {
 
     setIsGeneratingIdeasForGoal(prev => ({...prev, [goalId]: true}));
     
+    // Mock AI generation
     const promptText = `Goal for campaign "${activeCampaign.name}": ${goal.text}\nDetails: ${goal.details || "No specific details provided."}`;
     await new Promise(resolve => setTimeout(resolve, 1500)); 
     const mockIdeas: GeneratedIdea[] = [
@@ -241,6 +244,7 @@ export default function NextSessionGoalsRefactoredPage() {
   const handleOpenLogGoalDialog = (goal: Goal) => {
     let formattedDetails = "";
     if (goal.details && goal.details.trim()) {
+      // Replace literal '\n' from textarea with actual newlines for the log
       formattedDetails = `\n\nDetails:\n${goal.details.replace(/\\n/g, '\n').trim()}`;
     }
     setLogGoalDialogData({
@@ -334,22 +338,18 @@ export default function NextSessionGoalsRefactoredPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center"><ClipboardList className="mr-3 h-8 w-8 text-primary"/>Next Session Goals for {activeCampaign.name}</h1>
-        <Button variant="ghost" size="icon" onClick={() => setIsHelpDialogOpen(true)} aria-label="Help with Next Session Goals">
-            <HelpCircle className="h-6 w-6" />
-        </Button>
-      </div>
-      
+    <div className="w-full space-y-6">
       <Card className="w-full">
         <CardHeader className="flex flex-row justify-between items-center">
           <div>
             <CardTitle>Planned Plot Beats / Goals</CardTitle>
             <CardDescription>
-              Plan your session. Expand goals to view, or click edit (<Edit3 className="inline h-3 w-3 align-text-bottom mr-0.5"/>) to modify.
+              Plan your session. Expand goals to view, or click edit (<Edit3 className="inline h-3 w-3 align-text-bottom mr-0.5"/>) to modify and generate ideas.
             </CardDescription>
           </div>
+          <Button onClick={handleOpenAddGoalDialog} size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Goal
+          </Button>
         </CardHeader>
         <CardContent>
           {goals.length === 0 ? (
@@ -478,26 +478,26 @@ export default function NextSessionGoalsRefactoredPage() {
               className="mt-1"
             />
           </div>
-          <UIDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setAddGoalDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleAddGoal} disabled={!newGoalText.trim()}>Add Goal</Button>
-          </UIDialogFooter>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <UIAlertDialogContent>
+        <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Are you sure?</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
+            <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the goal and all its details and generated ideas.
-            </UIAlertDialogDescription>
+            </AlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => { setGoalToDeleteId(null); setIsDeleteConfirmOpen(false); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete} className={buttonVariants({variant: "destructive"})}>Delete Goal</AlertDialogAction>
           </UIAlertDialogFooter>
-        </UIAlertDialogContent>
+        </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={!!logGoalDialogData} onOpenChange={(isOpen) => !isOpen && setLogGoalDialogData(null)}>
@@ -519,10 +519,10 @@ export default function NextSessionGoalsRefactoredPage() {
             />
             <p className="text-xs text-muted-foreground">This text will be added to the Adventure Recap.</p>
           </div>
-          <UIDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setLogGoalDialogData(null)}>Cancel</Button>
             <Button onClick={handleConfirmLogGoal} disabled={!logGoalDialogData?.logText.trim()}>Confirm Log Entry</Button>
-          </UIDialogFooter>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -534,7 +534,7 @@ export default function NextSessionGoalsRefactoredPage() {
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] pr-3">
             <div className="text-sm text-muted-foreground space-y-3 py-4">
-                <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" (in the card footer or when the list is empty) to open a dialog and input a new plot beat or objective.</p>
+                <p>1. Click "<PlusCircle className="inline h-4 w-4 align-text-bottom mr-0.5"/> Add Goal" (in the card header or footer) to open a dialog and input a new plot beat or objective.</p>
                 <p>2. For each goal in the list:</p>
                 <ul className="list-disc pl-5 space-y-1">
                     <li>Click the <ChevronDown className="inline h-4 w-4 align-text-bottom data-[state=open]:rotate-180 data-[state=closed]:rotate-0 mr-0.5 transition-transform duration-200" /> icon or the goal text to expand/collapse and view its formatted read-only details.</li>
@@ -552,14 +552,22 @@ export default function NextSessionGoalsRefactoredPage() {
                 <p>5. All goals and their details are saved per campaign to your browser's local storage.</p>
             </div>
             </ScrollArea>
-            <UIDialogFooter>
+            <DialogFooter>
                 <DialogClose asChild>
                     <Button>Close</Button>
                 </DialogClose>
-            </UIDialogFooter>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
 
+export function NextSessionGoalsHelpContent() {
+    // This component is not directly used in the page, 
+    // but its content was moved to the Dialog with id "isHelpDialogOpen"
+    // It can be removed if the main page structure is stable
+    return null;
+}
+
+    
