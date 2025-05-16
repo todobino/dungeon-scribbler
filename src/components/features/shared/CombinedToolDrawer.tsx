@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen, MinusCircle } from "lucide-react";
+import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster } from "@/lib/types";
@@ -55,6 +55,7 @@ export function CombinedToolDrawer({
   // Combat Tracker State
   const [combatants, setCombatants] = useState<Combatant[]>([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState<number | null>(null);
+  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
   const combatUniqueId = useId(); 
   
   const [damageInputs, setDamageInputs] = useState<Record<string, string>>({});
@@ -173,6 +174,7 @@ export function CombinedToolDrawer({
       setRollMode("normal");
       setShowAddFriendlySection(false);
       setShowAddEnemySection(false);
+      setSelectedCombatantId(null);
     }
   }, [open]);
 
@@ -202,7 +204,7 @@ export function CombinedToolDrawer({
     const amountStr = damageInputs[combatantId]; if (!amountStr) return;
     const amount = parseInt(amountStr); if (isNaN(amount) || amount <= 0) return;
     setCombatants(prevCombatants => prevCombatants.map(combatant => {
-      if (combatant.id === combatantId && (combatant.hp !== undefined || (combatant.type === 'player' && !combatant.playerId))) { // Updated condition
+      if (combatant.id === combatantId && (combatant.hp !== undefined || (combatant.type === 'player' && !combatant.playerId))) {
         let newHp = combatant.currentHp ?? combatant.hp!;
         newHp = type === 'damage' ? Math.max(0, newHp - amount) : Math.min(combatant.hp!, newHp + amount);
         return { ...combatant, currentHp: newHp };
@@ -220,10 +222,14 @@ export function CombinedToolDrawer({
         else if (combatantToRemoveIndex < currentTurnIndex) setCurrentTurnIndex(currentTurnIndex - 1);
       } return newCombatants;
     });
+    if (selectedCombatantId === id) {
+      setSelectedCombatantId(null);
+    }
   };
   const nextTurn = () => { if (combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex + 1) % combatants.length); };
   const prevTurn = () => { if (combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex - 1 + combatants.length) % combatants.length); };
-  const endCombat = () => { setCombatants([]); setCurrentTurnIndex(null); combatantRefs.current.clear(); setDamageInputs({}); };
+  const endCombat = () => { setCombatants([]); setCurrentTurnIndex(null); setSelectedCombatantId(null); combatantRefs.current.clear(); setDamageInputs({}); };
+  
   const handleRollAllPlayerInitiatives = () => {
     if (availablePartyMembers.length === 0) return;
     const newCombatantsFromParty: Combatant[] = availablePartyMembers.map(player => ({
@@ -414,12 +420,19 @@ export function CombinedToolDrawer({
 
   const selectedEncounterDetails = selectedSavedEncounterId ? savedEncountersForCombat.find(e => e.id === selectedSavedEncounterId) : null;
 
+  const handleCombatantCardClick = (combatant: Combatant) => {
+    if (combatant.type === 'enemy') {
+      setSelectedCombatantId(prevId => prevId === combatant.id ? null : combatant.id);
+    } else {
+      setSelectedCombatantId(null); // Players cannot be "selected" for damage controls
+    }
+  };
+
 
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
@@ -491,7 +504,7 @@ export function CombinedToolDrawer({
                   <div className="p-4 flex flex-col gap-2 border-b shrink-0">
                       <div className="flex gap-2">
                           <Button 
-                            onClick={() => { setShowAddFriendlySection(p => !p); setShowAddEnemySection(false); }} 
+                            onClick={() => { setShowAddFriendlySection(p => !p); setShowAddEnemySection(false); setSelectedCombatantId(null); }} 
                             variant={showAddFriendlySection ? "secondary" : "outline"} 
                             className="flex-1"
                           >
@@ -499,7 +512,7 @@ export function CombinedToolDrawer({
                               {addPlayerButtonLabel}
                           </Button>
                           <Button 
-                            onClick={() => { setShowAddEnemySection(p => !p); setShowAddFriendlySection(false); }} 
+                            onClick={() => { setShowAddEnemySection(p => !p); setShowAddFriendlySection(false); setSelectedCombatantId(null);}} 
                             variant={showAddEnemySection ? "secondary" : "outline"} 
                             className="flex-1"
                           >
@@ -530,7 +543,7 @@ export function CombinedToolDrawer({
                         <>
                           <div>
                             <Label htmlFor="ally-name-inline">Ally Name</Label>
-                            <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} placeholder="e.g., Sir Reginald" />
+                            <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -562,7 +575,7 @@ export function CombinedToolDrawer({
                   {/* Inline Add Enemy Section */}
                   {showAddEnemySection && (
                     <div className="p-4 border-b bg-card">
-                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 flex flex-col flex-grow">
+                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 flex flex-col flex-grow min-h-[350px]">
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
                           <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger>
@@ -574,7 +587,7 @@ export function CombinedToolDrawer({
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                             </Button>
                           </div>
-                          <Input id="enemy-name-inline" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} placeholder="e.g., Goblin" />
+                          <Input id="enemy-name-inline" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} />
                           <div className="grid grid-cols-2 gap-3">
                             <div><Label htmlFor="enemy-ac-inline">AC (Optional)</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
                             <div><Label htmlFor="enemy-hp-inline">HP (Optional)</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
@@ -645,30 +658,45 @@ export function CombinedToolDrawer({
                           {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
                           <ul className="space-y-1.5">
                           {combatants.map((c, index) => (
-                              <li key={c.id} ref={(el) => combatantRefs.current.set(c.id, el)} className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`} style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}>
-                              <div className="flex items-center justify-between w-full">
+                              <li 
+                                key={c.id} 
+                                ref={(el) => combatantRefs.current.set(c.id, el)} 
+                                className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'} ${c.type === 'enemy' ? 'cursor-pointer hover:bg-muted/70' : ''}`} 
+                                style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
+                                onClick={() => handleCombatantCardClick(c)}
+                              >
+                              <div className="flex items-start justify-between w-full">
                                   <div className="flex items-center">
-                                  <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
-                                  <div>
-                                      <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                      {c.type === 'player' ? (availablePartyMembers.length === 0 && !c.playerId ? 'Ally' : 'Player') : 'Enemy'}
-                                      {c.type === 'player' && c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null; })()}
-                                      {c.type === 'player' && !c.playerId && c.ac !== undefined && <span className="ml-1">(AC: {c.ac})</span>}
-                                      </p>
+                                    <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
+                                    <div>
+                                        <p className={`font-medium ${c.type === 'enemy' ? 'text-destructive' : ''}`}>{c.name}</p>
+                                        {c.type === 'player' ? (
+                                          <p className="text-xs text-muted-foreground">
+                                            {availablePartyMembers.length === 0 && !c.playerId ? 'Ally' : 'Player'}
+                                            {c.playerId && (() => { const player = activeCampaignParty.find(p => p.id === c.playerId); return player ? <span className="ml-1">(AC: {player.armorClass})</span> : null; })()}
+                                            {!c.playerId && c.ac !== undefined && <span className="ml-1">(AC: {c.ac})</span>}
+                                            {!c.playerId && c.hp !== undefined && <span className="ml-1">(HP: {c.currentHp ?? c.hp}/{c.hp})</span>}
+                                          </p>
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground">
+                                            AC: {c.ac ?? 'N/A'} | HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}
+                                          </p>
+                                        )}
+                                    </div>
                                   </div>
+                                  <div className="flex items-center">
+                                    {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
+                                        <BookOpen className="h-4 w-4 text-muted-foreground mr-1" />
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); removeCombatant(c.id);}}><Trash2 className="h-4 w-4" /></Button>
                                   </div>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => removeCombatant(c.id)}><Trash2 className="h-4 w-4" /></Button>
                               </div>
-                              {c.type === 'enemy' && (c.ac !== undefined || c.hp !== undefined) && (
-                                  <div className="flex items-center gap-3 text-xs text-muted-foreground border-t border-border pt-1.5 mt-1">
-                                  {c.ac !== undefined && <div className="flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> AC: {c.ac}</div>}
-                                  {c.hp !== undefined && <div className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> HP: {c.currentHp ?? c.hp}/{c.hp}</div>}
-                                  </div>
-                              )}
-                              {c.type === 'enemy' && c.hp !== undefined && ( <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </> )}
-                              {c.type === 'player' && !c.playerId && c.hp !== undefined && ( 
+                              
+                              {c.type === 'player' && !c.playerId && c.hp !== undefined && selectedCombatantId === c.id && ( 
                                  <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Down (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </>
+                               )}
+                              {c.type === 'enemy' && c.hp !== undefined && c.id === selectedCombatantId && ( 
+                                <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </> 
                                )}
                               </li>
                           ))}
@@ -701,12 +729,12 @@ export function CombinedToolDrawer({
 
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
-      <DialogContent className="max-w-md">
-        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-6 mb-4">
+      <DialogContent className="max-w-md min-h-[480px] flex flex-col">
+        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
           <UIDialogTitle className="text-primary-foreground">Select Favorite Monster</UIDialogTitle>
           <UIDialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</UIDialogDescription>
         </UIDialogHeader>
-        <ScrollArea className="h-[calc(100%-80px)] mt-4 max-h-[60vh]">
+        <ScrollArea className="mt-4 flex-grow">
             {favoritesList.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No favorites found.</p>
             ) : (
@@ -730,3 +758,4 @@ export function CombinedToolDrawer({
   );
 }
 
+    
