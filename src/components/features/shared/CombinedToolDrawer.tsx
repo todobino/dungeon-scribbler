@@ -11,14 +11,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader as UIDialogHeader, DialogTitle as UIDialogTitle, DialogDescription as UIDialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen } from "lucide-react";
+import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, ShieldAlert, Users, ArrowRight, ArrowLeft, XCircle, Heart, Shield, Skull, Loader2, Swords, FolderOpen, MinusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -69,7 +69,7 @@ export function CombinedToolDrawer({
   const [showAddFriendlySection, setShowAddFriendlySection] = useState(false);
   const [showAddEnemySection, setShowAddEnemySection] = useState(false);
 
-  // State moved from AddFriendlyDrawer
+  // State for AddFriendly section
   const [selectedPlayerToAdd, setSelectedPlayerToAdd] = useState<PlayerCharacter | null>(null);
   const [allyNameInput, setAllyNameInput] = useState<string>("");
   const [friendlyInitiativeInput, setFriendlyInitiativeInput] = useState<string>("");
@@ -77,7 +77,7 @@ export function CombinedToolDrawer({
   const [allyHPInput, setAllyHPInput] = useState<string>("");
 
 
-  // State moved from AddEnemyDrawer
+  // State for AddEnemy section
   const [activeAddEnemyTab, setActiveAddEnemyTab] = useState("single-enemy");
   const [enemyName, setEnemyName] = useState("");
   const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>("");
@@ -195,14 +195,14 @@ export function CombinedToolDrawer({
   }, [currentTurnIndex, combatants]);
 
   const availablePartyMembers = activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id));
-  const addPlayerButtonLabel = availablePartyMembers.length > 0 ? "Add Player" : "Add Ally";
+  const addPlayerButtonLabel = availablePartyMembers.length === 0 ? "Add Ally" : "Add Player";
 
   const handleDamageInputChange = (combatantId: string, value: string) => setDamageInputs(prev => ({ ...prev, [combatantId]: value }));
   const handleApplyDamage = (combatantId: string, type: 'damage' | 'heal') => {
     const amountStr = damageInputs[combatantId]; if (!amountStr) return;
     const amount = parseInt(amountStr); if (isNaN(amount) || amount <= 0) return;
     setCombatants(prevCombatants => prevCombatants.map(combatant => {
-      if (combatant.id === combatantId && combatant.type === 'enemy' && combatant.hp !== undefined) {
+      if (combatant.id === combatantId && (combatant.hp !== undefined || (combatant.type === 'player' && !combatant.playerId))) { // Updated condition
         let newHp = combatant.currentHp ?? combatant.hp!;
         newHp = type === 'damage' ? Math.max(0, newHp - amount) : Math.min(combatant.hp!, newHp + amount);
         return { ...combatant, currentHp: newHp };
@@ -535,11 +535,11 @@ export function CombinedToolDrawer({
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <Label htmlFor="ally-ac-inline">AC (Optional)</Label>
-                              <Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} placeholder="e.g., 15" />
+                              <Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} />
                             </div>
                             <div>
                               <Label htmlFor="ally-hp-inline">HP (Optional)</Label>
-                              <Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} placeholder="e.g., 30" />
+                              <Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} />
                             </div>
                           </div>
                         </>
@@ -547,7 +547,7 @@ export function CombinedToolDrawer({
                        <div>
                         <Label htmlFor="friendly-initiative-inline">Initiative</Label>
                         <div className="flex gap-2 items-center">
-                          <Input id="friendly-initiative-inline" type="number" value={friendlyInitiativeInput} onChange={(e) => setFriendlyInitiativeInput(e.target.value)} placeholder="e.g., 15" className="flex-grow" />
+                          <Input id="friendly-initiative-inline" type="number" value={friendlyInitiativeInput} onChange={(e) => setFriendlyInitiativeInput(e.target.value)} className="flex-grow" />
                           {(availablePartyMembers.length === 0 || selectedPlayerToAdd) && (
                             <Button onClick={handleRollFriendlyInitiative} variant="outline" size="sm" className="shrink-0">
                               <Dice5 className="mr-1 h-4 w-4"/> Roll (d20{(! (availablePartyMembers.length === 0) && selectedPlayerToAdd && selectedPlayerToAdd.initiativeModifier) ? `${selectedPlayerToAdd.initiativeModifier >= 0 ? '+' : ''}${selectedPlayerToAdd.initiativeModifier}` : ''})
@@ -562,7 +562,7 @@ export function CombinedToolDrawer({
                   {/* Inline Add Enemy Section */}
                   {showAddEnemySection && (
                     <div className="p-4 border-b bg-card">
-                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 min-h-[350px] flex flex-col">
+                      <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="pt-2 flex flex-col flex-grow">
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
                           <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger>
@@ -575,11 +575,22 @@ export function CombinedToolDrawer({
                             </Button>
                           </div>
                           <Input id="enemy-name-inline" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} placeholder="e.g., Goblin" />
-                          <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="enemy-ac-inline">AC (Optional)</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} placeholder="e.g., 13" /></div><div><Label htmlFor="enemy-hp-inline">HP (Optional)</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} placeholder="e.g., 7" /></div></div>
-                          <div><Label htmlFor="enemy-quantity-inline">Quantity</Label><Input id="enemy-quantity-inline" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} placeholder="1" min="1" /></div>
-                          <div className="flex items-center space-x-2 pt-2"><Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} /><Label htmlFor="roll-group-initiative-inline" className="cursor-pointer">Roll initiative as a group?</Label></div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div><Label htmlFor="enemy-ac-inline">AC (Optional)</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
+                            <div><Label htmlFor="enemy-hp-inline">HP (Optional)</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
+                          </div>
+                          <div className="flex items-end gap-3">
+                            <div className="w-20">
+                                <Label htmlFor="enemy-quantity-inline">Quantity</Label>
+                                <Input id="enemy-quantity-inline" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" />
+                            </div>
+                            <div className="flex items-center space-x-2 pb-1">
+                                <Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} />
+                                <Label htmlFor="roll-group-initiative-inline" className="cursor-pointer">Group</Label>
+                            </div>
+                          </div>
                           <div className="flex items-center space-x-2 pt-1"><Switch id="roll-enemy-initiative-inline" checked={rollEnemyInitiativeFlag} onCheckedChange={setRollEnemyInitiativeFlag} /><Label htmlFor="roll-enemy-initiative-inline" className="cursor-pointer">{rollGroupInitiativeFlag ? "Roll for Group?" : "Roll for each Enemy?"}</Label></div>
-                          <div><Label htmlFor="enemy-initiative-input-inline">{rollEnemyInitiativeFlag ? "Initiative Modifier (e.g., +2 or -1)" : "Fixed Initiative Value"}{rollGroupInitiativeFlag ? " (for group)" : ""}</Label><Input id="enemy-initiative-input-inline" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} placeholder={rollEnemyInitiativeFlag ? "e.g., 2 or -1" : "e.g., 12"} type={rollEnemyInitiativeFlag ? "text" : "number"} /></div>
+                          <div><Label htmlFor="enemy-initiative-input-inline">{rollEnemyInitiativeFlag ? "Initiative Modifier" : "Fixed Initiative Value"}{rollGroupInitiativeFlag ? " (for group)" : ""}</Label><Input id="enemy-initiative-input-inline" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type={rollEnemyInitiativeFlag ? "text" : "number"} /></div>
                           <div className="mt-auto pt-4">
                             <Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim() || (rollEnemyInitiativeFlag ? false : !enemyInitiativeInput.trim())} className="w-full">Add to Combat</Button>
                           </div>
@@ -656,7 +667,7 @@ export function CombinedToolDrawer({
                                   </div>
                               )}
                               {c.type === 'enemy' && c.hp !== undefined && ( <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </> )}
-                              {c.type === 'player' && !c.playerId && c.hp !== undefined && ( /* HP/Damage for generic allies */
+                              {c.type === 'player' && !c.playerId && c.hp !== undefined && ( 
                                  <> {c.currentHp !== undefined && c.currentHp === 0 ? ( <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); removeCombatant(c.id); }}><Skull className="mr-2 h-4 w-4" /> Down (Remove)</Button> ) : ( <div className="flex items-center gap-1.5 pt-1"> <Input type="number" placeholder="Amt" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" /> <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}>Hit</Button> <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}>Heal</Button> </div> )} </>
                                )}
                               </li>
@@ -691,9 +702,9 @@ export function CombinedToolDrawer({
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
       <DialogContent className="max-w-md">
-        <UIDialogHeader>
-          <UIDialogTitle>Select Favorite Monster</UIDialogTitle>
-          <UIDialogDescription>Choose from your Monster Mash favorites.</UIDialogDescription>
+        <UIDialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-6 mb-4">
+          <UIDialogTitle className="text-primary-foreground">Select Favorite Monster</UIDialogTitle>
+          <UIDialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</UIDialogDescription>
         </UIDialogHeader>
         <ScrollArea className="h-[calc(100%-80px)] mt-4 max-h-[60vh]">
             {favoritesList.length === 0 ? (
