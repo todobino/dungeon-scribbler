@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, ClipboardList, Zap, Brain, HelpCircle, Edit3, Trash2, ChevronDown, Eye, PlusSquare, ClipboardCheck, Library, Users, Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter as StandardDialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
@@ -369,9 +369,11 @@ export default function NextSessionGoalsRefactoredPage() {
             >
               {goals.map(goal => (
                 <AccordionItem value={goal.id} key={goal.id} className="border rounded-md bg-card shadow-sm overflow-hidden">
-                   <AccordionTrigger className="flex items-center w-full text-left p-3 hover:bg-muted/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 data-[state=open]:bg-muted/50">
-                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 mr-3 data-[state=open]:rotate-180 data-[state=closed]:rotate-0" />
-                        <span className="text-base font-medium flex-1 truncate pr-2">{goal.text}</span>
+                   <div className="flex items-center p-3 hover:bg-muted/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 data-[state=open]:bg-muted/50">
+                        <AccordionTrigger className="flex items-center w-full text-left p-0 hover:no-underline flex-1" onClick={(e) => e.stopPropagation()}>
+                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 mr-3 data-[state=open]:rotate-180 data-[state=closed]:rotate-0" />
+                            <span className="text-base font-medium flex-1 truncate pr-2">{goal.text}</span>
+                        </AccordionTrigger>
                         <Button 
                             variant="ghost" 
                             size="icon" 
@@ -384,7 +386,7 @@ export default function NextSessionGoalsRefactoredPage() {
                         >
                             {editingGoalId === goal.id ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
                         </Button>
-                    </AccordionTrigger>
+                    </div>
                   <AccordionContent className="p-3 border-t space-y-4">
                     {editingGoalId === goal.id ? ( 
                       <>
@@ -477,10 +479,10 @@ export default function NextSessionGoalsRefactoredPage() {
               className="mt-1"
             />
           </div>
-          <DialogFooter>
+          <StandardDialogFooter>
             <Button variant="outline" onClick={() => setAddGoalDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleAddGoal} disabled={!newGoalText.trim()}>Add Goal</Button>
-          </DialogFooter>
+          </StandardDialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -518,10 +520,10 @@ export default function NextSessionGoalsRefactoredPage() {
             />
             <p className="text-xs text-muted-foreground">This text will be added to the Adventure Recap.</p>
           </div>
-          <DialogFooter>
+          <StandardDialogFooter>
             <Button variant="outline" onClick={() => setLogGoalDialogData(null)}>Cancel</Button>
             <Button onClick={handleConfirmLogGoal} disabled={!logGoalDialogData?.logText.trim()}>Confirm Log Entry</Button>
-          </DialogFooter>
+          </StandardDialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -559,11 +561,11 @@ export function NextSessionGoalsHelpContent() {
           <p>5. All goals and their details are saved per campaign to your browser's local storage.</p>
       </div>
       </ScrollArea>
-      <DialogFooter>
+      <StandardDialogFooter>
           <DialogClose asChild>
               <Button>Close</Button>
           </DialogClose>
-      </DialogFooter>
+      </StandardDialogFooter>
     </>
     );
 }
