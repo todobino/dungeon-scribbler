@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, ClipboardList, Zap, Brain, HelpCircle, Edit3, Trash2, ChevronDown, Eye, PlusSquare, ClipboardCheck, Library, Users, Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter as StandardDialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
@@ -279,7 +279,7 @@ export default function NextSessionGoalsRefactoredPage() {
         id: Date.now().toString(),
         sessionNumber: currentSessionNumber,
         timestamp: new Date().toISOString(),
-        text: logGoalDialogData.logText.trim(), 
+        text: logGoalDialogData.logText.trim().replace(/\\n/g, '\n'), 
       };
 
       plotPoints.push(newPlotPoint);
@@ -346,9 +346,6 @@ export default function NextSessionGoalsRefactoredPage() {
               Plan your session. Expand goals to view, or click edit (<Edit3 className="inline h-3 w-3 align-text-bottom mr-0.5"/>) to modify and generate ideas.
             </CardDescription>
           </div>
-          <Button onClick={handleOpenAddGoalDialog} size="sm">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Goal
-          </Button>
         </CardHeader>
         <CardContent>
           {goals.length === 0 ? (
@@ -479,10 +476,10 @@ export default function NextSessionGoalsRefactoredPage() {
               className="mt-1"
             />
           </div>
-          <StandardDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setAddGoalDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleAddGoal} disabled={!newGoalText.trim()}>Add Goal</Button>
-          </StandardDialogFooter>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -518,12 +515,12 @@ export default function NextSessionGoalsRefactoredPage() {
               rows={6}
               className="text-sm"
             />
-            <p className="text-xs text-muted-foreground">This text will be added to the Adventure Recap.</p>
+            <p className="text-xs text-muted-foreground mt-1">This text will be added to the Adventure Recap.</p>
           </div>
-          <StandardDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setLogGoalDialogData(null)}>Cancel</Button>
             <Button onClick={handleConfirmLogGoal} disabled={!logGoalDialogData?.logText.trim()}>Confirm Log Entry</Button>
-          </StandardDialogFooter>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -561,11 +558,12 @@ export function NextSessionGoalsHelpContent() {
           <p>5. All goals and their details are saved per campaign to your browser's local storage.</p>
       </div>
       </ScrollArea>
-      <StandardDialogFooter>
+      <DialogFooter>
           <DialogClose asChild>
               <Button>Close</Button>
           </DialogClose>
-      </StandardDialogFooter>
+      </DialogFooter>
     </>
     );
 }
+
