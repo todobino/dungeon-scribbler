@@ -4,7 +4,7 @@
 import type { PlayerCharacter, ApiListItem } from "@/lib/types";
 import type { DndClass } from "@/lib/constants";
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -66,7 +66,7 @@ export default function PartyManagerPage() {
 
   // Fetch Races
   useEffect(() => {
-    if (isFormDialogOpen && apiRaces.length === 0) {
+    if (isFormDialogOpen && apiRaces.length === 0 && !isLoadingApiRaces) {
       const fetchRaces = async () => {
         setIsLoadingApiRaces(true);
         try {
@@ -76,21 +76,20 @@ export default function PartyManagerPage() {
           setApiRaces(data.results || []);
         } catch (error) {
           console.error("Error fetching races:", error);
-          // Optionally show a toast message here
         }
         setIsLoadingApiRaces(false);
       };
       fetchRaces();
     }
-  }, [isFormDialogOpen, apiRaces.length]);
+  }, [isFormDialogOpen, apiRaces.length, isLoadingApiRaces]);
 
   // Fetch Subclasses when class changes
   useEffect(() => {
     if (isFormDialogOpen && characterFormData.class) {
       const fetchSubclasses = async () => {
         setIsLoadingApiSubclasses(true);
-        setApiSubclasses([]); // Clear previous subclasses
-        setCharacterFormData(prev => ({ ...prev, subclass: "" })); // Reset selected subclass
+        setApiSubclasses([]); 
+        //setCharacterFormData(prev => ({ ...prev, subclass: "" })); // Reset subclass selection when class changes
 
         const classIndex = characterFormData.class.toLowerCase().replace(/\s+/g, '-');
         try {
@@ -100,13 +99,13 @@ export default function PartyManagerPage() {
           setApiSubclasses(data.subclasses || []);
         } catch (error) {
           console.error(`Error fetching subclasses for ${characterFormData.class}:`, error);
-          setApiSubclasses([]); // Ensure it's empty on error
+          setApiSubclasses([]);
         }
         setIsLoadingApiSubclasses(false);
       };
       fetchSubclasses();
     } else if (isFormDialogOpen) {
-      setApiSubclasses([]); // Clear subclasses if no class is selected
+      setApiSubclasses([]); 
     }
   }, [characterFormData.class, isFormDialogOpen]);
 
@@ -114,9 +113,11 @@ export default function PartyManagerPage() {
   const handleFormSubmit = async () => {
     if (characterFormData.name?.trim() && characterFormData.class && characterFormData.race?.trim() && activeCampaign) {
       
-      const dataToSave = {
+      const dataToSave: CharacterFormData = {
         ...characterFormData,
-        // race and subclass are already set in characterFormData by handleSelectChange
+        name: characterFormData.name.trim(),
+        race: characterFormData.race.trim(),
+        subclass: characterFormData.subclass?.trim() || "",
       };
 
       if (editingCharacter) {
@@ -144,7 +145,7 @@ export default function PartyManagerPage() {
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
       setIsFormDialogOpen(false);
-      setApiSubclasses([]); // Clear subclasses for next form open
+      setApiSubclasses([]); 
     }
   };
 
@@ -182,15 +183,13 @@ export default function PartyManagerPage() {
   };
 
   const handleSelectChange = (name: keyof CharacterFormData, value: string) => {
-    setCharacterFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (name === "class") {
-      // Subclass fetching is handled by useEffect
-      // Reset subclass when class changes
-      setCharacterFormData(prev => ({ ...prev, subclass: "" }));
-    }
+     setCharacterFormData((prev) => {
+      const newState = { ...prev, [name]: value };
+      if (name === "class") {
+        newState.subclass = ""; // Reset subclass when class changes
+      }
+      return newState;
+    });
   };
   
   const handleColorChange = (value: string) => {
@@ -216,14 +215,13 @@ export default function PartyManagerPage() {
       name: character.name,
       level: character.level,
       class: character.class,
-      race: character.race, // This will be the name from the API or manual input
+      race: character.race,
       subclass: character.subclass || "",
       armorClass: character.armorClass,
       initiativeModifier: character.initiativeModifier || 0,
       color: character.color || PREDEFINED_COLORS[0].value,
     });
     setIsFormDialogOpen(true);
-    // Subclasses will be fetched by the useEffect when `characterFormData.class` is set
   };
 
   const openDetailsDialog = (character: PlayerCharacter) => {
@@ -466,7 +464,7 @@ export default function PartyManagerPage() {
                         "Select a subclass"
                     }/>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent key={characterFormData.class || 'no-class-selected'}>
                     {isLoadingApiSubclasses ? (
                        <SelectItem value="loading-sub" disabled>Loading...</SelectItem>
                     ) : apiSubclasses.length === 0 && characterFormData.class ? (
