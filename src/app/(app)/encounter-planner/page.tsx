@@ -27,7 +27,7 @@ interface CurrentEncounterData {
 type DuplicateNameAction = "overwrite" | "rename" | "append";
 
 export default function EncounterPlannerPage() {
-  const { activeCampaign, isLoadingCampaigns, encounterUpdateKey, notifySavedEncountersUpdate } = useCampaign();
+  const { activeCampaign, isLoadingCampaigns, encounterUpdateKey, notifySavedEncountersUpdate, savedEncountersUpdateKey } = useCampaign();
   const { toast } = useToast();
 
   const [encounterMonsters, setEncounterMonsters] = useState<EncounterMonster[]>([]);
@@ -136,7 +136,7 @@ export default function EncounterPlannerPage() {
       setSavedEncounters([]);
     }
     setIsLoadingSavedEncounters(false);
-  }, [activeCampaign, isLoadingCampaigns, getSavedEncountersStorageKey, encounterUpdateKey]); // Added encounterUpdateKey here too
+  }, [activeCampaign, isLoadingCampaigns, getSavedEncountersStorageKey, savedEncountersUpdateKey]); 
 
   // Save Saved Encounters
   useEffect(() => {
@@ -145,7 +145,7 @@ export default function EncounterPlannerPage() {
       if (storageKey) {
         try {
           localStorage.setItem(storageKey, JSON.stringify(savedEncounters));
-          notifySavedEncountersUpdate(); // Notify context that saved encounters changed
+          notifySavedEncountersUpdate(); 
         } catch (error) {
           console.error("Error saving saved encounters to localStorage for " + activeCampaign.name, error);
         }
@@ -202,7 +202,7 @@ export default function EncounterPlannerPage() {
     setMonsterAC("");
     setMonsterHP("");
     setMonsterInitiativeModifier("");
-    setSelectedFavoriteIndexForAdd(undefined); // Reset after adding
+    setSelectedFavoriteIndexForAdd(undefined); 
     toast({ title: "Enemy Added", description: `${newEnemy.name} (x${newEnemy.quantity}) added to encounter.` });
   };
 
@@ -211,8 +211,8 @@ export default function EncounterPlannerPage() {
     setMonsterCR(formatCRDisplay(fav.cr));
     setMonsterAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setMonsterHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
-    setSelectedFavoriteIndexForAdd(fav.index); // Store the index
-    setMonsterInitiativeModifier(""); // Clear initiative modifier, as it's not stored in FavoriteMonster
+    setSelectedFavoriteIndexForAdd(fav.index); 
+    setMonsterInitiativeModifier(""); 
     setIsFavoriteDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled.`});
   };
@@ -397,7 +397,7 @@ export default function EncounterPlannerPage() {
                 </div>
                  <div>
                   <Label htmlFor="monsterInitiativeModifier">Init. Mod.</Label>
-                  <Input id="monsterInitiativeModifier" type="text" value={monsterInitiativeModifier} onChange={(e) => setMonsterInitiativeModifier(e.target.value)} placeholder="e.g., +2 or -1" />
+                  <Input id="monsterInitiativeModifier" type="number" value={monsterInitiativeModifier} onChange={(e) => setMonsterInitiativeModifier(e.target.value)} placeholder="e.g., 2" />
                 </div>
               </div>
               <div>
@@ -607,5 +607,4 @@ export default function EncounterPlannerPage() {
     </div>
   );
 }
-
     

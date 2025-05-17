@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef, useCallback } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet"; // Removed SheetHeader, SheetTitle
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 
-import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage } from "lucide-react";
+import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
@@ -22,7 +22,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -46,7 +46,7 @@ interface CombinedToolDrawerProps {
 
 type RollMode = "normal" | "advantage" | "disadvantage";
 
-// Helper functions for rendering monster details (adapted from MonsterMashDrawer)
+// Helper functions for rendering monster details
 const formatDetailArmorClass = (acArray: MonsterDetail["armor_class"] | undefined): string => {
     if (!acArray || acArray.length === 0) return "N/A";
     const mainAc = acArray[0];
@@ -155,6 +155,7 @@ export function CombinedToolDrawer({
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
+  const [selectedFavoriteMonsterIndexForCombatAdd, setSelectedFavoriteMonsterIndexForCombatAdd] = useState<string | undefined>(undefined);
   
   const [isFavoriteMonsterDialogOpen, setIsFavoriteMonsterDialogOpen] = useState(false);
   const [favoritesList, setFavoritesList] = useState<FavoriteMonster[]>([]);
@@ -167,7 +168,6 @@ export function CombinedToolDrawer({
   
   const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
 
-  // State for monster detail dialog in combat tracker
   const [isMonsterDetailDialogOpen, setIsMonsterDetailDialogOpen] = useState(false);
   const [selectedMonsterForDetailDialog, setSelectedMonsterForDetailDialog] = useState<Combatant | null>(null);
   const [fullEnemyDetailsCache, setFullEnemyDetailsCache] = useState<Record<string, MonsterDetail>>({});
@@ -441,7 +441,7 @@ export function CombinedToolDrawer({
     setEnemyName(fav.name);
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
-    // Note: fav.cr is available if needed for enemyInitiativeModifierInput logic
+    setSelectedFavoriteMonsterIndexForCombatAdd(fav.index);
     setIsFavoriteMonsterDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled where possible.`});
   };
@@ -471,9 +471,7 @@ export function CombinedToolDrawer({
     if (rollGroupInitiativeFlag) {
       groupInitiativeValue = rollDie(20) + initMod;
     }
-
-    const matchedFavorite = favoritesList.find(f => f.name === enemyName.trim());
-
+    
     for (let i = 0; i < quantity; i++) {
       let initiativeValue: number;
       const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
@@ -496,8 +494,8 @@ export function CombinedToolDrawer({
         hp: hpValue,
         currentHp: hpValue,
         initiativeModifier: initMod,
-        monsterIndex: matchedFavorite?.index, 
-        cr: matchedFavorite ? formatCRDisplay(matchedFavorite.cr) : undefined,
+        monsterIndex: selectedFavoriteMonsterIndexForCombatAdd, 
+        cr: favoritesList.find(f => f.index === selectedFavoriteMonsterIndexForCombatAdd)?.cr !== undefined ? formatCRDisplay(favoritesList.find(f => f.index === selectedFavoriteMonsterIndexForCombatAdd)!.cr) : undefined,
       });
     }
     onAddCombatants(newEnemies);
@@ -507,6 +505,7 @@ export function CombinedToolDrawer({
     setEnemyInitiativeModifierInput("0");
     setRollGroupInitiativeFlag(false);
     setEnemyAC(""); setEnemyHP(""); 
+    setSelectedFavoriteMonsterIndexForCombatAdd(undefined);
     setShowAddEnemySection(false);
   };
 
@@ -555,8 +554,12 @@ export function CombinedToolDrawer({
   };
 
   const fetchFullEnemyDetails = useCallback(async (combatant: Combatant) => {
-    if (!combatant.monsterIndex || fullEnemyDetailsCache[combatant.monsterIndex]) {
+    if (!combatant.monsterIndex) {
+      toast({ title: "Details Unavailable", description: "No API index found for this enemy.", variant: "default" });
       return;
+    }
+    if (fullEnemyDetailsCache[combatant.monsterIndex]) {
+      return; // Already cached
     }
     setIsLoadingFullEnemyDetailsFor(combatant.id);
     try {
@@ -565,7 +568,7 @@ export function CombinedToolDrawer({
         throw new Error(`Failed to fetch details for ${combatant.name}`);
       }
       const data: MonsterDetail = await response.json();
-      setFullEnemyDetailsCache(prev => ({ ...prev, [combatant.monsterIndex!]: data }));
+      setFullEnemyDetailsCache(prev => ({ ...prev, [combatant.monsterIndex!]: {...data, source: 'api'} }));
     } catch (err) {
       console.error(err);
       toast({ title: "Error", description: `Could not load details for ${combatant.name}.`, variant: "destructive" });
@@ -587,10 +590,9 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        {/* Visually hidden header for accessibility */}
-        <DialogHeader className="sr-only">
-          <DialogTitle>DM Tools</DialogTitle>
-        </DialogHeader>
+        <SheetHeader className="sr-only">
+          <SheetTitle>DM Tools</SheetTitle>
+        </SheetHeader>
         <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
              <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
@@ -665,7 +667,7 @@ export function CombinedToolDrawer({
                     variant={showAddEnemySection ? "secondary" : "outline"}
                     className="flex-1"
                   >
-                    <Swords className="mr-2 h-4 w-4" /> Add Enemy
+                    <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
                   </Button>
               </div>
                {availablePartyMembers.length > 0 && !showAddFriendlySection && !showAddEnemySection && (
@@ -695,8 +697,8 @@ export function CombinedToolDrawer({
                   <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                    <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
                   </div>
                 </>
                 )}
@@ -930,7 +932,7 @@ export function CombinedToolDrawer({
         <DialogHeader>
           <DialogTitle>{selectedMonsterForDetailDialog?.name || "Monster Details"}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] pr-4"> {/* Added pr-4 to avoid scrollbar overlap */}
+        <ScrollArea className="max-h-[70vh] pr-4"> 
           {isLoadingFullEnemyDetailsFor === selectedMonsterForDetailDialog?.id ? (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -985,3 +987,4 @@ export function CombinedToolDrawer({
     </>
   );
 }
+
