@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useId, useRef, useCallback } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"; 
+import { Sheet, SheetContent, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
+import { Progress } from "@/components/ui/progress"; // Added Progress import
 
 import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert } from "lucide-react";
 
@@ -22,7 +23,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -46,7 +47,7 @@ interface CombinedToolDrawerProps {
 
 type RollMode = "normal" | "advantage" | "disadvantage";
 
-// Helper functions for rendering monster details
+// Helper functions for rendering monster details (for Combat Tracker dialog)
 const formatDetailArmorClass = (acArray: MonsterDetail["armor_class"] | undefined): string => {
     if (!acArray || acArray.length === 0) return "N/A";
     const mainAc = acArray[0];
@@ -64,7 +65,7 @@ const renderDetailTextField = (label: string, textContent: string | undefined | 
       <div>
         <h4 className="font-semibold mt-2 mb-1 text-primary">{label}</h4>
         {paragraphs.map((paragraph, index) => {
-          const parts = paragraph.split(/\*\*(.*?)\*\*/g); 
+          const parts = paragraph.split(/\*\*(.*?)\*\*/g);
           return (
             <p key={index} className="text-sm mb-1.5">
               {parts.map((part, i) =>
@@ -78,7 +79,7 @@ const renderDetailTextField = (label: string, textContent: string | undefined | 
 };
 
 type DetailActionType = MonsterAction | SpecialAbility | LegendaryAction;
-const renderDetailActions = (actions: DetailActionType[] | undefined, actionTypeLabel: string) => { 
+const renderDetailActions = (actions: DetailActionType[] | undefined, actionTypeLabel: string) => {
     if (!actions || actions.length === 0) return null;
     return (
       <div>
@@ -88,7 +89,7 @@ const renderDetailActions = (actions: DetailActionType[] | undefined, actionType
             <li key={action.name} className="text-sm">
               <strong className="font-medium">{action.name}
               {('usage' in action && action.usage) ? ` (${action.usage.type}${(action.usage as any).times ? ` ${(action.usage as any).times} times` : ''}${(action.usage as any).dice ? `, recharges on ${(action.usage as any).dice}` : ''})` : ''}
-              .</strong> {(action as any).desc} 
+              .</strong> {(action as any).desc}
                { ('attack_bonus' in action && action.attack_bonus !== undefined) && <p className="text-xs pl-2">Attack Bonus: +{action.attack_bonus}</p> }
               { ('damage' in action && action.damage) && ((action.damage as any[])).map((dmg: any, i: number) => (
                 <p key={i} className="text-xs pl-2">Damage: {dmg.damage_dice} {dmg.damage_type?.name}</p>
@@ -133,7 +134,7 @@ export function CombinedToolDrawer({
   const combatantRefs = useRef<Map<string, HTMLLIElement | null>>(new Map());
 
   const [activeTab, setActiveTab] = useState(defaultTab);
-  
+
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab, open]);
@@ -156,7 +157,7 @@ export function CombinedToolDrawer({
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
   const [selectedFavoriteMonsterIndexForCombatAdd, setSelectedFavoriteMonsterIndexForCombatAdd] = useState<string | undefined>(undefined);
-  
+
   const [isFavoriteMonsterDialogOpen, setIsFavoriteMonsterDialogOpen] = useState(false);
   const [favoritesList, setFavoritesList] = useState<FavoriteMonster[]>([]);
   const [savedEncountersForCombat, setSavedEncountersForCombat] = useState<SavedEncounter[]>([]);
@@ -165,14 +166,14 @@ export function CombinedToolDrawer({
 
   const [combatantToDelete, setCombatantToDelete] = useState<Combatant | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  
+
   const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
 
   const [isMonsterDetailDialogOpen, setIsMonsterDetailDialogOpen] = useState(false);
   const [selectedMonsterForDetailDialog, setSelectedMonsterForDetailDialog] = useState<Combatant | null>(null);
   const [fullEnemyDetailsCache, setFullEnemyDetailsCache] = useState<Record<string, MonsterDetail>>({});
   const [isLoadingFullEnemyDetailsFor, setIsLoadingFullEnemyDetailsFor] = useState<string | null>(null);
-  
+
 
   const handleDiceRoll = () => {
     const notationToParse = inputValue.trim() === "" ? "1d20" : inputValue.trim();
@@ -288,7 +289,7 @@ export function CombinedToolDrawer({
   }, [currentTurnIndex, combatants]);
 
   const availablePartyMembers = activeCampaignParty ? activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id)) : [];
-  
+
   const handleDamageInputChange = (combatantId: string, value: string) => setDamageInputs(prev => ({ ...prev, [combatantId]: value }));
   const handleApplyDamage = (combatantId: string, type: 'damage' | 'heal') => {
     const amountStr = damageInputs[combatantId]; if (!amountStr) return;
@@ -310,7 +311,7 @@ export function CombinedToolDrawer({
   const handleConfirmDeleteCombatant = () => {
     if (!combatantToDelete) return;
     const id = combatantToDelete.id;
-    onRemoveCombatant(id); 
+    onRemoveCombatant(id);
     if (combatants.length -1 === 0) {
       setCurrentTurnIndex(null);
     } else if (currentTurnIndex !== null) {
@@ -330,12 +331,12 @@ export function CombinedToolDrawer({
 
   const nextTurn = () => { if (!combatants || combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex + 1) % combatants.length); };
   const prevTurn = () => { if (!combatants || combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex - 1 + combatants.length) % combatants.length); };
-  
-  const handleEndCombatLocal = () => { 
-    onEndCombat(); 
-    setCurrentTurnIndex(null); 
-    setSelectedCombatantId(null); 
-    setDamageInputs({}); 
+
+  const handleEndCombatLocal = () => {
+    onEndCombat();
+    setCurrentTurnIndex(null);
+    setSelectedCombatantId(null);
+    setDamageInputs({});
     setShowAddFriendlySection(false);
     setShowAddEnemySection(false);
   };
@@ -449,7 +450,7 @@ export function CombinedToolDrawer({
   const parseModifierString = (modStr: string): number => {
     modStr = modStr.trim();
     if (modStr === "") return 0;
-    if (modStr === "+") return 0; 
+    if (modStr === "+") return 0;
     const num = parseInt(modStr);
     return isNaN(num) ? 0 : num;
   };
@@ -471,11 +472,11 @@ export function CombinedToolDrawer({
     if (rollGroupInitiativeFlag) {
       groupInitiativeValue = rollDie(20) + initMod;
     }
-    
+
     for (let i = 0; i < quantity; i++) {
       let initiativeValue: number;
       const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
-      
+
       if (rollGroupInitiativeFlag && groupInitiativeValue !== undefined) {
         initiativeValue = groupInitiativeValue;
       } else if (enemyInitiativeInput.trim() !== "" && !isNaN(parseInt(enemyInitiativeInput.trim()))) {
@@ -484,7 +485,7 @@ export function CombinedToolDrawer({
       else {
         initiativeValue = rollDie(20) + initMod;
       }
-      
+
       newEnemies.push({
         id: `${combatUniqueId}-enemy-${Date.now()}-${i}`,
         name: currentEnemyName,
@@ -494,7 +495,7 @@ export function CombinedToolDrawer({
         hp: hpValue,
         currentHp: hpValue,
         initiativeModifier: initMod,
-        monsterIndex: selectedFavoriteMonsterIndexForCombatAdd, 
+        monsterIndex: selectedFavoriteMonsterIndexForCombatAdd,
         cr: favoritesList.find(f => f.index === selectedFavoriteMonsterIndexForCombatAdd)?.cr !== undefined ? formatCRDisplay(favoritesList.find(f => f.index === selectedFavoriteMonsterIndexForCombatAdd)!.cr) : undefined,
       });
     }
@@ -504,7 +505,7 @@ export function CombinedToolDrawer({
     setEnemyName(""); setEnemyInitiativeInput(""); setEnemyQuantityInput("1");
     setEnemyInitiativeModifierInput("0");
     setRollGroupInitiativeFlag(false);
-    setEnemyAC(""); setEnemyHP(""); 
+    setEnemyAC(""); setEnemyHP("");
     setSelectedFavoriteMonsterIndexForCombatAdd(undefined);
     setShowAddEnemySection(false);
   };
@@ -521,7 +522,7 @@ export function CombinedToolDrawer({
         const initiativeValue = rollDie(20) + (monster.initiativeModifier || 0);
         const acValue = monster.ac ? parseInt(monster.ac) : undefined;
         const hpValue = monster.hp ? parseInt(monster.hp) : undefined;
-        
+
         newEnemiesFromEncounter.push({
           id: `${combatUniqueId}-enemy-${monster.name.replace(/\s+/g, '')}-${Date.now()}-${monsterIndexInEncounter}-${i}`,
           name: combatantName,
@@ -532,7 +533,7 @@ export function CombinedToolDrawer({
           currentHp: isNaN(hpValue!) ? undefined : hpValue,
           cr: monster.cr,
           initiativeModifier: monster.initiativeModifier,
-          monsterIndex: monster.monsterIndex 
+          monsterIndex: monster.monsterIndex
         });
       }
     });
@@ -559,7 +560,7 @@ export function CombinedToolDrawer({
       return;
     }
     if (fullEnemyDetailsCache[combatant.monsterIndex]) {
-      return; // Already cached
+      return;
     }
     setIsLoadingFullEnemyDetailsFor(combatant.id);
     try {
@@ -593,7 +594,7 @@ export function CombinedToolDrawer({
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col h-full pr-8"> 
+        <div className="flex flex-col h-full pr-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
              <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
                 <TabsTrigger
@@ -633,7 +634,7 @@ export function CombinedToolDrawer({
                     {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
                     <div className="space-y-3">
                       {rollLog.map(entry => (
-                        <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm transition-all", entry.isRolling ? "opacity-70" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
+                        <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
                           {entry.isRolling ? (
                              <div className="flex items-center h-10">
                                <Dice5 className="h-6 w-6 animate-spin text-primary" />
@@ -718,7 +719,7 @@ export function CombinedToolDrawer({
               )}
 
               {showAddEnemySection && (
-              <div className="px-4 pb-4 border-b bg-card shrink-0">
+              <div className="px-4 pb-4 border-b bg-card shrink-0 flex-grow flex flex-col">
                 <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
@@ -736,17 +737,17 @@ export function CombinedToolDrawer({
                       <div><Label htmlFor="enemy-ac-inline">AC</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
                       <div><Label htmlFor="enemy-hp-inline">HP</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                      <div><Label htmlFor="enemy-init-mod-inline">Init. Mod.</Label><Input id="enemy-init-mod-inline" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} /></div>
-                      <div className="flex items-end gap-1">
-                        <div className="flex-grow">
-                           <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
-                           <Input id="enemy-initiative-input-inline" className="w-full" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" />
-                        </div>
-                        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())}>
-                            <Dice5 className="h-4 w-4" />
-                        </Button>
+                   <div className="grid grid-cols-2 gap-3">
+                    <div><Label htmlFor="enemy-init-mod-inline">Init. Mod.</Label><Input id="enemy-init-mod-inline" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} /></div>
+                    <div className="flex items-end gap-1">
+                      <div className="flex-grow">
+                         <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
+                         <Input id="enemy-initiative-input-inline" className="w-full" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" />
                       </div>
+                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())}>
+                          <Dice5 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-end gap-3">
                       <div className="w-20">
@@ -758,6 +759,7 @@ export function CombinedToolDrawer({
                           <Label htmlFor="roll-group-initiative-inline" className="cursor-pointer text-sm">Group</Label>
                       </div>
                   </div>
+
                   <div className="mt-auto pt-4">
                   <Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim()} className="w-full">Add to Combat</Button>
                   </div>
@@ -804,13 +806,13 @@ export function CombinedToolDrawer({
                 </Tabs>
               </div>
               )}
-              
+
              <div className="p-4 flex-grow flex flex-col min-h-0">
                 <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
                 <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
-                    {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
+                    {(combatants || []).length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
                     <ul className="space-y-1.5">
-                    {combatants.map((c, index) => (
+                    {(combatants || []).map((c, index) => (
                         <li
                         key={c.id}
                         ref={(el) => combatantRefs.current.set(c.id, el)}
@@ -825,7 +827,6 @@ export function CombinedToolDrawer({
                                   <p className="text-xs text-muted-foreground">
                                     AC: {c.ac ?? 'N/A'}
                                     {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
-                                    {(c.cr) && <span className="ml-1">| CR: {c.cr}</span>}
                                   </p>
                               </div>
                             </div>
@@ -835,6 +836,15 @@ export function CombinedToolDrawer({
                                 </Button>
                             )}
                         </div>
+
+                        {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
+                          <div className="mt-1">
+                            <Progress value={(c.currentHp / c.hp) * 100} className="h-2 [&>div]:bg-destructive" />
+                            <p className="text-xs text-muted-foreground/80 text-center mt-0.5">
+                              {c.currentHp} / {c.hp} HP
+                            </p>
+                          </div>
+                        )}
 
                         {c.type === 'enemy' && c.hp !== undefined && c.id === selectedCombatantId && (
                         <>
@@ -857,7 +867,7 @@ export function CombinedToolDrawer({
                     </ul>
                 </ScrollArea>
               </div>
-              {combatants.length > 0 && (
+              {(combatants || []).length > 0 && (
               <div className="p-4 space-y-2 border-t shrink-0">
                 <div className="flex gap-2">
                 <Button onClick={prevTurn} variant="outline" className="flex-1"><ArrowLeft className="mr-2 h-4 w-4"/>Prev</Button>
@@ -913,9 +923,9 @@ export function CombinedToolDrawer({
         <UIAlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
+            <AlertDialogDescription>
               Are you sure you want to remove "{combatantToDelete?.name}" from the combat?
-            </UIAlertDialogDescription>
+            </AlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel>
@@ -932,7 +942,7 @@ export function CombinedToolDrawer({
         <DialogHeader>
           <DialogTitle>{selectedMonsterForDetailDialog?.name || "Monster Details"}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] pr-4"> 
+        <ScrollArea className="max-h-[70vh] pr-4">
           {isLoadingFullEnemyDetailsFor === selectedMonsterForDetailDialog?.id ? (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -964,7 +974,7 @@ export function CombinedToolDrawer({
                   {detail.condition_immunities && (typeof detail.condition_immunities === 'string' ? detail.condition_immunities.length > 0 : detail.condition_immunities.length > 0) && <div><strong>Condition Immunities:</strong> {(Array.isArray(detail.condition_immunities) && detail.condition_immunities.length > 0 && typeof detail.condition_immunities[0] !== 'string') ? (detail.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (Array.isArray(detail.condition_immunities) ? detail.condition_immunities.join(', ') : detail.condition_immunities) }</div>}
                   <div><strong>Senses:</strong> {typeof detail.senses === 'string' ? detail.senses : detail.senses ? Object.entries(detail.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ') : 'N/A'}</div>
                   <div><strong>Languages:</strong> {detail.languages || "None"}</div>
-                  
+
                   {renderDetailActions(detail.special_abilities as SpecialAbility[] | undefined, "Special Abilities")}
                   {renderDetailActions(detail.actions as MonsterAction[] | undefined, "Actions")}
                   {renderDetailActions(detail.legendary_actions as LegendaryAction[] | undefined, "Legendary Actions")}
@@ -987,4 +997,3 @@ export function CombinedToolDrawer({
     </>
   );
 }
-
