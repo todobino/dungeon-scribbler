@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 
@@ -23,7 +23,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; // Assuming this is exported
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -120,7 +120,7 @@ export function CombinedToolDrawer({
   onUpdateCombatantHp,
   onEndCombat
 }: CombinedToolDrawerProps) {
-  const { activeCampaign, activeCampaignParty, savedEncountersUpdateKey } = useCampaign();
+  const { activeCampaign, savedEncountersUpdateKey } = useCampaign();
   const { toast } = useToast();
 
   const [inputValue, setInputValue] = useState("");
@@ -288,7 +288,7 @@ export function CombinedToolDrawer({
     }
   }, [currentTurnIndex, combatants]);
 
-  const availablePartyMembers = activeCampaignParty ? activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id)) : [];
+  const availablePartyMembers = activeCampaign?.activeParty ? activeCampaign.activeParty.filter(p => !combatants.some(c => c.playerId === p.id)) : [];
 
   const handleDamageInputChange = (combatantId: string, value: string) => setDamageInputs(prev => ({ ...prev, [combatantId]: value }));
   const handleApplyDamage = (combatantId: string, type: 'damage' | 'heal') => {
@@ -375,7 +375,7 @@ export function CombinedToolDrawer({
       color = selectedPlayerToAdd.color;
       ac = selectedPlayerToAdd.armorClass;
       initiativeModifier = selectedPlayerToAdd.initiativeModifier;
-      hp = undefined;
+      hp = undefined; // Players typically track their own HP outside this form
     }
 
     const newCombatant: Combatant = {
@@ -442,7 +442,7 @@ export function CombinedToolDrawer({
     setEnemyName(fav.name);
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
-    setSelectedFavoriteMonsterIndexForCombatAdd(fav.index);
+    setSelectedFavoriteMonsterIndexForCombatAdd(fav.index); // Store the index
     setIsFavoriteMonsterDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled where possible.`});
   };
@@ -450,7 +450,7 @@ export function CombinedToolDrawer({
   const parseModifierString = (modStr: string): number => {
     modStr = modStr.trim();
     if (modStr === "") return 0;
-    if (modStr === "+") return 0;
+    if (modStr === "+") return 0; // Allow just "+" to mean +0
     const num = parseInt(modStr);
     return isNaN(num) ? 0 : num;
   };
@@ -506,7 +506,7 @@ export function CombinedToolDrawer({
     setEnemyInitiativeModifierInput("0");
     setRollGroupInitiativeFlag(false);
     setEnemyAC(""); setEnemyHP("");
-    setSelectedFavoriteMonsterIndexForCombatAdd(undefined);
+    setSelectedFavoriteMonsterIndexForCombatAdd(undefined); // Clear stored index
     setShowAddEnemySection(false);
   };
 
@@ -531,9 +531,9 @@ export function CombinedToolDrawer({
           ac: isNaN(acValue!) ? undefined : acValue,
           hp: isNaN(hpValue!) ? undefined : hpValue,
           currentHp: isNaN(hpValue!) ? undefined : hpValue,
-          cr: monster.cr,
+          cr: monster.cr, // Added CR from EncounterMonster
           initiativeModifier: monster.initiativeModifier,
-          monsterIndex: monster.monsterIndex
+          monsterIndex: monster.monsterIndex // Transfer monsterIndex
         });
       }
     });
@@ -550,7 +550,10 @@ export function CombinedToolDrawer({
     if (combatant.type === 'enemy') {
       setSelectedCombatantId(prevId => prevId === combatant.id ? null : combatant.id);
     } else {
-      setSelectedCombatantId(null);
+      setSelectedCombatantId(null); // Deselect if a player card is clicked, or if an enemy card is clicked again
+    }
+    if (isMonsterDetailDialogOpen && selectedMonsterForDetailDialog?.id !== combatant.id) {
+      setIsMonsterDetailDialogOpen(false); // Close details if a different combatant is selected
     }
   };
 
@@ -579,6 +582,7 @@ export function CombinedToolDrawer({
   }, [fullEnemyDetailsCache, toast]);
 
   const handleOpenMonsterDetailDialog = (combatant: Combatant) => {
+    if (selectedCombatantId === combatant.id) setSelectedCombatantId(null); // Close action bar if opening details
     setSelectedMonsterForDetailDialog(combatant);
     setIsMonsterDetailDialogOpen(true);
     if (combatant.monsterIndex && !fullEnemyDetailsCache[combatant.monsterIndex]) {
@@ -591,7 +595,6 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
@@ -685,7 +688,7 @@ export function CombinedToolDrawer({
                 {availablePartyMembers.length > 0 ? (
                 <div>
                   <Label htmlFor="player-select-inline">Player Character</Label>
-                  <Select value={selectedPlayerToAdd?.id || ""} onValueChange={(value) => setSelectedPlayerToAdd(activeCampaignParty.find((p) => p.id === value) || null)}>
+                  <Select value={selectedPlayerToAdd?.id || ""} onValueChange={(value) => setSelectedPlayerToAdd(activeCampaign?.activeParty?.find((p) => p.id === value) || null)}>
                   <SelectTrigger id="player-select-inline" className="mt-1"><SelectValue placeholder="Select a player" /></SelectTrigger>
                   <SelectContent>
                     {availablePartyMembers.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name} - {p.race} {p.class}</SelectItem>))}
@@ -750,7 +753,7 @@ export function CombinedToolDrawer({
                       </Button>
                     </div>
                   </div>
-                  <div className="flex items-end gap-3">
+                   <div className="flex items-end gap-3">
                       <div className="w-20">
                           <Label htmlFor="enemy-quantity-inline">Quantity</Label>
                           <Input id="enemy-quantity-inline" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" />
@@ -824,7 +827,7 @@ export function CombinedToolDrawer({
                             <div className="flex items-center cursor-pointer flex-1" onClick={() => handleCombatantCardClick(c)}>
                               <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
                               <div>
-                                  <p className={`font-medium ${(c.type === 'enemy' && selectedCombatantId !== c.id) ? 'text-destructive' : (selectedCombatantId === c.id ? 'text-primary' : '')}`}>{c.name}</p>
+                                  <p className={cn("font-medium", c.type === 'enemy' && selectedCombatantId !== c.id && 'text-destructive', c.type === 'enemy' && selectedCombatantId === c.id && 'text-primary')}>{c.name}</p>
                                   <p className="text-xs text-muted-foreground">
                                     AC: {c.ac ?? 'N/A'}
                                     {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
@@ -841,24 +844,18 @@ export function CombinedToolDrawer({
                         {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
                           <div className="mt-1">
                             <Progress value={(c.currentHp / c.hp) * 100} className="h-2 [&>div]:bg-destructive" />
-                            <p className="text-xs text-muted-foreground/80 text-center mt-0.5">
-                              {c.currentHp} / {c.hp} HP
-                            </p>
                           </div>
                         )}
 
-                        {c.type === 'enemy' && c.hp !== undefined && c.id === selectedCombatantId && (
+                        {c.type === 'enemy' && c.id === selectedCombatantId && (
                         <>
                         {c.currentHp !== undefined && c.currentHp === 0 ? (
                             <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>
                         ) : (
-                            <div className="flex items-center justify-between gap-1.5 pt-1">
-                              <div className="flex items-center gap-1.5">
-                                  <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
-                                  <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
-                                  <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
-                              </div>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={(e) => {e.stopPropagation(); handleOpenDeleteConfirm(c);}}><Trash2 className="h-4 w-4" /></Button>
+                            <div className="flex items-center justify-center gap-1.5 pt-1">
+                              <Button size="sm" variant="destructive" className="px-2 py-1 h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
+                              <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
+                              <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
                             </div>
                         )}
                         </>
@@ -922,18 +919,18 @@ export function CombinedToolDrawer({
     {/* Delete Combatant Confirmation Dialog */}
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
-          <UIAlertDialogHeader>
-            <UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Combatant?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove "{combatantToDelete?.name}" from the combat?
             </AlertDialogDescription>
-          </UIAlertDialogHeader>
-          <UIAlertDialogFooter>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteCombatant} className={cn("bg-destructive text-destructive-foreground hover:bg-destructive/90")}>
               Remove
             </AlertDialogAction>
-          </UIAlertDialogFooter>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
