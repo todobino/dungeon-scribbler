@@ -43,6 +43,7 @@ export default function EncounterPlannerPage() {
   const [monsterHP, setMonsterHP] = useState("");
   const [monsterInitiativeModifier, setMonsterInitiativeModifier] = useState("");
   const [selectedFavoriteIndexForAdd, setSelectedFavoriteIndexForAdd] = useState<string | undefined>(undefined);
+  const [selectedMonsterIndexFromFavorite, setSelectedMonsterIndexFromFavorite] = useState<string | undefined>(undefined);
 
 
   const [savedEncounters, setSavedEncounters] = useState<SavedEncounter[]>([]);
@@ -138,20 +139,19 @@ export default function EncounterPlannerPage() {
     setIsLoadingSavedEncounters(false);
   }, [activeCampaign, isLoadingCampaigns, getSavedEncountersStorageKey, savedEncountersUpdateKey]); 
 
-  // Save Saved Encounters
+  // Save Saved Encounters (Persistence Only)
   useEffect(() => {
     if (activeCampaign && !isLoadingSavedEncounters) {
       const storageKey = getSavedEncountersStorageKey();
       if (storageKey) {
         try {
           localStorage.setItem(storageKey, JSON.stringify(savedEncounters));
-          notifySavedEncountersUpdate(); 
         } catch (error) {
           console.error("Error saving saved encounters to localStorage for " + activeCampaign.name, error);
         }
       }
     }
-  }, [savedEncounters, activeCampaign, isLoadingSavedEncounters, getSavedEncountersStorageKey, notifySavedEncountersUpdate]);
+  }, [savedEncounters, activeCampaign, isLoadingSavedEncounters, getSavedEncountersStorageKey]);
   
   // Load Favorites for Dialog
   useEffect(() => {
@@ -183,7 +183,6 @@ export default function EncounterPlannerPage() {
         return;
     }
 
-
     const newEnemy: EncounterMonster = {
       id: Date.now().toString(),
       name: monsterName.trim(),
@@ -191,7 +190,7 @@ export default function EncounterPlannerPage() {
       cr: monsterCR.trim() || undefined,
       ac: monsterAC.trim() || undefined,
       hp: monsterHP.trim() || undefined,
-      monsterIndex: selectedFavoriteIndexForAdd,
+      monsterIndex: selectedMonsterIndexFromFavorite, // Use the stored index
       initiativeModifier: initiativeModifierValue,
     };
 
@@ -202,7 +201,7 @@ export default function EncounterPlannerPage() {
     setMonsterAC("");
     setMonsterHP("");
     setMonsterInitiativeModifier("");
-    setSelectedFavoriteIndexForAdd(undefined); 
+    setSelectedMonsterIndexFromFavorite(undefined); // Clear the stored index
     toast({ title: "Enemy Added", description: `${newEnemy.name} (x${newEnemy.quantity}) added to encounter.` });
   };
 
@@ -211,7 +210,7 @@ export default function EncounterPlannerPage() {
     setMonsterCR(formatCRDisplay(fav.cr));
     setMonsterAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setMonsterHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
-    setSelectedFavoriteIndexForAdd(fav.index); 
+    setSelectedMonsterIndexFromFavorite(fav.index); // Store the index
     setMonsterInitiativeModifier(""); 
     setIsFavoriteDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled.`});
@@ -242,6 +241,7 @@ export default function EncounterPlannerPage() {
       setSavedEncounters(prev => [encounterToSave, ...prev]);
       toast({ title: "Encounter Saved!", description: `"${encounterToSave.title}" has been added.` });
     }
+    notifySavedEncountersUpdate(); // Notify after state change
   };
 
   const handleSaveCurrentEncounter = () => {
@@ -307,6 +307,7 @@ export default function EncounterPlannerPage() {
   const handleDeleteSavedEncounter = (id: string) => {
     setSavedEncounters(prev => prev.filter(enc => enc.id !== id));
     toast({ title: "Saved Encounter Deleted" });
+    notifySavedEncountersUpdate(); // Notify after state change
   };
 
   const handleQuantityChange = (monsterId: string, change: number) => {
@@ -397,7 +398,7 @@ export default function EncounterPlannerPage() {
                 </div>
                  <div>
                   <Label htmlFor="monsterInitiativeModifier">Init. Mod.</Label>
-                  <Input id="monsterInitiativeModifier" type="number" value={monsterInitiativeModifier} onChange={(e) => setMonsterInitiativeModifier(e.target.value)} placeholder="e.g., 2" />
+                  <Input id="monsterInitiativeModifier" type="number" value={monsterInitiativeModifier} onChange={(e) => setMonsterInitiativeModifier(e.target.value)} />
                 </div>
               </div>
               <div>
@@ -407,11 +408,11 @@ export default function EncounterPlannerPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="monsterAC">Armor Class (AC)</Label>
-                  <Input id="monsterAC" type="text" value={monsterAC} onChange={(e) => setMonsterAC(e.target.value)} placeholder="e.g., 15" />
+                  <Input id="monsterAC" type="text" value={monsterAC} onChange={(e) => setMonsterAC(e.target.value)} />
                 </div>
                 <div>
                   <Label htmlFor="monsterHP">Hit Points (HP)</Label>
-                  <Input id="monsterHP" type="text" value={monsterHP} onChange={(e) => setMonsterHP(e.target.value)} placeholder="e.g., 27" />
+                  <Input id="monsterHP" type="text" value={monsterHP} onChange={(e) => setMonsterHP(e.target.value)} />
                 </div>
               </div>
             </CardContent>
@@ -607,4 +608,6 @@ export default function EncounterPlannerPage() {
     </div>
   );
 }
+    
+
     
