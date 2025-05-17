@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
-import { Progress } from "@/components/ui/progress"; // Added Progress import
+import { Progress } from "@/components/ui/progress";
 
 import { Dice5, Zap, Trash2, ChevronRight, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert } from "lucide-react";
 
@@ -560,7 +560,7 @@ export function CombinedToolDrawer({
       return;
     }
     if (fullEnemyDetailsCache[combatant.monsterIndex]) {
-      return;
+      return; // Already cached
     }
     setIsLoadingFullEnemyDetailsFor(combatant.id);
     try {
@@ -591,10 +591,11 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
+        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col h-full pr-8">
+        <div className="flex flex-col h-full pr-8"> 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
              <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground">
                 <TabsTrigger
@@ -698,8 +699,8 @@ export function CombinedToolDrawer({
                   <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                    <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                    <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
                   </div>
                 </>
                 )}
@@ -810,9 +811,9 @@ export function CombinedToolDrawer({
              <div className="p-4 flex-grow flex flex-col min-h-0">
                 <Label className="mb-1">Combat Order (Highest to Lowest)</Label>
                 <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
-                    {(combatants || []).length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
+                    {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
                     <ul className="space-y-1.5">
-                    {(combatants || []).map((c, index) => (
+                    {combatants.map((c, index) => (
                         <li
                         key={c.id}
                         ref={(el) => combatantRefs.current.set(c.id, el)}
@@ -823,7 +824,7 @@ export function CombinedToolDrawer({
                             <div className="flex items-center cursor-pointer flex-1" onClick={() => handleCombatantCardClick(c)}>
                               <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
                               <div>
-                                  <p className={`font-medium ${c.type === 'enemy' ? (selectedCombatantId === c.id ? 'text-primary' : 'text-destructive') : ''}`}>{c.name}</p>
+                                  <p className={`font-medium ${(c.type === 'enemy' && selectedCombatantId !== c.id) ? 'text-destructive' : (selectedCombatantId === c.id ? 'text-primary' : '')}`}>{c.name}</p>
                                   <p className="text-xs text-muted-foreground">
                                     AC: {c.ac ?? 'N/A'}
                                     {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
@@ -920,7 +921,7 @@ export function CombinedToolDrawer({
 
     {/* Delete Combatant Confirmation Dialog */}
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <UIAlertDialogContent>
+        <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle>
             <AlertDialogDescription>
@@ -933,7 +934,7 @@ export function CombinedToolDrawer({
               Remove
             </AlertDialogAction>
           </UIAlertDialogFooter>
-        </UIAlertDialogContent>
+        </AlertDialogContent>
       </AlertDialog>
 
     {/* Monster Detail Dialog */}
@@ -949,7 +950,7 @@ export function CombinedToolDrawer({
             </div>
           ) : selectedMonsterForDetailDialog?.monsterIndex && fullEnemyDetailsCache[selectedMonsterForDetailDialog.monsterIndex] ? (
             (() => {
-              const detail = fullEnemyDetailsCache[selectedMonsterForDetailDialog.monsterIndex];
+              const detail = fullEnemyDetailsCache[selectedMonsterForDetailDialog.monsterIndex!];
               return (
                 <div className="space-y-3 text-sm py-4">
                   <p className="text-sm text-muted-foreground">{detail.size} {detail.type} {detail.subtype ? `(${detail.subtype})` : ''}, {detail.alignment}</p>
