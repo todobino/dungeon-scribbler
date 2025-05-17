@@ -6,7 +6,7 @@ import { DND_CLASS_DETAILS } from "@/lib/data/class-data"; // Import new class d
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookOpen, Shield, Users, VenetianMask } from "lucide-react"; 
+import { BookOpen, Shield, Users } from "lucide-react"; 
 
 interface CharacterDetailsDialogProps {
   character: PlayerCharacter | null;
@@ -72,7 +72,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
               <div>
                 <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
                   <BookOpen className="mr-2 h-5 w-5" />
-                  Base Class Features (Level {character.level})
+                  Base Class Features (up to Level {character.level})
                 </h3>
                 <ul className="space-y-3 pl-2">
                   {baseClassFeatures.map((feature, index) => (
@@ -89,7 +89,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
               <div>
                 <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
                   <Users className="mr-2 h-5 w-5" /> 
-                  {subclassDetail.name} Features (Level {character.level})
+                  {subclassDetail.name} Features (up to Level {character.level})
                 </h3>
                 <ul className="space-y-3 pl-2">
                   {subclassFeatures.map((feature, index) => (
