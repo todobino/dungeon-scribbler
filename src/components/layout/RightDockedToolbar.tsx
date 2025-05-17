@@ -20,15 +20,15 @@ import {
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, VenetianMask } from "lucide-react"; // Ensured all icons are imported
+import { Dice5, Swords, Skull, ShieldQuestion, BookOpen } from "lucide-react";
 import { useCampaign } from "@/contexts/campaign-context";
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
-  const { notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
-  
-  // State lifted from CombinedToolDrawer for Dice Roller
+  const { notifyEncounterUpdate } = useCampaign();
+
+  // State for Dice Roller (lifted)
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
 
@@ -48,7 +48,7 @@ export function RightDockedToolbar() {
         );
       } else {
         const updatedLog = [newEntryBase, ...prevLog];
-        return updatedLog.slice(0, 10); // Keep last 10 rolls
+        return updatedLog.slice(0, 10); 
       }
     });
   }, [getNewRollId]);
@@ -57,7 +57,7 @@ export function RightDockedToolbar() {
     setRollLog([]);
   }, []);
 
-  // State lifted from CombinedToolDrawer for Combat Tracker
+  // State for Combat Tracker (lifted)
   const [combatants, setCombatants] = useState<Combatant[]>([]);
 
   const handleAddCombatant = useCallback((combatant: Combatant) => {
@@ -86,9 +86,7 @@ export function RightDockedToolbar() {
 
   const handleEndCombat = useCallback(() => {
     setCombatants([]);
-    // Potentially reset other combat-related states if they were also lifted, e.g., currentTurnIndex
   }, []);
-
 
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
@@ -99,12 +97,8 @@ export function RightDockedToolbar() {
         setOpenDrawerId(COMBINED_TOOLS_DRAWER_ID);
         setActiveCombinedTab(newTab);
       }
-    } else if (itemId === MONSTER_MASH_DRAWER_ID) {
-      setOpenDrawerId(prev => (prev === MONSTER_MASH_DRAWER_ID ? null : MONSTER_MASH_DRAWER_ID));
-    } else if (itemId === STATUS_CONDITIONS_DRAWER_ID) {
-      setOpenDrawerId(prev => (prev === STATUS_CONDITIONS_DRAWER_ID ? null : STATUS_CONDITIONS_DRAWER_ID));
-    } else if (itemId === SPELLBOOK_DRAWER_ID) {
-      setOpenDrawerId(prev => (prev === SPELLBOOK_DRAWER_ID ? null : SPELLBOOK_DRAWER_ID));
+    } else if (itemId === MONSTER_MASH_DRAWER_ID || itemId === STATUS_CONDITIONS_DRAWER_ID || itemId === SPELLBOOK_DRAWER_ID) {
+      setOpenDrawerId(prev => (prev === itemId ? null : itemId));
     }
   };
   
@@ -113,6 +107,8 @@ export function RightDockedToolbar() {
            (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) &&
            activeCombinedTab === itemId;
   };
+
+  const isCombatActive = combatants.length > 0;
 
   return (
     <>
@@ -128,12 +124,13 @@ export function RightDockedToolbar() {
                                 (openDrawerId === STATUS_CONDITIONS_DRAWER_ID && item.id === STATUS_CONDITIONS_DRAWER_ID) ||
                                 (openDrawerId === SPELLBOOK_DRAWER_ID && item.id === SPELLBOOK_DRAWER_ID);
             
-            let isCombatActiveIcon = item.id === COMBAT_TRACKER_TAB_ID && combatants.length > 0;
+            let isThisCombatTrackerIcon = item.id === COMBAT_TRACKER_TAB_ID;
 
             let finalButtonCn = cn(
               buttonBaseCn,
               isActiveTool && "bg-primary/20 text-primary ring-2 ring-primary",
-              isCombatActiveIcon && "animate-pulse ring-2 ring-destructive bg-destructive/20 text-destructive"
+              isThisCombatTrackerIcon && isCombatActive && !isActiveTool && "animate-pulse ring-2 ring-destructive bg-destructive/20 text-destructive",
+              isThisCombatTrackerIcon && isCombatActive && isActiveTool && "animate-pulse ring-2 ring-destructive" // Keeps pulse if active
             );
             
             return (
@@ -156,7 +153,6 @@ export function RightDockedToolbar() {
                 </Tooltip>
                 {item.id === COMBAT_TRACKER_TAB_ID && <Separator className="my-0.5 bg-border/70" />}
                 {item.id === MONSTER_MASH_DRAWER_ID && <Separator className="my-0.5 bg-border/70" />}
-                {item.id === SPELLBOOK_DRAWER_ID && item.id !== TOOLBAR_ITEMS[TOOLBAR_ITEMS.length -1].id && <Separator className="my-0.5 bg-border/70" />}
               </React.Fragment>
             );
           })}
