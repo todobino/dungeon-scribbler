@@ -28,7 +28,10 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
     const gained: ClassFeatureDetail[] = [];
     levelBasedFeatures.forEach(levelFeature => {
       if (levelFeature.level <= currentLevel) {
-        gained.push(...levelFeature.features);
+        // Ensure features array exists and is an array before spreading
+        if (levelFeature.features && Array.isArray(levelFeature.features)) {
+          gained.push(...levelFeature.features);
+        }
       }
     });
     return gained;
@@ -52,32 +55,24 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
             <div>
               <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
                 <Shield className="mr-2 h-5 w-5" /> 
-                Core Stats
+                Core Stats & Proficiencies
               </h3>
-              <ul className="list-disc list-inside space-y-1 pl-2">
+              <ul className="list-disc list-inside space-y-1 pl-2 text-sm">
                 <li>Armor Class: {character.armorClass}</li>
                 <li>Initiative Modifier: {character.initiativeModifier !== undefined ? (character.initiativeModifier >= 0 ? `+${character.initiativeModifier}` : character.initiativeModifier) : '+0'}</li>
                 {classDetail && <li>Hit Die: {classDetail.hit_die}</li>}
+                {classDetail && classDetail.saving_throws.length > 0 && <li>Saving Throws: {classDetail.saving_throws.join(", ")}</li>}
+                {classDetail && classDetail.armor_proficiencies.length > 0 && <li>Armor Proficiencies: {classDetail.armor_proficiencies.join(", ")}</li>}
+                {classDetail && classDetail.weapon_proficiencies.length > 0 && <li>Weapon Proficiencies: {classDetail.weapon_proficiencies.join(", ")}</li>}
+                {classDetail && classDetail.tools.length > 0 && <li>Tool Proficiencies: {classDetail.tools.join(", ")}</li>}
               </ul>
             </div>
-
-            {classDetail && (
-              <div>
-                <h4 className="font-semibold text-md mb-1">Proficiencies:</h4>
-                <ul className="list-disc list-inside space-y-0.5 pl-4 text-sm">
-                  {classDetail.armor_proficiencies.length > 0 && <li>Armor: {classDetail.armor_proficiencies.join(", ")}</li>}
-                  {classDetail.weapon_proficiencies.length > 0 && <li>Weapons: {classDetail.weapon_proficiencies.join(", ")}</li>}
-                  {classDetail.tools.length > 0 && <li>Tools: {classDetail.tools.join(", ")}</li>}
-                  <li>Saving Throws: {classDetail.saving_throws.join(", ")}</li>
-                </ul>
-              </div>
-            )}
             
             {baseClassFeatures.length > 0 && (
               <div>
                 <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
                   <BookOpen className="mr-2 h-5 w-5" />
-                  Base Class Features
+                  Base Class Features (Level {character.level})
                 </h3>
                 <ul className="space-y-3 pl-2">
                   {baseClassFeatures.map((feature, index) => (
@@ -93,8 +88,8 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
             {subclassDetail && subclassFeatures.length > 0 && (
               <div>
                 <h3 className="font-semibold text-lg mb-2 text-primary flex items-center">
-                  <Users className="mr-2 h-5 w-5" /> {/* Using Users icon for subclass features */}
-                  {subclassDetail.name} Features
+                  <Users className="mr-2 h-5 w-5" /> 
+                  {subclassDetail.name} Features (Level {character.level})
                 </h3>
                 <ul className="space-y-3 pl-2">
                   {subclassFeatures.map((feature, index) => (
@@ -108,7 +103,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
             )}
             
              <p className="text-xs text-muted-foreground pt-4">
-              Note: Abilities and features are based on provided data and may vary. This is a simplified representation.
+              Note: Features shown are based on the character's current level and provided class data. This is a simplified representation.
             </p>
           </div>
         </ScrollArea>
@@ -121,5 +116,3 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
     </Dialog>
   );
 }
-
-    
