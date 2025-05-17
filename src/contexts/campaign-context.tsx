@@ -4,16 +4,18 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Campaign, PlayerCharacter } from '@/lib/types';
-import type { DndClass } from '@/lib/constants';
+// Removed: import type { DndClass } from '@/lib/constants';
 import { 
   CAMPAIGNS_STORAGE_KEY, 
   ACTIVE_CAMPAIGN_ID_STORAGE_KEY, 
   PARTY_STORAGE_KEY_PREFIX,
-  CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES
+  CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES,
+  PREDEFINED_COLORS // Added for initialCharacterFormState
 } from '@/lib/constants';
+import { DND_CLASS_DETAILS } from '@/lib/data/class-data'; // Added for initialCharacterFormState
 
 
-export type CharacterFormData = Omit<PlayerCharacter, 'id' | 'abilities' | 'racialTraits'>;
+export type CharacterFormData = Omit<PlayerCharacter, 'id'>; // Removed 'abilities' and 'racialTraits' as they are derived
 
 
 interface CampaignContextType {
@@ -33,6 +35,8 @@ interface CampaignContextType {
   getCampaignById: (id: string) => Campaign | undefined;
   encounterUpdateKey: number;
   notifyEncounterUpdate: () => void;
+  savedEncountersUpdateKey: number; // Added
+  notifySavedEncountersUpdate: () => void; // Added
 }
 
 const CampaignContext = createContext<CampaignContextType | undefined>(undefined);
@@ -46,6 +50,19 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
   const [isLoadingParty, setIsLoadingParty] = useState(false);
   const [encounterUpdateKey, setEncounterUpdateKey] = useState(0);
+  const [savedEncountersUpdateKey, setSavedEncountersUpdateKey] = useState(0); // Added state
+
+  const initialCharacterFormState: CharacterFormData = { // Moved here and updated
+    name: "",
+    level: 1,
+    class: DND_CLASS_DETAILS[0]?.class || "", // Use first class from new data or empty string
+    race: "", 
+    subclass: "",
+    armorClass: 10,
+    initiativeModifier: 0,
+    color: PREDEFINED_COLORS[0].value,
+  };
+
 
   useEffect(() => {
     try {
@@ -147,10 +164,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         console.error(`Error removing ${prefix}${campaignIdToDelete} from localStorage:`, error);
       }
     });
-    try {
-    } catch (error) {
-       console.error(`Error removing draft for campaign ${campaignIdToDelete} from localStorage:`, error);
-    }
+    // No campaign wizard draft to remove here per current constants
 
     if (activeCampaignId === campaignIdToDelete) {
       setActiveCampaignIdState(campaigns.length > 1 ? campaigns.find(c => c.id !== campaignIdToDelete)?.id || null : null);
@@ -221,6 +235,11 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setEncounterUpdateKey(prevKey => prevKey + 1);
   }, []);
 
+  const notifySavedEncountersUpdate = useCallback(() => { // Added function
+    setSavedEncountersUpdateKey(prevKey => prevKey + 1);
+  }, []);
+
+
   const activeCampaign = activeCampaignId ? campaigns.find(c => c.id === activeCampaignId) || null : null;
 
   return (
@@ -240,7 +259,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       setPartyLevel,
       getCampaignById,
       encounterUpdateKey,
-      notifyEncounterUpdate
+      notifyEncounterUpdate,
+      savedEncountersUpdateKey, // Added
+      notifySavedEncountersUpdate // Added
     }}>
       {children}
     </CampaignContext.Provider>
@@ -254,3 +275,5 @@ export function useCampaign() {
   }
   return context;
 }
+
+    

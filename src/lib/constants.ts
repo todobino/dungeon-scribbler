@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2, User, ArrowUpDown } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
-export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co"; // Defined and exported
+export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
 
 export interface NavItem {
   label: string;
@@ -66,13 +66,9 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
  { label: 'Settings', href: '/settings', icon: Cog, disabled: true },
 ];
 
-
-export const DND_CLASSES = [
-  "Artificer", "Barbarian", "Bard", "Cleric", "Druid", "Fighter",
-  "Monk", "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard"
-] as const;
-
-export type DndClass = typeof DND_CLASSES[number];
+// Removed DND_CLASSES and DndClass as class info now comes from class-data.ts
+// export const DND_CLASSES = [...]
+// export type DndClass = ...
 
 export const PREDEFINED_COLORS = [
   { name: 'Red', value: '#ef4444' },
@@ -146,7 +142,7 @@ export const CAMPAIGN_TONE_OPTIONS = ["Heroic Fantasy", "Dark Fantasy/Grimdark",
 export const WORLD_STYLE_OPTIONS: CampaignOption[] = [
   { value: "High Fantasy", description: "A world brimming with magic, mythical creatures, and epic heroism. Think Lord of the Rings or Dungeons & Dragons' Forgotten Realms." },
   { value: "Low Magic", description: "Magic is rare, subtle, or dangerous. Mundane solutions are common. Think Game of Thrones or The Witcher (books)." },
-  { value: "Sword & Sorcery", description: "Focuses on personal heroism, dangerous magic, and often morally ambiguous protagonists. Think Conan the Barbarian." },
+  { value: "Sword &amp; Sorcery", description: "Focuses on personal heroism, dangerous magic, and often morally ambiguous protagonists. Think Conan the Barbarian." },
   { value: "Steampunk", description: "A world powered by steam technology and clockwork, often with Victorian aesthetics and fantastical inventions." },
   { value: "Post-Apocalyptic", description: "A setting after a cataclysmic event, where survivors navigate a changed and often hazardous world. Think Mad Max or Fallout." },
   { value: "Urban Fantasy", description: "Magic and the supernatural exist hidden within a modern, contemporary urban setting. Think The Dresden Files." },
@@ -271,3 +267,5 @@ export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
   REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX,
   REFACTORED_GOALS_KEY_PREFIX,
 ];
+
+    

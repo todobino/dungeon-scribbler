@@ -2,18 +2,19 @@
 "use client";
 
 import type { PlayerCharacter, ApiListItem } from "@/lib/types";
-import type { DndClass } from "@/lib/constants";
+// Removed: import type { DndClass } from "@/lib/constants"; // DndClass removed
 import { useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; // Renamed imports
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask, ChevronsRight, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DND_CLASSES, PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants";
+import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants"; // DND_CLASSES removed
+import { DND_CLASS_DETAILS } from "@/lib/data/class-data"; // Import new class data
 import { useCampaign, type CharacterFormData } from "@/contexts/campaign-context";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
@@ -48,14 +49,15 @@ export default function PartyManagerPage() {
 
   const [apiRaces, setApiRaces] = useState<ApiListItem[]>([]);
   const [isLoadingApiRaces, setIsLoadingApiRaces] = useState(false);
-  const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]);
-  const [isLoadingApiSubclasses, setIsLoadingApiSubclasses] = useState(false);
+  // No longer need apiSubclasses and isLoadingApiSubclasses from API
+  // const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]);
+  // const [isLoadingApiSubclasses, setIsLoadingApiSubclasses] = useState(false);
 
 
   const initialCharacterFormState: CharacterFormData = {
     name: "",
     level: 1,
-    class: DND_CLASSES[0],
+    class: DND_CLASS_DETAILS[0]?.class || "", // Default to first class from data or empty
     race: "", 
     subclass: "",
     armorClass: 10,
@@ -64,7 +66,7 @@ export default function PartyManagerPage() {
   };
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
 
-  // Fetch Races
+  // Fetch Races (remains the same)
   useEffect(() => {
     if (isFormDialogOpen && apiRaces.length === 0 && !isLoadingApiRaces) {
       const fetchRaces = async () => {
@@ -83,31 +85,10 @@ export default function PartyManagerPage() {
     }
   }, [isFormDialogOpen, apiRaces.length, isLoadingApiRaces]);
 
-  // Fetch Subclasses when class changes
-  useEffect(() => {
-    if (isFormDialogOpen && characterFormData.class) {
-      const fetchSubclasses = async () => {
-        setIsLoadingApiSubclasses(true);
-        setApiSubclasses([]); 
-        //setCharacterFormData(prev => ({ ...prev, subclass: "" })); // Reset subclass selection when class changes
-
-        const classIndex = characterFormData.class.toLowerCase().replace(/\s+/g, '-');
-        try {
-          const response = await fetch(`${DND5E_API_BASE_URL}/api/classes/${classIndex}`);
-          if (!response.ok) throw new Error(`Failed to fetch subclasses for ${characterFormData.class}`);
-          const data = await response.json();
-          setApiSubclasses(data.subclasses || []);
-        } catch (error) {
-          console.error(`Error fetching subclasses for ${characterFormData.class}:`, error);
-          setApiSubclasses([]);
-        }
-        setIsLoadingApiSubclasses(false);
-      };
-      fetchSubclasses();
-    } else if (isFormDialogOpen) {
-      setApiSubclasses([]); 
-    }
-  }, [characterFormData.class, isFormDialogOpen]);
+  // Subclasses are now derived from DND_CLASS_DETAILS, not fetched via API
+  const availableSubclasses = DND_CLASS_DETAILS.find(
+    (cls) => cls.class === characterFormData.class
+  )?.subclasses || [];
 
 
   const handleFormSubmit = async () => {
@@ -145,7 +126,7 @@ export default function PartyManagerPage() {
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
       setIsFormDialogOpen(false);
-      setApiSubclasses([]); 
+      // No longer need to clear apiSubclasses here as it's derived
     }
   };
 
@@ -170,7 +151,6 @@ export default function PartyManagerPage() {
     setCharacterFormData(initialCharacterFormState);
     setEditingCharacter(null);
     setIsFormDialogOpen(false); 
-    setApiSubclasses([]);
   };
 
 
@@ -205,7 +185,7 @@ export default function PartyManagerPage() {
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       newCharLevel = activeCampaignParty[0].level;
     }
-    setCharacterFormData({...initialCharacterFormState, level: newCharLevel, race: "", subclass: ""});
+    setCharacterFormData({...initialCharacterFormState, level: newCharLevel, race: "", class: DND_CLASS_DETAILS[0]?.class || "", subclass: ""});
     setIsFormDialogOpen(true);
   };
 
@@ -388,7 +368,7 @@ export default function PartyManagerPage() {
           if (!isOpen) {
             setEditingCharacter(null); 
             setCharacterFormData(initialCharacterFormState);
-            setApiSubclasses([]);
+            // No longer need to clear apiSubclasses here
             setLevelSyncDetails(null); 
             setIsLevelSyncDialogOpen(false); 
           }
@@ -434,14 +414,14 @@ export default function PartyManagerPage() {
 
               <div>
                 <Label htmlFor="class-select">Class</Label>
-                <Select name="class" value={characterFormData.class} onValueChange={(value) => handleSelectChange("class", value as DndClass || DND_CLASSES[0])}>
+                <Select name="class" value={characterFormData.class} onValueChange={(value) => handleSelectChange("class", value || (DND_CLASS_DETAILS[0]?.class || ""))}>
                   <SelectTrigger id="class-select">
                     <SelectValue placeholder="Select a class" />
                   </SelectTrigger>
                   <SelectContent>
-                    {DND_CLASSES.map((className) => (
-                      <SelectItem key={className} value={className}>
-                        {className}
+                    {DND_CLASS_DETAILS.map((classDetail) => (
+                      <SelectItem key={classDetail.class} value={classDetail.class}>
+                        {classDetail.class}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -454,24 +434,21 @@ export default function PartyManagerPage() {
                   name="subclass" 
                   value={characterFormData.subclass || ""} 
                   onValueChange={(value) => handleSelectChange("subclass", value || "")}
-                  disabled={!characterFormData.class || isLoadingApiSubclasses || apiSubclasses.length === 0}
+                  disabled={!characterFormData.class || availableSubclasses.length === 0}
                 >
                   <SelectTrigger id="subclass-select">
                     <SelectValue placeholder={
-                        isLoadingApiSubclasses ? "Loading subclasses..." : 
                         !characterFormData.class ? "Select class first" : 
-                        apiSubclasses.length === 0 ? "No subclasses available" : 
-                        "Select a subclass"
+                        availableSubclasses.length === 0 ? "No subclasses available" : 
+                        "Select a subclass (Optional)"
                     }/>
                   </SelectTrigger>
                   <SelectContent key={characterFormData.class || 'no-class-selected'}>
-                    {isLoadingApiSubclasses ? (
-                       <SelectItem value="loading-sub" disabled>Loading...</SelectItem>
-                    ) : apiSubclasses.length === 0 && characterFormData.class ? (
+                    {availableSubclasses.length === 0 && characterFormData.class ? (
                         <SelectItem value="none" disabled>No subclasses for {characterFormData.class}</SelectItem>
                     ) : (
-                      apiSubclasses.map((subclass) => (
-                        <SelectItem key={subclass.index} value={subclass.name}>
+                      availableSubclasses.map((subclass) => (
+                        <SelectItem key={subclass.name} value={subclass.name}>
                           {subclass.name}
                         </SelectItem>
                       ))
@@ -530,7 +507,6 @@ export default function PartyManagerPage() {
                 setIsFormDialogOpen(false); 
                 setEditingCharacter(null); 
                 setCharacterFormData(initialCharacterFormState);
-                setApiSubclasses([]);
                 setLevelSyncDetails(null);
                 setIsLevelSyncDialogOpen(false);
             }}>Cancel</Button>
@@ -554,10 +530,10 @@ export default function PartyManagerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription>
               Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
               Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
@@ -581,3 +557,5 @@ export default function PartyManagerPage() {
     </div>
   );
 }
+
+    

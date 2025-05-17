@@ -1,18 +1,18 @@
 
-import type { DndClass } from './constants';
+// Removed: import type { DndClass } from './constants'; // DndClass is no longer defined in constants
 
 export interface PlayerCharacter {
   id: string;
   name: string;
   level: number;
-  class: DndClass;
+  class: string; // Changed from DndClass
   armorClass: number;
-  race: string; // Will store the race name
-  subclass?: string; // Will store the subclass name
+  race: string;
+  subclass?: string;
   initiativeModifier?: number;
   color?: string;
-  abilities?: string[]; // Kept for potential future use
-  racialTraits?: string[]; // Kept for potential future use
+  // Removed: abilities?: string[]; // This will be derived from new class data
+  // Removed: racialTraits?: string[]; // This is not covered by the new class data
 }
 
 export interface NPC {
@@ -242,7 +242,7 @@ export interface MonsterDetail extends MonsterSummary {
   condition_immunities?: { index: string; name: string; url: string }[] | string[] | string;
   senses?: Sense | string;
   languages?: string;
-  challenge_rating?: number;
+  challenge_rating?: number; // Typically a number from API
   xp?: number;
   special_abilities?: SpecialAbility[] | string;
   actions?: MonsterAction[] | string;
@@ -256,7 +256,7 @@ export interface MonsterDetail extends MonsterSummary {
 export interface FavoriteMonster {
   index: string;
   name: string;
-  cr: number;
+  cr: number; // Keep as number for sorting/filtering
   type: string;
   source: 'api' | 'homebrew';
   acValue?: number;
@@ -405,7 +405,7 @@ export interface EncounterMonster {
   ac?: string;
   hp?: string;
   initiativeModifier?: number;
-  monsterIndex?: string;
+  monsterIndex?: string; 
 }
 
 export interface SavedEncounter {
@@ -420,3 +420,35 @@ export interface ApiListItem {
   name: string;
   url: string;
 }
+
+// New types for D&D Class Data
+export interface ClassFeatureDetail {
+  name: string;
+  description: string;
+}
+
+export interface LevelBasedFeature {
+  level: number;
+  features: ClassFeatureDetail[];
+}
+
+export interface SubclassDetail {
+  name: string;
+  source: string;
+  features: LevelBasedFeature[];
+}
+
+export interface ClassDetail {
+  class: string;
+  source: string;
+  hit_die: string;
+  primary_abilities: string[];
+  saving_throws: string[];
+  armor_proficiencies: string[];
+  weapon_proficiencies: string[];
+  tools: string[];
+  base_class_features: LevelBasedFeature[];
+  subclasses: SubclassDetail[];
+}
+
+    
