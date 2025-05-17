@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
 
 
@@ -27,7 +27,7 @@ interface CurrentEncounterData {
 type DuplicateNameAction = "overwrite" | "rename" | "append";
 
 export default function EncounterPlannerPage() {
-  const { activeCampaign, isLoadingCampaigns, encounterUpdateKey } = useCampaign();
+  const { activeCampaign, isLoadingCampaigns, encounterUpdateKey, notifySavedEncountersUpdate } = useCampaign();
   const { toast } = useToast();
 
   const [encounterMonsters, setEncounterMonsters] = useState<EncounterMonster[]>([]);
@@ -41,6 +41,9 @@ export default function EncounterPlannerPage() {
   const [monsterCR, setMonsterCR] = useState("");
   const [monsterAC, setMonsterAC] = useState("");
   const [monsterHP, setMonsterHP] = useState("");
+  const [monsterInitiativeModifier, setMonsterInitiativeModifier] = useState("");
+  const [selectedFavoriteIndexForAdd, setSelectedFavoriteIndexForAdd] = useState<string | undefined>(undefined);
+
 
   const [savedEncounters, setSavedEncounters] = useState<SavedEncounter[]>([]);
   const [isFavoriteDialogOpen, setIsFavoriteDialogOpen] = useState(false);
@@ -94,7 +97,7 @@ export default function EncounterPlannerPage() {
       setCurrentEncounterTitle("New Encounter");
     }
     setIsLoadingEncounter(false);
-  }, [activeCampaign, isLoadingCampaigns, getEncounterStorageKey, encounterUpdateKey]); // Added encounterUpdateKey
+  }, [activeCampaign, isLoadingCampaigns, getEncounterStorageKey, encounterUpdateKey]);
 
   // Save Current Encounter
   useEffect(() => {
@@ -133,7 +136,7 @@ export default function EncounterPlannerPage() {
       setSavedEncounters([]);
     }
     setIsLoadingSavedEncounters(false);
-  }, [activeCampaign, isLoadingCampaigns, getSavedEncountersStorageKey]);
+  }, [activeCampaign, isLoadingCampaigns, getSavedEncountersStorageKey, encounterUpdateKey]); // Added encounterUpdateKey here too
 
   // Save Saved Encounters
   useEffect(() => {
@@ -142,12 +145,13 @@ export default function EncounterPlannerPage() {
       if (storageKey) {
         try {
           localStorage.setItem(storageKey, JSON.stringify(savedEncounters));
+          notifySavedEncountersUpdate(); // Notify context that saved encounters changed
         } catch (error) {
           console.error("Error saving saved encounters to localStorage for " + activeCampaign.name, error);
         }
       }
     }
-  }, [savedEncounters, activeCampaign, isLoadingSavedEncounters, getSavedEncountersStorageKey]);
+  }, [savedEncounters, activeCampaign, isLoadingSavedEncounters, getSavedEncountersStorageKey, notifySavedEncountersUpdate]);
   
   // Load Favorites for Dialog
   useEffect(() => {
@@ -173,6 +177,12 @@ export default function EncounterPlannerPage() {
       toast({ title: "Invalid Quantity", description: "Quantity must be a positive number.", variant: "destructive" });
       return;
     }
+    const initiativeModifierValue = monsterInitiativeModifier.trim() === "" ? undefined : parseInt(monsterInitiativeModifier);
+    if (monsterInitiativeModifier.trim() !== "" && (isNaN(initiativeModifierValue!) || !Number.isInteger(initiativeModifierValue))) {
+        toast({ title: "Invalid Init. Modifier", description: "Initiative Modifier must be a whole number.", variant: "destructive" });
+        return;
+    }
+
 
     const newEnemy: EncounterMonster = {
       id: Date.now().toString(),
@@ -181,6 +191,8 @@ export default function EncounterPlannerPage() {
       cr: monsterCR.trim() || undefined,
       ac: monsterAC.trim() || undefined,
       hp: monsterHP.trim() || undefined,
+      monsterIndex: selectedFavoriteIndexForAdd,
+      initiativeModifier: initiativeModifierValue,
     };
 
     setEncounterMonsters(prev => [...prev, newEnemy]);
@@ -189,6 +201,8 @@ export default function EncounterPlannerPage() {
     setMonsterCR("");
     setMonsterAC("");
     setMonsterHP("");
+    setMonsterInitiativeModifier("");
+    setSelectedFavoriteIndexForAdd(undefined); // Reset after adding
     toast({ title: "Enemy Added", description: `${newEnemy.name} (x${newEnemy.quantity}) added to encounter.` });
   };
 
@@ -197,6 +211,8 @@ export default function EncounterPlannerPage() {
     setMonsterCR(formatCRDisplay(fav.cr));
     setMonsterAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setMonsterHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
+    setSelectedFavoriteIndexForAdd(fav.index); // Store the index
+    setMonsterInitiativeModifier(""); // Clear initiative modifier, as it's not stored in FavoriteMonster
     setIsFavoriteDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled.`});
   };
@@ -374,21 +390,29 @@ export default function EncounterPlannerPage() {
                 <Label htmlFor="monsterName">Enemy Name*</Label>
                 <Input id="monsterName" value={monsterName} onChange={(e) => setMonsterName(e.target.value)} placeholder="e.g., Goblin Boss" />
               </div>
-              <div>
-                <Label htmlFor="monsterQuantity">Quantity*</Label>
-                <Input id="monsterQuantity" type="number" value={monsterQuantity} onChange={(e) => setMonsterQuantity(e.target.value)} min="1" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="monsterQuantity">Quantity*</Label>
+                  <Input id="monsterQuantity" type="number" value={monsterQuantity} onChange={(e) => setMonsterQuantity(e.target.value)} min="1" />
+                </div>
+                 <div>
+                  <Label htmlFor="monsterInitiativeModifier">Init. Mod.</Label>
+                  <Input id="monsterInitiativeModifier" type="text" value={monsterInitiativeModifier} onChange={(e) => setMonsterInitiativeModifier(e.target.value)} placeholder="e.g., +2 or -1" />
+                </div>
               </div>
               <div>
                 <Label htmlFor="monsterCR">Challenge Rating (CR)</Label>
                 <Input id="monsterCR" value={monsterCR} onChange={(e) => setMonsterCR(e.target.value)} placeholder="e.g., 1/2 or 5" />
               </div>
-              <div>
-                <Label htmlFor="monsterAC">Armor Class (AC)</Label>
-                <Input id="monsterAC" type="text" value={monsterAC} onChange={(e) => setMonsterAC(e.target.value)} placeholder="e.g., 15" />
-              </div>
-              <div>
-                <Label htmlFor="monsterHP">Hit Points (HP)</Label>
-                <Input id="monsterHP" type="text" value={monsterHP} onChange={(e) => setMonsterHP(e.target.value)} placeholder="e.g., 27" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="monsterAC">Armor Class (AC)</Label>
+                  <Input id="monsterAC" type="text" value={monsterAC} onChange={(e) => setMonsterAC(e.target.value)} placeholder="e.g., 15" />
+                </div>
+                <div>
+                  <Label htmlFor="monsterHP">Hit Points (HP)</Label>
+                  <Input id="monsterHP" type="text" value={monsterHP} onChange={(e) => setMonsterHP(e.target.value)} placeholder="e.g., 27" />
+                </div>
               </div>
             </CardContent>
             <CardFooter>
@@ -447,6 +471,7 @@ export default function EncounterPlannerPage() {
                           {monster.cr && <span>CR: {monster.cr}</span>}
                           {monster.ac && <span>AC: {monster.ac}</span>}
                           {monster.hp && <span>HP: {monster.hp}</span>}
+                           {monster.initiativeModifier !== undefined && <span>Init Mod: {monster.initiativeModifier >= 0 ? `+${monster.initiativeModifier}` : monster.initiativeModifier}</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 ml-2">
@@ -507,7 +532,8 @@ export default function EncounterPlannerPage() {
                                 <span className="text-xs text-muted-foreground ml-2">
                                   {monster.cr && `CR:${monster.cr} `}
                                   {monster.ac && `AC:${monster.ac} `}
-                                  {monster.hp && `HP:${monster.hp}`}
+                                  {monster.hp && `HP:${monster.hp} `}
+                                  {monster.initiativeModifier !== undefined && `Init Mod:${monster.initiativeModifier >= 0 ? `+${monster.initiativeModifier}` : monster.initiativeModifier}`}
                                 </span>
                               </li>
                             ))}
@@ -527,9 +553,9 @@ export default function EncounterPlannerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Delete Saved Encounter?</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription>
               Are you sure you want to delete the encounter "{encounterToDelete?.title}"? This action cannot be undone.
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => setEncounterToDelete(null)}>Cancel</AlertDialogCancel>
@@ -581,3 +607,5 @@ export default function EncounterPlannerPage() {
     </div>
   );
 }
+
+    
