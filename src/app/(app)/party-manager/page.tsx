@@ -1,19 +1,19 @@
 
 "use client";
 
-import type { PlayerCharacter } from "@/lib/types";
+import type { PlayerCharacter, ApiListItem } from "@/lib/types";
 import type { DndClass } from "@/lib/constants";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask, ChevronsRight } from "lucide-react";
+import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask, ChevronsRight, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DND_CLASSES, PREDEFINED_COLORS } from "@/lib/constants";
+import { DND_CLASSES, PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants";
 import { useCampaign, type CharacterFormData } from "@/contexts/campaign-context";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
@@ -46,37 +46,96 @@ export default function PartyManagerPage() {
   const [isLevelDiscrepancyDialogOpen, setIsLevelDiscrepancyDialogOpen] = useState(false);
   const [partyUniqueLevels, setPartyUniqueLevels] = useState<number[]>([]);
 
+  const [apiRaces, setApiRaces] = useState<ApiListItem[]>([]);
+  const [isLoadingApiRaces, setIsLoadingApiRaces] = useState(false);
+  const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]);
+  const [isLoadingApiSubclasses, setIsLoadingApiSubclasses] = useState(false);
+
 
   const initialCharacterFormState: CharacterFormData = {
     name: "",
     level: 1,
     class: DND_CLASSES[0],
     race: "", 
+    subclass: "",
     armorClass: 10,
     initiativeModifier: 0,
     color: PREDEFINED_COLORS[0].value,
   };
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
 
+  // Fetch Races
+  useEffect(() => {
+    if (isFormDialogOpen && apiRaces.length === 0) {
+      const fetchRaces = async () => {
+        setIsLoadingApiRaces(true);
+        try {
+          const response = await fetch(`${DND5E_API_BASE_URL}/api/races`);
+          if (!response.ok) throw new Error("Failed to fetch races");
+          const data = await response.json();
+          setApiRaces(data.results || []);
+        } catch (error) {
+          console.error("Error fetching races:", error);
+          // Optionally show a toast message here
+        }
+        setIsLoadingApiRaces(false);
+      };
+      fetchRaces();
+    }
+  }, [isFormDialogOpen, apiRaces.length]);
+
+  // Fetch Subclasses when class changes
+  useEffect(() => {
+    if (isFormDialogOpen && characterFormData.class) {
+      const fetchSubclasses = async () => {
+        setIsLoadingApiSubclasses(true);
+        setApiSubclasses([]); // Clear previous subclasses
+        setCharacterFormData(prev => ({ ...prev, subclass: "" })); // Reset selected subclass
+
+        const classIndex = characterFormData.class.toLowerCase().replace(/\s+/g, '-');
+        try {
+          const response = await fetch(`${DND5E_API_BASE_URL}/api/classes/${classIndex}`);
+          if (!response.ok) throw new Error(`Failed to fetch subclasses for ${characterFormData.class}`);
+          const data = await response.json();
+          setApiSubclasses(data.subclasses || []);
+        } catch (error) {
+          console.error(`Error fetching subclasses for ${characterFormData.class}:`, error);
+          setApiSubclasses([]); // Ensure it's empty on error
+        }
+        setIsLoadingApiSubclasses(false);
+      };
+      fetchSubclasses();
+    } else if (isFormDialogOpen) {
+      setApiSubclasses([]); // Clear subclasses if no class is selected
+    }
+  }, [characterFormData.class, isFormDialogOpen]);
+
+
   const handleFormSubmit = async () => {
     if (characterFormData.name?.trim() && characterFormData.class && characterFormData.race?.trim() && activeCampaign) {
+      
+      const dataToSave = {
+        ...characterFormData,
+        // race and subclass are already set in characterFormData by handleSelectChange
+      };
+
       if (editingCharacter) {
         const originalLevel = editingCharacter.level;
-        const newLevel = characterFormData.level;
+        const newLevel = dataToSave.level;
 
         if (linkedPartyLevel && newLevel !== originalLevel && activeCampaignParty.length > 1) {
           setLevelSyncDetails({
             characterId: editingCharacter.id,
             newLevel: newLevel,
-            allFormData: { ...characterFormData } 
+            allFormData: dataToSave 
           });
           setIsLevelSyncDialogOpen(true);
           return; 
         } else {
-          await updateCharacterInActiveCampaign({ ...editingCharacter, ...characterFormData });
+          await updateCharacterInActiveCampaign({ ...editingCharacter, ...dataToSave });
         }
       } else { 
-        let dataToAdd = { ...characterFormData };
+        let dataToAdd = { ...dataToSave };
         if (linkedPartyLevel && activeCampaignParty.length > 0) {
           dataToAdd.level = activeCampaignParty[0].level; 
         }
@@ -85,6 +144,7 @@ export default function PartyManagerPage() {
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
       setIsFormDialogOpen(false);
+      setApiSubclasses([]); // Clear subclasses for next form open
     }
   };
 
@@ -109,6 +169,7 @@ export default function PartyManagerPage() {
     setCharacterFormData(initialCharacterFormState);
     setEditingCharacter(null);
     setIsFormDialogOpen(false); 
+    setApiSubclasses([]);
   };
 
 
@@ -120,11 +181,16 @@ export default function PartyManagerPage() {
     }));
   };
 
-  const handleClassChange = (value: string) => {
+  const handleSelectChange = (name: keyof CharacterFormData, value: string) => {
     setCharacterFormData((prev) => ({
       ...prev,
-      class: value as DndClass,
+      [name]: value,
     }));
+    if (name === "class") {
+      // Subclass fetching is handled by useEffect
+      // Reset subclass when class changes
+      setCharacterFormData(prev => ({ ...prev, subclass: "" }));
+    }
   };
   
   const handleColorChange = (value: string) => {
@@ -140,22 +206,24 @@ export default function PartyManagerPage() {
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       newCharLevel = activeCampaignParty[0].level;
     }
-    setCharacterFormData({...initialCharacterFormState, level: newCharLevel});
+    setCharacterFormData({...initialCharacterFormState, level: newCharLevel, race: "", subclass: ""});
     setIsFormDialogOpen(true);
   };
 
-  const openEditDialog = (character: PlayerCharacter) => {
+  const openEditDialog = async (character: PlayerCharacter) => {
     setEditingCharacter(character);
     setCharacterFormData({
       name: character.name,
       level: character.level,
       class: character.class,
-      race: character.race,
+      race: character.race, // This will be the name from the API or manual input
+      subclass: character.subclass || "",
       armorClass: character.armorClass,
       initiativeModifier: character.initiativeModifier || 0,
       color: character.color || PREDEFINED_COLORS[0].value,
     });
     setIsFormDialogOpen(true);
+    // Subclasses will be fetched by the useEffect when `characterFormData.class` is set
   };
 
   const openDetailsDialog = (character: PlayerCharacter) => {
@@ -202,9 +270,8 @@ export default function PartyManagerPage() {
     setIsLevelDiscrepancyDialogOpen(false);
   };
 
-
   if (isLoadingCampaigns || isLoadingParty) {
-    return <div className="text-center p-10">Loading party data...</div>;
+    return <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2"/>Loading party data...</div>;
   }
 
   if (!activeCampaign) {
@@ -270,7 +337,7 @@ export default function PartyManagerPage() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <CardDescription>Level {char.level} {char.race} {char.class}</CardDescription>
+              <CardDescription>Level {char.level} {char.race} {char.class}{char.subclass ? ` (${char.subclass})` : ""}</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-3">
                <div className="flex items-center">
@@ -278,20 +345,20 @@ export default function PartyManagerPage() {
                 <span>Race: {char.race}</span>
               </div>
               <div className="flex items-center">
-                <Shield className="mr-2 h-5 w-5 text-primary" />
-                <span>Armor Class: {char.armorClass}</span>
-              </div>
-              <div className="flex items-center">
                 <Wand className="mr-2 h-5 w-5 text-primary" />
-                <span>Class: {char.class}</span>
+                <span>Class: {char.class}{char.subclass ? ` (${char.subclass})` : ""}</span>
               </div>
               <div className="flex items-center">
                 <User className="mr-2 h-5 w-5 text-primary" />
                 <span>Level: {char.level}</span>
               </div>
+               <div className="flex items-center">
+                <Shield className="mr-2 h-5 w-5 text-primary" />
+                <span>Armor Class: {char.armorClass}</span>
+              </div>
               <div className="flex items-center">
                 <ChevronsRight className="mr-2 h-5 w-5 text-primary" />
-                <span>Initiative Mod: {characterFormData.initiativeModifier !== undefined ? (characterFormData.initiativeModifier >= 0 ? `+${characterFormData.initiativeModifier}` : characterFormData.initiativeModifier) : '+0'}</span>
+                <span>Initiative Mod: {char.initiativeModifier !== undefined ? (char.initiativeModifier >= 0 ? `+${char.initiativeModifier}` : char.initiativeModifier) : '+0'}</span>
               </div>
             </CardContent>
             <CardFooter className="flex gap-2">
@@ -323,6 +390,7 @@ export default function PartyManagerPage() {
           if (!isOpen) {
             setEditingCharacter(null); 
             setCharacterFormData(initialCharacterFormState);
+            setApiSubclasses([]);
             setLevelSyncDetails(null); 
             setIsLevelSyncDialogOpen(false); 
           }
@@ -341,14 +409,35 @@ export default function PartyManagerPage() {
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" name="name" value={characterFormData.name} onChange={handleInputChange} placeholder="e.g., Elara Meadowlight" />
               </div>
+              
               <div>
-                <Label htmlFor="race">Race</Label>
-                <Input id="race" name="race" value={characterFormData.race} onChange={handleInputChange} placeholder="e.g., Human, Elf, Dwarf" />
+                <Label htmlFor="race-select">Race</Label>
+                <Select 
+                  name="race" 
+                  value={characterFormData.race} 
+                  onValueChange={(value) => handleSelectChange("race", value || "")}
+                >
+                  <SelectTrigger id="race-select" disabled={isLoadingApiRaces}>
+                    <SelectValue placeholder={isLoadingApiRaces ? "Loading races..." : "Select a race"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingApiRaces ? (
+                       <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    ) : (
+                      apiRaces.map((race) => (
+                        <SelectItem key={race.index} value={race.name}>
+                          {race.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
+
               <div>
-                <Label htmlFor="class">Class</Label>
-                <Select name="class" value={characterFormData.class} onValueChange={handleClassChange}>
-                  <SelectTrigger id="class">
+                <Label htmlFor="class-select">Class</Label>
+                <Select name="class" value={characterFormData.class} onValueChange={(value) => handleSelectChange("class", value as DndClass || DND_CLASSES[0])}>
+                  <SelectTrigger id="class-select">
                     <SelectValue placeholder="Select a class" />
                   </SelectTrigger>
                   <SelectContent>
@@ -360,6 +449,39 @@ export default function PartyManagerPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div>
+                <Label htmlFor="subclass-select">Subclass</Label>
+                <Select 
+                  name="subclass" 
+                  value={characterFormData.subclass || ""} 
+                  onValueChange={(value) => handleSelectChange("subclass", value || "")}
+                  disabled={!characterFormData.class || isLoadingApiSubclasses || apiSubclasses.length === 0}
+                >
+                  <SelectTrigger id="subclass-select">
+                    <SelectValue placeholder={
+                        isLoadingApiSubclasses ? "Loading subclasses..." : 
+                        !characterFormData.class ? "Select class first" : 
+                        apiSubclasses.length === 0 ? "No subclasses available" : 
+                        "Select a subclass"
+                    }/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingApiSubclasses ? (
+                       <SelectItem value="loading-sub" disabled>Loading...</SelectItem>
+                    ) : apiSubclasses.length === 0 && characterFormData.class ? (
+                        <SelectItem value="none" disabled>No subclasses for {characterFormData.class}</SelectItem>
+                    ) : (
+                      apiSubclasses.map((subclass) => (
+                        <SelectItem key={subclass.index} value={subclass.name}>
+                          {subclass.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <Label htmlFor="level">Level</Label>
                 <Input 
@@ -386,9 +508,9 @@ export default function PartyManagerPage() {
                 <Input id="initiativeModifier" name="initiativeModifier" type="number" value={(characterFormData.initiativeModifier || 0).toString()} onChange={handleInputChange} placeholder="e.g., 2" />
               </div>
               <div>
-                <Label htmlFor="color">Character Color</Label>
+                <Label htmlFor="color-select">Character Color</Label>
                 <Select name="color" value={characterFormData.color} onValueChange={handleColorChange}>
-                  <SelectTrigger id="color">
+                  <SelectTrigger id="color-select">
                     <SelectValue placeholder="Select a color" />
                   </SelectTrigger>
                   <SelectContent>
@@ -410,6 +532,7 @@ export default function PartyManagerPage() {
                 setIsFormDialogOpen(false); 
                 setEditingCharacter(null); 
                 setCharacterFormData(initialCharacterFormState);
+                setApiSubclasses([]);
                 setLevelSyncDetails(null);
                 setIsLevelSyncDialogOpen(false);
             }}>Cancel</Button>

@@ -7,11 +7,12 @@ export interface PlayerCharacter {
   level: number;
   class: DndClass;
   armorClass: number;
-  race: string;
+  race: string; // Will store the race name
+  subclass?: string; // Will store the subclass name
   initiativeModifier?: number;
   color?: string;
-  abilities?: string[];
-  racialTraits?: string[];
+  abilities?: string[]; // Kept for potential future use
+  racialTraits?: string[]; // Kept for potential future use
 }
 
 export interface NPC {
@@ -79,13 +80,13 @@ export interface Combatant {
   initiative: number;
   type: 'player' | 'enemy';
   color?: string;
-  playerId?: string; // Link to PlayerCharacter if it's a PC
+  playerId?: string; 
   ac?: number;
   hp?: number;
   currentHp?: number;
-  initiativeModifier?: number; // For PCs
-  cr?: string; // Optional CR for enemies
-  // Add other stats as needed, e.g., from MonsterMash for quick reference
+  initiativeModifier?: number; 
+  monsterIndex?: string; 
+  cr?: string;
 }
 
 export interface Faction {
@@ -135,7 +136,7 @@ export interface MonsterSummaryWithCR {
   cr?: number;
   type?: string;
   url?: string;
-  source?: 'api' | 'homebrew'; // To distinguish API monsters from homebrew
+  source?: 'api' | 'homebrew'; 
 }
 
 
@@ -403,10 +404,19 @@ export interface EncounterMonster {
   cr?: string;
   ac?: string;
   hp?: string;
+  initiativeModifier?: number;
+  monsterIndex?: string;
 }
 
 export interface SavedEncounter {
   id: string;
   title: string;
   monsters: EncounterMonster[];
+}
+
+// Simple type for API list items (like races, classes, subclasses)
+export interface ApiListItem {
+  index: string;
+  name: string;
+  url: string;
 }
