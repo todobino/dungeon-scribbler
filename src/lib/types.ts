@@ -1,18 +1,17 @@
 
+
 // Removed: import type { DndClass } from './constants'; // DndClass is no longer defined in constants
 
 export interface PlayerCharacter {
   id: string;
   name: string;
   level: number;
-  class: string; // Changed from DndClass
+  class: string; 
   armorClass: number;
   race: string;
   subclass?: string;
   initiativeModifier?: number;
   color?: string;
-  // Removed: abilities?: string[]; // This will be derived from new class data
-  // Removed: racialTraits?: string[]; // This is not covered by the new class data
 }
 
 export interface NPC {
@@ -72,7 +71,20 @@ export interface Campaign {
   id: string;
   name: string;
   description?: string;
+  activeParty?: PlayerCharacter[]; 
 }
+
+export interface CharacterFormData {
+  name: string;
+  level: number;
+  class: string; 
+  race: string;
+  subclass?: string;
+  armorClass: number;
+  initiativeModifier?: number;
+  color?: string;
+}
+
 
 export interface Combatant {
   id: string;
@@ -236,13 +248,13 @@ export interface MonsterDetail extends MonsterSummary {
   wisdom?: number;
   charisma?: number;
   proficiencies?: ProficiencyEntry[];
-  damage_vulnerabilities?: string[];
-  damage_resistances?: string[];
-  damage_immunities?: string[];
+  damage_vulnerabilities?: string[] | string;
+  damage_resistances?: string[] | string;
+  damage_immunities?: string[] | string;
   condition_immunities?: { index: string; name: string; url: string }[] | string[] | string;
   senses?: Sense | string;
   languages?: string;
-  challenge_rating?: number; // Typically a number from API
+  challenge_rating?: number; 
   xp?: number;
   special_abilities?: SpecialAbility[] | string;
   actions?: MonsterAction[] | string;
@@ -256,7 +268,7 @@ export interface MonsterDetail extends MonsterSummary {
 export interface FavoriteMonster {
   index: string;
   name: string;
-  cr: number; // Keep as number for sorting/filtering
+  cr: number; 
   type: string;
   source: 'api' | 'homebrew';
   acValue?: number;
@@ -451,4 +463,13 @@ export interface ClassDetail {
   subclasses: SubclassDetail[];
 }
 
-    
+// Item Shop Types
+export interface ShopItem {
+  id: string;
+  name: string;
+  description?: string;
+  cost?: string; // e.g., "10 gp", "5 sp"
+  type?: string; // e.g., Potion, Weapon, Armor
+  rarity?: string; // e.g., Common, Uncommon, Rare
+  // Add other properties as needed, like weight, damage, AC, etc.
+}

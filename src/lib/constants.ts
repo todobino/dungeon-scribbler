@@ -1,6 +1,7 @@
 
+
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2, User, ArrowUpDown, Store } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
 export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
@@ -220,6 +221,14 @@ export const MONSTER_MASH_HOMEBREW_STORAGE_KEY = `${SHARED_DATA_PREFIX}MonsterMa
 
 // Spellbook Feature Key
 export const SPELLBOOK_HOMEBREW_STORAGE_KEY = `${SHARED_DATA_PREFIX}Spellbook_Homebrew`;
+
+// Item Shop Feature Key
+export const ITEM_SHOP_STORAGE_KEY = `${SHARED_DATA_PREFIX}ItemShop_GlobalItems`;
+export const ITEM_TYPES: string[] = [
+  "Potion", "Scroll", "Wand", "Rod", "Staff", "Weapon", "Armor", "Shield", 
+  "Ring", "Amulet", "Cloak", "Boots", "Gloves", "Helm", "Wondrous Item", 
+  "Adventuring Gear", "Tool", "Treasure", "Mount", "Vehicle", "Other"
+];
 
 
 // Monster Mash Homebrew Form Options
