@@ -9,14 +9,14 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
-import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 
-import { Dice5, Zap, Trash2, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert, Settings2Icon } from "lucide-react";
+import { Dice5, Zap, Trash2, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert, Settings2Icon, ChevronsRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
@@ -24,7 +24,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { useToast } from "@/hooks/use-toast";
 
 interface CombinedToolDrawerProps {
@@ -601,11 +601,15 @@ export function CombinedToolDrawer({
 
   return (
     <>
-    <SheetHeader className="sr-only">
-      <SheetTitle>DM Tools</SheetTitle>
-    </SheetHeader>
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
-        <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground sticky top-0 z-10">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
+        {/* Visually hidden header for accessibility */}
+        <SheetHeader className="sr-only">
+          <SheetTitle>DM Tools</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col h-full pr-8"> {/* Main content wrapper */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
+            <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground sticky top-0 z-10">
             <TabsTrigger
                 value={DICE_ROLLER_TAB_ID}
                 className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=inactive]:text-primary-foreground/80 data-[state=inactive]:hover:text-primary-foreground"
@@ -643,19 +647,19 @@ export function CombinedToolDrawer({
                 {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
                 <div className="space-y-3">
                     {rollLog.map(entry => (
-                    <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
+                     <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
                         {entry.isRolling ? (
-                            <div className="flex items-center h-10">
+                          <div className="flex items-center h-10">
                             <Dice5 className="h-6 w-6 animate-spin text-primary" />
                             <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
-                            </div>
+                          </div>
                         ) : (
-                        <>
+                          <>
                             <p className="text-2xl font-bold text-primary">{entry.resultText}</p>
                             <p className="text-xs text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: entry.detailText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
-                        </>
+                          </>
                         )}
-                    </div>
+                      </div>
                     ))}
                 </div>
                 </ScrollArea>
@@ -663,23 +667,28 @@ export function CombinedToolDrawer({
         </TabsContent>
 
         <TabsContent value={COMBAT_TRACKER_TAB_ID} className="data-[state=active]:flex flex-col flex-grow min-h-0">
-            <div className="p-4 flex gap-2 border-b shrink-0">
+             <div className="p-4 flex gap-2 border-b shrink-0">
                 <Button
-                onClick={handleAddFriendlyButtonClick}
-                variant={showAddFriendlySection ? "secondary" : "outline"}
-                className="flex-1"
+                    onClick={handleAddFriendlyButtonClick}
+                    variant={showAddFriendlySection ? "secondary" : "outline"}
+                    className="flex-1"
                 >
-                {availablePartyMembers.length > 0 ? <Users className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                {availablePartyMembers.length > 0 ? "Add Players" : "Add Ally"}
+                    {availablePartyMembers.length > 0 ? <Users className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                    {availablePartyMembers.length > 0 ? "Add Players" : "Add Ally"}
                 </Button>
                 <Button
-                onClick={() => { setShowAddEnemySection(p => !p); setShowAddFriendlySection(false); setSelectedCombatantId(null);}}
-                variant={showAddEnemySection ? "secondary" : "outline"}
-                className="flex-1"
+                    onClick={() => { setShowAddEnemySection(p => !p); setShowAddFriendlySection(false); setSelectedCombatantId(null);}}
+                    variant={showAddEnemySection ? "secondary" : "outline"}
+                    className="flex-1"
                 >
-                <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
+                    <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
                 </Button>
             </div>
+             {availablePartyMembers.length > 0 && !showAddFriendlySection && !showAddEnemySection && (
+              <div className="p-2 text-xs text-center text-muted-foreground bg-card shrink-0">
+                Click "Add Players" to quickly add all party members to combat.
+              </div>
+            )}
             
             {showAddFriendlySection && (
             <div className="px-4 pb-4 space-y-3 border-b bg-card shrink-0">
@@ -688,8 +697,8 @@ export function CombinedToolDrawer({
                 <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
             </div>
             <div>
                 <Label htmlFor="friendly-initiative-inline">Initiative</Label>
@@ -705,7 +714,7 @@ export function CombinedToolDrawer({
             )}
 
             {showAddEnemySection && (
-            <div className="px-4 pb-4 border-b bg-card shrink-0 flex-grow flex flex-col">
+            <div className="px-4 pb-4 border-b bg-card shrink-0">
                 <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow">
                 <TabsList className="grid w-full grid-cols-2 shrink-0">
                 <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
@@ -723,17 +732,18 @@ export function CombinedToolDrawer({
                     <div><Label htmlFor="enemy-ac-inline">AC</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
                     <div><Label htmlFor="enemy-hp-inline">HP</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
                 </div>
-                    <div className="flex items-end gap-3">
-                    <div className="flex-grow">
-                        <Label htmlFor="enemy-init-mod-inline">Init. Mod.</Label>
-                        <Input id="enemy-init-mod-inline" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} />
-                    </div>
-                    <div className="w-28">
-                        <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
-                        <Input id="enemy-initiative-input-inline" className="w-full" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" />
-                    </div>
-                    <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())}><Dice5 className="h-4 w-4" /></Button>
+                <div className="flex items-end gap-3">
+                  <div className="flex-grow">
+                    <Label htmlFor="enemy-init-mod-inline">Init. Mod.</Label>
+                    <Input id="enemy-init-mod-inline" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} />
+                  </div>
+                  <div className="w-28">
+                    <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
+                    <Input id="enemy-initiative-input-inline" className="w-full" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" />
+                  </div>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())}><Dice5 className="h-4 w-4" /></Button>
                 </div>
+
                 <div className="flex items-end gap-3">
                     <div className="w-20"><Label htmlFor="enemy-quantity-inline">Quantity</Label><Input id="enemy-quantity-inline" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" /></div>
                     <div className="flex items-center space-x-2 pb-1"><Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} /><Label htmlFor="roll-group-initiative-inline" className="cursor-pointer text-sm">Group</Label></div>
@@ -782,54 +792,54 @@ export function CombinedToolDrawer({
             )}
 
             <div className="p-4 flex-grow flex flex-col min-h-0">
-            <Label className="mb-1 shrink-0">Combat Order (Highest to Lowest)</Label>
-            <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
-                {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
-                <ul className="space-y-1.5">
-                {combatants.map((c, index) => (
-                    <li
-                    key={c.id}
-                    ref={(el) => combatantRefs.current.set(c.id, el)}
-                    className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
-                    style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
-                    >
-                    <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center cursor-pointer flex-1" onClick={() => handleCombatantCardClick(c)}>
-                        <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
-                        <div>
-                            <p className={cn("font-medium", c.type === 'enemy' && 'text-destructive', selectedCombatantId === c.id && c.type === 'enemy' && 'text-primary')}>{c.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                                AC: {c.ac ?? 'N/A'}
-                                {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
-                            </p>
+                <Label className="mb-1 shrink-0">Combat Order (Highest to Lowest)</Label>
+                <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
+                    {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
+                    <ul className="space-y-1.5">
+                    {combatants.map((c, index) => (
+                        <li
+                        key={c.id}
+                        ref={(el) => combatantRefs.current.set(c.id, el)}
+                        className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
+                        style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
+                        >
+                        <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center cursor-pointer flex-1" onClick={() => handleCombatantCardClick(c)}>
+                            <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
+                            <div>
+                                <p className={cn("font-medium", c.type === 'enemy' && 'text-destructive', selectedCombatantId === c.id && c.type === 'enemy' && 'text-primary')}>{c.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    AC: {c.ac ?? 'N/A'}
+                                    {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
+                                </p>
+                            </div>
+                            </div>
+                            {c.type === 'enemy' && c.monsterIndex && (
+                                <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => handleOpenMonsterDetailDialog(c)}>
+                                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            )}
                         </div>
-                        </div>
-                        {c.type === 'enemy' && c.monsterIndex && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => handleOpenMonsterDetailDialog(c)}>
-                                <BookOpen className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                        )}
-                    </div>
 
-                    {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
-                    <div className="mt-1">
-                        <Progress value={(c.currentHp / c.hp) * 100} className="h-2 [&>div]:bg-destructive" />
-                    </div>
-                    )}
-                     {c.id === selectedCombatantId && c.currentHp !== undefined && c.currentHp > 0 && (
-                        <div className="flex items-center justify-center gap-1.5 pt-1">
-                           <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
-                            <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
-                            <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
+                        {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
+                        <div className="mt-1">
+                            <Progress value={(c.currentHp / c.hp) * 100} className="h-2 [&>div]:bg-destructive" />
                         </div>
-                    )}
-                    {c.type === 'enemy' && c.currentHp !== undefined && c.currentHp === 0 && (
-                        <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>
-                    )}
-                    </li>
-                ))}
-                </ul>
-            </ScrollArea>
+                        )}
+                        {c.type === 'enemy' && c.id === selectedCombatantId && c.currentHp !== undefined && c.currentHp > 0 && (
+                            <div className="flex items-center justify-center gap-1.5 pt-1">
+                            <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
+                                <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
+                                <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
+                            </div>
+                        )}
+                        {c.type === 'enemy' && c.currentHp !== undefined && c.currentHp === 0 && (
+                            <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>
+                        )}
+                        </li>
+                    ))}
+                    </ul>
+                </ScrollArea>
             </div>
             {combatants.length > 0 && (
             <div className="p-4 space-y-2 border-t shrink-0">
@@ -842,13 +852,23 @@ export function CombinedToolDrawer({
             )}
         </TabsContent>
     </Tabs>
+    </div> {/* End Main content wrapper */}
+        <button
+            onClick={() => onOpenChange(false)}
+            className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
+            aria-label="Close DM Tools"
+        >
+            <ChevronsRight className="h-6 w-6" />
+        </button>
+      </SheetContent>
+    </Sheet>
 
     {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
-        <DialogContent className="max-w-md min-h-[480px] flex flex-col">
+      <DialogContent className="max-w-md min-h-[480px] flex flex-col">
         <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
-            <DialogTitle className="text-primary-foreground">Select Favorite Monster</DialogTitle>
-            <DialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</DialogDescription>
+          <DialogTitle className="text-primary-foreground">Select Favorite Monster</DialogTitle>
+          <DialogDescription className="text-primary-foreground/80">Choose from your Monster Mash favorites.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="mt-4 flex-grow">
             {favoritesList.length === 0 ? (
@@ -873,18 +893,18 @@ export function CombinedToolDrawer({
 
     <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
-            <UIAlertDialogHeader>
-            <UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Remove Combatant?</AlertDialogTitle>
             <AlertDialogDescription>
                 Are you sure you want to remove "{combatantToDelete?.name}" from the combat?
             </AlertDialogDescription>
-            </UIAlertDialogHeader>
-            <UIAlertDialogFooter>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteCombatant} className={cn("bg-destructive text-destructive-foreground hover:bg-destructive/90")}>
                 Remove
             </AlertDialogAction>
-            </UIAlertDialogFooter>
+            </AlertDialogFooter>
         </AlertDialogContent>
         </AlertDialog>
 
@@ -927,9 +947,10 @@ export function CombinedToolDrawer({
                     <div><strong>Senses:</strong> {typeof detail.senses === 'string' ? detail.senses : detail.senses ? Object.entries(detail.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ') : 'N/A'}</div>
                     <div><strong>Languages:</strong> {detail.languages || "None"}</div>
 
-                    {renderDetailActions(detail.special_abilities as SpecialAbility[] | undefined, "Special Abilities")}
+                    {renderDetailTextField("Special Abilities", detail.special_abilities as string | undefined)}
                     {renderDetailActions(detail.actions as MonsterAction[] | undefined, "Actions")}
                     {renderDetailActions(detail.legendary_actions as LegendaryAction[] | undefined, "Legendary Actions")}
+
 
                     {detail.image && (<div className="mt-2"><Image src={detail.source === 'api' ? `${DND5E_API_BASE_URL}${detail.image}` : detail.image} alt={detail.name} width={300} height={300} className="rounded-md border object-contain mx-auto" data-ai-hint={`${detail.type} monster`}/></div>)}
                 </div>
