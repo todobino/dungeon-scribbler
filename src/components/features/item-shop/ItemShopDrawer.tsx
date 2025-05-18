@@ -77,7 +77,7 @@ export function ItemShopDrawer({ open, onOpenChange }: ItemShopDrawerProps) {
         item.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    if (selectedTypeFilter) {
+    if (selectedTypeFilter) { // This condition correctly handles selectedTypeFilter === "" (no filter)
       itemsToFilter = itemsToFilter.filter(item => item.type === selectedTypeFilter);
     }
     setFilteredItems(itemsToFilter.sort((a, b) => a.name.localeCompare(b.name)));
@@ -145,10 +145,10 @@ export function ItemShopDrawer({ open, onOpenChange }: ItemShopDrawerProps) {
                 <Label htmlFor="item-type-filter" className="sr-only">Filter by Type</Label>
                 <Select value={selectedTypeFilter} onValueChange={setSelectedTypeFilter}>
                   <SelectTrigger id="item-type-filter" className="w-full">
-                    <SelectValue placeholder="Filter by Type..." />
+                    <SelectValue placeholder="Filter by Type (All)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
+                    {/* Removed: <SelectItem value="">All Types</SelectItem> */}
                     {ITEM_TYPES.map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
@@ -270,4 +270,3 @@ export function ItemShopDrawer({ open, onOpenChange }: ItemShopDrawerProps) {
     </>
   );
 }
-
