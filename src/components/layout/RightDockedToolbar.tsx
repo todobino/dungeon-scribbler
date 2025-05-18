@@ -8,25 +8,27 @@ import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDra
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { StatusConditionsDrawer } from "@/components/features/status-conditions/StatusConditionsDrawer";
 import { SpellbookDrawer } from "@/components/features/spellbook/SpellbookDrawer";
+import { ItemShopDrawer } from "@/components/features/item-shop/ItemShopDrawer"; // New Import
 import { 
   TOOLBAR_ITEMS, 
   COMBINED_TOOLS_DRAWER_ID, 
   MONSTER_MASH_DRAWER_ID, 
   STATUS_CONDITIONS_DRAWER_ID,
   SPELLBOOK_DRAWER_ID,
+  ITEM_SHOP_DRAWER_ID, // New Import
   DICE_ROLLER_TAB_ID, 
   COMBAT_TRACKER_TAB_ID 
 } from "@/lib/constants";
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen } from "lucide-react";
+import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store } from "lucide-react"; // New: Store
 import { useCampaign } from "@/contexts/campaign-context";
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
-  const { notifyEncounterUpdate } = useCampaign();
+  const { notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
 
   // State for Dice Roller (lifted)
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
@@ -97,7 +99,7 @@ export function RightDockedToolbar() {
         setOpenDrawerId(COMBINED_TOOLS_DRAWER_ID);
         setActiveCombinedTab(newTab);
       }
-    } else if (itemId === MONSTER_MASH_DRAWER_ID || itemId === STATUS_CONDITIONS_DRAWER_ID || itemId === SPELLBOOK_DRAWER_ID) {
+    } else if (itemId === MONSTER_MASH_DRAWER_ID || itemId === STATUS_CONDITIONS_DRAWER_ID || itemId === SPELLBOOK_DRAWER_ID || itemId === ITEM_SHOP_DRAWER_ID) {
       setOpenDrawerId(prev => (prev === itemId ? null : itemId));
     }
   };
@@ -114,7 +116,7 @@ export function RightDockedToolbar() {
     <>
       <TooltipProvider delayDuration={100}>
         <div className="fixed top-1/2 -translate-y-1/2 right-0 flex flex-col gap-1 p-1.5 bg-card/80 backdrop-blur-sm shadow-lg rounded-l-lg z-50 border border-r-0">
-          {TOOLBAR_ITEMS.map((item) => {
+          {TOOLBAR_ITEMS.map((item, index) => {
             let IconToRender = item.icon;
             let iconCn = "h-6 w-6"; 
             let buttonBaseCn = "h-10 w-10 rounded-md"; 
@@ -122,7 +124,8 @@ export function RightDockedToolbar() {
             let isActiveTool = isCombinedToolActive(item.id) || 
                                 (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID) ||
                                 (openDrawerId === STATUS_CONDITIONS_DRAWER_ID && item.id === STATUS_CONDITIONS_DRAWER_ID) ||
-                                (openDrawerId === SPELLBOOK_DRAWER_ID && item.id === SPELLBOOK_DRAWER_ID);
+                                (openDrawerId === SPELLBOOK_DRAWER_ID && item.id === SPELLBOOK_DRAWER_ID) ||
+                                (openDrawerId === ITEM_SHOP_DRAWER_ID && item.id === ITEM_SHOP_DRAWER_ID);
             
             let isThisCombatTrackerIcon = item.id === COMBAT_TRACKER_TAB_ID;
 
@@ -133,6 +136,11 @@ export function RightDockedToolbar() {
               isThisCombatTrackerIcon && isCombatActive && isActiveTool && "animate-pulse ring-2 ring-destructive" // Keeps pulse if active
             );
             
+            const isLastItem = index === TOOLBAR_ITEMS.length - 1;
+            const nextItemIsSeparatorTarget = TOOLBAR_ITEMS[index + 1]?.id === MONSTER_MASH_DRAWER_ID || 
+                                              TOOLBAR_ITEMS[index + 1]?.id === SPELLBOOK_DRAWER_ID ||
+                                              TOOLBAR_ITEMS[index + 1]?.id === ITEM_SHOP_DRAWER_ID; // Added Item Shop
+
             return (
               <React.Fragment key={item.id}>
                 <Tooltip>
@@ -151,8 +159,7 @@ export function RightDockedToolbar() {
                     <p>{item.label}</p>
                   </TooltipContent>
                 </Tooltip>
-                {item.id === COMBAT_TRACKER_TAB_ID && <Separator className="my-0.5 bg-border/70" />}
-                {item.id === MONSTER_MASH_DRAWER_ID && <Separator className="my-0.5 bg-border/70" />}
+                { (item.id === COMBAT_TRACKER_TAB_ID || item.id === MONSTER_MASH_DRAWER_ID || item.id === SPELLBOOK_DRAWER_ID) && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
               </React.Fragment>
             );
           })}
@@ -189,6 +196,10 @@ export function RightDockedToolbar() {
       />
       <SpellbookDrawer
         open={openDrawerId === SPELLBOOK_DRAWER_ID}
+        onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
+      />
+      <ItemShopDrawer
+        open={openDrawerId === ITEM_SHOP_DRAWER_ID}
         onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
       />
     </>

@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2, User, ArrowUpDown } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompass, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompassIcon, Activity, Link2, User, ArrowUpDown, Store } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
 export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
@@ -18,10 +18,11 @@ export interface NavItem {
 // Toolbar IDs - DEFINE THESE FIRST
 export const DICE_ROLLER_TAB_ID = "dice-roller";
 export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
+export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
 export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const SPELLBOOK_DRAWER_ID = "spellbook";
-export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
+export const ITEM_SHOP_DRAWER_ID = "item-shop";
 
 
 // Toolbar items
@@ -31,6 +32,7 @@ export const TOOLBAR_ITEMS = [
   { id: MONSTER_MASH_DRAWER_ID, label: 'Monster Mash', icon: Skull },
   { id: STATUS_CONDITIONS_DRAWER_ID, label: 'Status Conditions', icon: ShieldQuestion },
   { id: SPELLBOOK_DRAWER_ID, label: 'Spellbook', icon: BookOpen },
+  { id: ITEM_SHOP_DRAWER_ID, label: 'Item Shop', icon: Store },
 ];
 
 export const NAV_ITEMS: NavItem[] = [
@@ -66,9 +68,6 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
  { label: 'Settings', href: '/settings', icon: Cog, disabled: true },
 ];
 
-// Removed DND_CLASSES and DndClass as class info now comes from class-data.ts
-// export const DND_CLASSES = [...]
-// export type DndClass = ...
 
 export const PREDEFINED_COLORS = [
   { name: 'Red', value: '#ef4444' },
@@ -142,7 +141,7 @@ export const CAMPAIGN_TONE_OPTIONS = ["Heroic Fantasy", "Dark Fantasy/Grimdark",
 export const WORLD_STYLE_OPTIONS: CampaignOption[] = [
   { value: "High Fantasy", description: "A world brimming with magic, mythical creatures, and epic heroism. Think Lord of the Rings or Dungeons & Dragons' Forgotten Realms." },
   { value: "Low Magic", description: "Magic is rare, subtle, or dangerous. Mundane solutions are common. Think Game of Thrones or The Witcher (books)." },
-  { value: "Sword &amp; Sorcery", description: "Focuses on personal heroism, dangerous magic, and often morally ambiguous protagonists. Think Conan the Barbarian." },
+  { value: "Sword & Sorcery", description: "Focuses on personal heroism, dangerous magic, and often morally ambiguous protagonists. Think Conan the Barbarian." },
   { value: "Steampunk", description: "A world powered by steam technology and clockwork, often with Victorian aesthetics and fantastical inventions." },
   { value: "Post-Apocalyptic", description: "A setting after a cataclysmic event, where survivors navigate a changed and often hazardous world. Think Mad Max or Fallout." },
   { value: "Urban Fantasy", description: "Magic and the supernatural exist hidden within a modern, contemporary urban setting. Think The Dresden Files." },
