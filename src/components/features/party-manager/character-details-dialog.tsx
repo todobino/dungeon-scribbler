@@ -2,11 +2,11 @@
 "use client";
 
 import type { PlayerCharacter, ClassDetail, LevelBasedFeature, ClassFeatureDetail } from "@/lib/types";
-import { DND_CLASS_DETAILS } from "@/lib/data/class-data"; // Import new class data
+import { DND_CLASS_DETAILS } from "@/lib/data/class-data"; 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookOpen, Shield, Users } from "lucide-react"; 
+import { BookOpen, Shield, Users, VenetianMask } from "lucide-react"; 
 
 interface CharacterDetailsDialogProps {
   character: PlayerCharacter | null;
@@ -78,7 +78,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
                   {baseClassFeatures.map((feature, index) => (
                     <li key={`base-feat-${index}`}>
                       <strong className="font-medium">{feature.name}:</strong>
-                      <p className="text-sm text-muted-foreground ml-2">{feature.description}</p>
+                      <p className="text-sm text-muted-foreground ml-2 whitespace-pre-wrap">{feature.description}</p>
                     </li>
                   ))}
                 </ul>
@@ -95,7 +95,7 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
                   {subclassFeatures.map((feature, index) => (
                     <li key={`subclass-feat-${index}`}>
                       <strong className="font-medium">{feature.name}:</strong>
-                      <p className="text-sm text-muted-foreground ml-2">{feature.description}</p>
+                      <p className="text-sm text-muted-foreground ml-2 whitespace-pre-wrap">{feature.description}</p>
                     </li>
                   ))}
                 </ul>
@@ -116,3 +116,4 @@ export function CharacterDetailsDialog({ character, isOpen, onOpenChange }: Char
     </Dialog>
   );
 }
+
