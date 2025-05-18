@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Store, ChevronRight, Search, PlusCircle, PackageOpen, Tag, FileText, DollarSign, Filter, X } from "lucide-react";
+import { Store, ChevronRight, Search, PlusCircle, PackageOpen, Tag, FileText, DollarSign, Filter, X, Star } from "lucide-react";
 import { ITEM_SHOP_STORAGE_KEY, ITEM_TYPES } from "@/lib/constants";
 import type { ShopItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -270,3 +270,4 @@ export function ItemShopDrawer({ open, onOpenChange }: ItemShopDrawerProps) {
     </>
   );
 }
+
