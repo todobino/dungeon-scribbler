@@ -17,8 +17,8 @@ import { Switch }
   from "@/components/ui/switch";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter }
   from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter }
-  from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter }
+  from "@/components/ui/alert-dialog"; // Renamed imports from AlertDialog
 import Image
   from "next/image";
 import { Progress }
@@ -584,17 +584,16 @@ export function CombinedToolDrawer({
       return;
     }
     
+    const initModValue = parseModifierString(enemyInitiativeModifierInput);
     const crValue = enemyCR.trim() === "" ? undefined : enemyCR.trim();
 
     const newEnemies: Combatant[] = [];
     let groupInitiativeValue: number | undefined;
-    const initMod = parseModifierString(enemyInitiativeModifierInput);
 
-    // Determine initiative for the group if applicable
     if (quantity > 1 && rollGroupInitiativeFlag) {
         groupInitiativeValue = enemyInitiativeInput.trim() !== "" && !isNaN(parseInt(enemyInitiativeInput.trim()))
             ? parseInt(enemyInitiativeInput.trim())
-            : rollDie(20) + initMod;
+            : rollDie(20) + initModValue;
     } else if (quantity === 1 && enemyInitiativeInput.trim() !== "") {
         const fixedInit = parseInt(enemyInitiativeInput.trim());
         if (!isNaN(fixedInit)) {
@@ -607,10 +606,10 @@ export function CombinedToolDrawer({
       let initiativeValue: number;
       const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
 
-      if (groupInitiativeValue !== undefined) { // This applies if group roll OR single enemy with fixed init
+      if (groupInitiativeValue !== undefined) {
         initiativeValue = groupInitiativeValue;
-      } else { // Roll individually: single enemy no fixed init, OR multiple enemies not grouped
-        initiativeValue = rollDie(20) + initMod;
+      } else { 
+        initiativeValue = rollDie(20) + initModValue;
       }
 
       newEnemies.push({
@@ -622,7 +621,7 @@ export function CombinedToolDrawer({
         hp: hpValue,
         currentHp: hpValue,
         tempHp: 0,
-        initiativeModifier: initMod,
+        initiativeModifier: initModValue,
         monsterIndex: selectedFavoriteMonsterIndexForCombatAdd,
         cr: crValue,
       });
@@ -726,11 +725,10 @@ export function CombinedToolDrawer({
       setShowAddEnemySection(false); 
 
       if (availablePartyMembers.length > 0) {
-        handleRollAllPlayerInitiatives();
-        setShowAddPlayersSection(false); 
+        setShowAddPlayersSection(s => !s);
         setShowAddGenericAllySection(false); 
       } else {
-        setShowAddGenericAllySection(g => !g);
+        setShowAddGenericAllySection(s => !s);
         setShowAddPlayersSection(false); 
       }
   };
@@ -805,7 +803,7 @@ export function CombinedToolDrawer({
         </TabsContent>
 
         <TabsContent value={COMBAT_TRACKER_TAB_ID} className="data-[state=active]:flex flex-col flex-grow min-h-0">
-             <div className="p-4 flex gap-2 border-b shrink-0">
+            <div className="p-4 flex gap-2 border-b shrink-0">
                 <Button
                     onClick={handleAddFriendlyButtonClick}
                     variant={(showAddPlayersSection || showAddGenericAllySection) ? "secondary" : "outline"}
@@ -829,33 +827,39 @@ export function CombinedToolDrawer({
 
             {showAddPlayersSection && (
             <div className="p-4 space-y-3 border-b bg-card shrink-0">
-                <ScrollArea className="max-h-48 border rounded-md">
-                <div className="p-2 space-y-2">
-                    {availablePartyMembers.map(player => (
-                    <div key={player.id} className="flex items-center justify-between gap-2">
-                        <div className="flex-grow">
-                        <p className="text-sm font-medium">{player.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                            Lvl {player.level} {player.race} {player.class} (Mod: {player.initiativeModifier !== undefined ? (player.initiativeModifier >= 0 ? '+':''):''}{player.initiativeModifier ?? '0'})
-                        </p>
+                {availablePartyMembers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center">No players available to add. Add them in Party Manager or they are already in combat.</p>
+                ) : (
+                <>
+                    <ScrollArea className="max-h-48 border rounded-md">
+                    <div className="p-2 space-y-2">
+                        {availablePartyMembers.map(player => (
+                        <div key={player.id} className="flex items-center justify-between gap-2">
+                            <div className="flex-grow">
+                            <p className="text-sm font-medium">{player.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                                Lvl {player.level} {player.race} {player.class} (Mod: {player.initiativeModifier !== undefined ? (player.initiativeModifier >= 0 ? '+':''):''}{player.initiativeModifier ?? '0'})
+                            </p>
+                            </div>
+                            <Input
+                            type="number"
+                            className="w-20 h-8 text-sm"
+                            value={manualPlayerInitiatives[player.id] || ""}
+                            onChange={(e) => handleManualPlayerInitiativeChange(player.id, e.target.value)}
+                            />
                         </div>
-                        <Input
-                        type="number"
-                        className="w-20 h-8 text-sm"
-                        value={manualPlayerInitiatives[player.id] || ""}
-                        onChange={(e) => handleManualPlayerInitiativeChange(player.id, e.target.value)}
-                        />
+                        ))}
                     </div>
-                    ))}
-                </div>
-                </ScrollArea>
-                <Button
-                onClick={handleRollAllPlayerInitiatives}
-                disabled={availablePartyMembers.length === 0}
-                className="w-full"
-                >
-                Add Players to Combat
-                </Button>
+                    </ScrollArea>
+                    <Button
+                    onClick={handleRollAllPlayerInitiatives}
+                    disabled={availablePartyMembers.length === 0}
+                    className="w-full"
+                    >
+                    Add Players to Combat
+                    </Button>
+                </>
+                )}
             </div>
             )}
 
@@ -884,7 +888,7 @@ export function CombinedToolDrawer({
 
 
             {showAddEnemySection && (
-            <div className="px-4 pb-4 border-b bg-card shrink-0">
+            <div className="px-4 pb-4 border-b bg-card shrink-0 flex-grow flex flex-col">
                 <Tabs value={activeAddEnemyTab} onValueChange={setActiveAddEnemyTab} className="flex flex-col flex-grow">
                 <TabsList className="grid w-full grid-cols-2 shrink-0">
                 <TabsTrigger value="single-enemy">Single Enemy/Group</TabsTrigger>
@@ -902,20 +906,20 @@ export function CombinedToolDrawer({
                     <div><Label htmlFor="enemy-ac-inline">AC</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
                     <div><Label htmlFor="enemy-hp-inline">HP</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
                 </div>
-                 <div className="flex items-end gap-3">
-                    <div>
-                        <Label htmlFor="enemy-init-mod-inline">Init. Mod.</Label>
-                        <Input id="enemy-init-mod-inline" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} />
-                    </div>
-                     <div className="w-20">
+                <div className="flex items-end gap-3">
+                    <div className="w-20">
                         <Label htmlFor="enemy-quantity-inline">Quantity</Label>
                         <Input id="enemy-quantity-inline" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" />
                     </div>
-                    <div className="flex items-center space-x-2 pb-1">
+                     <div className="flex items-center space-x-2 pb-1">
                         <Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} disabled={isGroupSwitchDisabled}/>
                         <Label htmlFor="roll-group-initiative-inline" className="cursor-pointer text-sm">Group</Label>
                     </div>
                 </div>
+                 <div>
+                    <Label htmlFor="enemy-init-mod-inline">Init. Mod.</Label>
+                    <Input id="enemy-init-mod-inline" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} />
+                 </div>
                  <div>
                     <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
                     <div className="flex gap-2 items-center">
@@ -996,8 +1000,7 @@ export function CombinedToolDrawer({
                                 <div>
                                     <p className={cn(
                                         "font-medium",
-                                        c.type === 'enemy' && 'text-destructive',
-                                        selectedCombatantId === c.id && c.type === 'enemy' && 'text-primary' 
+                                        c.type === 'enemy' && (selectedCombatantId === c.id ? 'text-primary' : 'text-destructive')
                                       )}>{c.name}</p>
                                     <p className="text-xs text-muted-foreground">
                                         AC: {c.ac ?? 'N/A'}
@@ -1026,7 +1029,7 @@ export function CombinedToolDrawer({
                         )}
                         {c.type === 'enemy' && c.id === selectedCombatantId && c.currentHp !== undefined && c.currentHp > 0 && (
                             <div className="flex items-center justify-center gap-1.5 pt-1">
-                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c);}}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c);}}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                                 <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
@@ -1098,18 +1101,18 @@ export function CombinedToolDrawer({
     {/* Delete Combatant Confirmation Dialog */}
     <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Remove Combatant?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogHeader>
+            <UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle>
+            <UIAlertDialogDescription>
                 Are you sure you want to remove "{combatantToDelete?.name}" from the combat?
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
+            </UIAlertDialogDescription>
+            </UIAlertDialogHeader>
+            <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteCombatant} className={cn(buttonVariants({variant: 'destructive'}))}>
                 Remove
             </AlertDialogAction>
-            </AlertDialogFooter>
+            </UIAlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
 
@@ -1175,4 +1178,3 @@ export function CombinedToolDrawer({
     </>
   );
 }
-
