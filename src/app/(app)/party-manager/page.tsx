@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { PlayerCharacter, ApiListItem } from "@/lib/types";
@@ -7,11 +6,11 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, User, Shield, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2, VenetianMask, Image as ImageIcon, UploadCloud } from "lucide-react";
+import { PlusCircle, User, Shield, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2, VenetianMask, ImageIcon, UploadCloud } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants";
@@ -56,7 +55,7 @@ export default function PartyManagerPage() {
 
   const [apiRaces, setApiRaces] = useState<ApiListItem[]>([]);
   const [isLoadingApiRaces, setIsLoadingApiRaces] = useState(false);
-  const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]);
+  const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]); // Changed to use ApiListItem
   const [isLoadingApiSubclasses, setIsLoadingApiSubclasses] = useState(false);
 
   const [characterToDelete, setCharacterToDelete] = useState<PlayerCharacter | null>(null);
@@ -88,7 +87,7 @@ export default function PartyManagerPage() {
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
 
   useEffect(() => {
-    if (isFormDialogOpen && !isLoadingApiRaces && (apiRaces.length === 0 || !apiRaces.find(r => r.index === 'other'))) {
+    if (isFormDialogOpen && !isLoadingApiRaces && (apiRaces.length === 0 || !apiRaces.find(r => r.name === 'Other'))) {
       const fetchRaces = async () => {
         setIsLoadingApiRaces(true);
         try {
@@ -96,90 +95,98 @@ export default function PartyManagerPage() {
           if (!response.ok) throw new Error("Failed to fetch races");
           const data = await response.json();
           const standardRaces: ApiListItem[] = data.results || [];
-          setApiRaces([{ index: 'other', name: 'Other', url: '' }, ...standardRaces.sort((a,b) => a.name.localeCompare(b.name))]);
+          // Ensure "Other" is always an option and at the top, then sorted races
+          const sortedStandardRaces = standardRaces.sort((a,b) => a.name.localeCompare(b.name));
+          setApiRaces([{ index: 'other', name: 'Other', url: '' }, ...sortedStandardRaces]);
         } catch (error) {
           console.error("Error fetching races:", error);
           toast({ title: "Error", description: "Could not fetch races from D&D API.", variant: "destructive" });
-          if (apiRaces.length === 0) setApiRaces([{ index: 'other', name: 'Other', url: '' }]);
+          if (apiRaces.length === 0) setApiRaces([{ index: 'other', name: 'Other', url: '' }]); // Fallback if API fails
         }
         setIsLoadingApiRaces(false);
       };
       fetchRaces();
     }
-  }, [isFormDialogOpen, apiRaces, isLoadingApiRaces, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFormDialogOpen, isLoadingApiRaces, toast]); // Removed apiRaces from deps to avoid loop
 
   useEffect(() => {
     if (isFormDialogOpen && characterFormData.class) {
+      setIsLoadingApiSubclasses(true);
       const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class);
       if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
+        // Assuming DND_CLASS_DETAILS.subclasses directly provide name/index, no need for API call
         setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})).sort((a,b) => a.name.localeCompare(b.name)));
       } else {
         setApiSubclasses([]);
       }
-       setCharacterFormData(prev => ({...prev, subclass: ""})); 
+       // No longer setting subclass to "" here to preserve it if editing and class matches
     } else if (isFormDialogOpen) {
       setApiSubclasses([]);
-       setCharacterFormData(prev => ({...prev, subclass: ""})); 
+       // No longer setting subclass to "" here to preserve it if editing and class matches
     }
+    setIsLoadingApiSubclasses(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFormDialogOpen, characterFormData.class]);
 
 
   const handleFormSubmit = async () => {
-    if (characterFormData.name?.trim() && characterFormData.class && characterFormData.race?.trim() && activeCampaign) {
-      let finalRace = characterFormData.race;
-      if (characterFormData.race === "Other") {
-        finalRace = characterFormData.customRaceInput?.trim() || "Unknown Custom Race";
-      }
-      
-      const characterDataForContext: CharacterFormData = {
-        name: characterFormData.name.trim(),
-        level: characterFormData.level,
-        class: characterFormData.class,
-        race: finalRace, // this will be the final string (custom or selected)
-        // customRaceInput is not part of PlayerCharacter, so it's omitted here
-        subclass: characterFormData.subclass?.trim() || "",
-        armorClass: characterFormData.armorClass,
-        initiativeModifier: characterFormData.initiativeModifier || 0,
-        color: characterFormData.color || PREDEFINED_COLORS[0].value,
+    if (!characterFormData.name?.trim() || !characterFormData.class || !characterFormData.race?.trim()) {
+      toast({ title: "Missing Fields", description: "Name, Race, and Class are required.", variant: "destructive" });
+      return;
+    }
+    if (characterFormData.race === "Other" && !characterFormData.customRaceInput?.trim()) {
+      toast({ title: "Custom Race Required", description: "Please specify the custom race name.", variant: "destructive" });
+      return;
+    }
+    if (!activeCampaign) return;
+
+    let finalRace = characterFormData.race;
+    if (characterFormData.race === "Other") {
+      finalRace = characterFormData.customRaceInput?.trim() || "Unknown Custom Race";
+    }
+    
+    const characterDataForContext: Omit<PlayerCharacter, 'id' | 'imageUrl'> = {
+      name: characterFormData.name.trim(),
+      level: characterFormData.level,
+      class: characterFormData.class,
+      race: finalRace,
+      subclass: characterFormData.subclass?.trim() || "",
+      armorClass: characterFormData.armorClass,
+      initiativeModifier: characterFormData.initiativeModifier || 0,
+      color: characterFormData.color || PREDEFINED_COLORS[0].value,
+    };
+
+    if (editingCharacter) {
+      const originalLevel = editingCharacter.level;
+      const newLevel = characterDataForContext.level;
+
+      const characterToUpdate: PlayerCharacter = {
+          ...editingCharacter,
+          ...characterDataForContext,
       };
 
-
-      if (editingCharacter) {
-        const originalLevel = editingCharacter.level;
-        const newLevel = characterDataForContext.level;
-
-        const characterToUpdate: PlayerCharacter = {
-            ...editingCharacter,
-            ...characterDataForContext,
-        };
-
-
-        if (linkedPartyLevel && newLevel !== originalLevel && activeCampaignParty.length > 1) {
-          setLevelSyncDetails({
-            characterId: editingCharacter.id,
-            newLevel: newLevel,
-            allFormData: characterFormData 
-          });
-          setIsLevelSyncDialogOpen(true);
-          return;
-        } else {
-          await updateCharacterInActiveCampaign(characterToUpdate);
-        }
+      if (linkedPartyLevel && newLevel !== originalLevel && activeCampaignParty.length > 1) {
+        setLevelSyncDetails({
+          characterId: editingCharacter.id,
+          newLevel: newLevel,
+          allFormData: characterFormData 
+        });
+        setIsLevelSyncDialogOpen(true);
+        return; 
       } else {
-        let dataToAdd: CharacterFormData = { ...characterDataForContext };
-         if (characterFormData.race === "Other") { // ensure customRaceInput is used for the 'race' field in PlayerCharacter
-            dataToAdd.race = characterFormData.customRaceInput?.trim() || "Unknown Custom Race";
-        }
-        if (linkedPartyLevel && activeCampaignParty.length > 0) {
-          dataToAdd.level = activeCampaignParty[0].level;
-        }
-        await addCharacterToActiveCampaign(dataToAdd);
+        await updateCharacterInActiveCampaign(characterToUpdate);
       }
-      setCharacterFormData(initialCharacterFormState);
-      setEditingCharacter(null);
-      setIsFormDialogOpen(false);
+    } else {
+      let dataToAdd = { ...characterDataForContext };
+      if (linkedPartyLevel && activeCampaignParty.length > 0) {
+        dataToAdd.level = activeCampaignParty[0].level;
+      }
+      await addCharacterToActiveCampaign(dataToAdd as CharacterFormData); // Ensure we pass type compatible with context
     }
+    setCharacterFormData(initialCharacterFormState);
+    setEditingCharacter(null);
+    setIsFormDialogOpen(false);
   };
 
   const handleLevelSyncConfirmation = async (syncAll: boolean) => {
@@ -202,7 +209,6 @@ export default function PartyManagerPage() {
       color: allFormData.color || PREDEFINED_COLORS[0].value,
       imageUrl: editingCharacter.imageUrl || "", 
     };
-
 
     if (syncAll) {
       try {
@@ -239,10 +245,10 @@ export default function PartyManagerPage() {
      setCharacterFormData((prev) => {
       let newState = { ...prev, [name]: value };
       if (name === "class") {
-        newState.subclass = "";
+        newState.subclass = ""; // Reset subclass when class changes
       }
       if (name === "race" && value !== "Other") {
-        newState.customRaceInput = "";
+        newState.customRaceInput = ""; // Clear custom input if a standard race is chosen
       }
       return newState;
     });
@@ -257,9 +263,9 @@ export default function PartyManagerPage() {
 
   const openAddDialog = () => {
     setEditingCharacter(null);
-    let newCharLevel = activeCampaign?.defaultStartingLevel && activeCampaign.defaultStartingLevel > 0 
+    let newCharLevel = (activeCampaign?.defaultStartingLevel && activeCampaign.defaultStartingLevel > 0 
                         ? activeCampaign.defaultStartingLevel 
-                        : 1;
+                        : 1);
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       newCharLevel = activeCampaignParty[0].level;
     }
@@ -272,9 +278,9 @@ export default function PartyManagerPage() {
     
     let raceValue = character.race;
     let customRaceValue = "";
-    const standardRaceExists = apiRaces.length > 1 && apiRaces.slice(1).some(r => r.name === character.race);
+    const isStandardRace = apiRaces.length > 1 && apiRaces.slice(1).some(r => r.name === character.race);
 
-    if (!standardRaceExists && character.race) { // apiRaces[0] is "Other"
+    if (!isStandardRace && character.race) {
         raceValue = "Other";
         customRaceValue = character.race;
     }
@@ -289,7 +295,6 @@ export default function PartyManagerPage() {
       armorClass: character.armorClass,
       initiativeModifier: character.initiativeModifier || 0,
       color: character.color || PREDEFINED_COLORS[0].value,
-      // imageUrl is not part of the form data for input
     });
     
     setIsFormDialogOpen(true);
@@ -322,7 +327,7 @@ export default function PartyManagerPage() {
       }
     } else if (deleteCharacterConfirmInput !== "DELETE") {
       toast({ title: "Incorrect Confirmation", description: "Please type DELETE to confirm.", variant: "destructive" });
-      return;
+      return; 
     }
     setIsDeleteCharacterConfirm2Open(false);
     setCharacterToDelete(null);
@@ -342,7 +347,7 @@ export default function PartyManagerPage() {
         if (uniqueLevels.length > 1) {
           setPartyUniqueLevels(uniqueLevels.sort((a,b) => a-b));
           setIsLevelDiscrepancyDialogOpen(true);
-          return;
+          return; 
         }
       }
       setLinkedPartyLevel(true);
@@ -358,7 +363,7 @@ export default function PartyManagerPage() {
   };
 
   const handleLevelDiscrepancyCancel = () => {
-    setLinkedPartyLevel(false);
+    setLinkedPartyLevel(false); 
     setIsLevelDiscrepancyDialogOpen(false);
   };
 
@@ -465,17 +470,29 @@ export default function PartyManagerPage() {
             <CardContent className="p-0 flex flex-col flex-grow">
                 <div className="aspect-[3/4] w-full bg-muted/50 relative overflow-hidden flex items-center justify-center">
                     {char.imageUrl ? (
-                        <NextImage src={char.imageUrl} alt={char.name} layout="fill" objectFit="cover" />
+                        <NextImage src={char.imageUrl} alt={char.name} layout="fill" objectFit="cover" data-ai-hint="character portrait fantasy" />
                     ) : (
                         <NextImage src="https://placehold.co/300x400.png" alt="Character Placeholder" layout="fill" objectFit="cover" data-ai-hint="character portrait fantasy" />
                     )}
                      <div className="absolute bottom-2 right-2 flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => toast({ title: "Image Upload Coming Soon!" })}>
-                            <UploadCloud className="h-4 w-4" />
-                        </Button>
-                         <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => handleOpenPortraitPromptDialog(char)}>
-                            <Palette className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => toast({ title: "Image Upload Coming Soon!" })}>
+                                  <UploadCloud className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Upload Image (Soon)</p></TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                             <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => handleOpenPortraitPromptDialog(char)}>
+                                    <Palette className="h-4 w-4" />
+                                </Button>
+                             </TooltipTrigger>
+                             <TooltipContent><p>Generate with AI</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                     </div>
                 </div>
                 <div className="p-4 flex-grow">
@@ -628,23 +645,23 @@ export default function PartyManagerPage() {
                   name="subclass"
                   value={characterFormData.subclass || ""}
                   onValueChange={(value) => handleSelectChange("subclass", value || "")}
-                  disabled={!characterFormData.class || (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).length === 0 || isLoadingApiSubclasses}
+                  disabled={!characterFormData.class || apiSubclasses.length === 0 || isLoadingApiSubclasses}
                 >
                   <SelectTrigger id="subclass-select">
                   <SelectValue placeholder={
                       isLoadingApiSubclasses ? "Loading subclasses..." :
                       !characterFormData.class ? "Select class first" :
-                      (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).length === 0 ? "No subclasses available" :
+                      apiSubclasses.length === 0 ? "No subclasses available" :
                       "Select a subclass (Optional)"
                   }/>
                   </SelectTrigger>
                   <SelectContent key={characterFormData.class || 'no-class-selected'}>
                     {isLoadingApiSubclasses && <SelectItem value="loading-subclasses" disabled>Loading...</SelectItem>}
-                    {!isLoadingApiSubclasses && (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).length === 0 && characterFormData.class ? (
+                    {!isLoadingApiSubclasses && apiSubclasses.length === 0 && characterFormData.class ? (
                         <SelectItem value="none" disabled>No subclasses for {characterFormData.class}</SelectItem>
                     ) : (
-                      (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).map((subclass) => (
-                        <SelectItem key={subclass.name} value={subclass.name}>
+                      apiSubclasses.map((subclass) => ( // Use apiSubclasses from state
+                        <SelectItem key={subclass.index} value={subclass.name}>
                           {subclass.name}
                         </SelectItem>
                       ))
@@ -663,8 +680,6 @@ export default function PartyManagerPage() {
                   <Input id="initiativeModifier" name="initiativeModifier" type="number" value={(characterFormData.initiativeModifier || 0).toString()} onChange={handleInputChange} placeholder="e.g., 2" />
                 </div>
               </div>
-
-              {/* Image URL input removed */}
 
               <div>
                 <Label htmlFor="color-select">Character Color</Label>
@@ -754,13 +769,13 @@ export default function PartyManagerPage() {
       />
 
       <AlertDialog open={isLevelSyncDialogOpen} onOpenChange={setIsLevelSyncDialogOpen}>
-        <UIAlertDialogContent>
+        <AlertDialogContent> {/* Corrected from UIAlertDialogContent */}
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription> {/* Corrected from AlertDialogDescription */}
               Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
               Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
@@ -770,7 +785,7 @@ export default function PartyManagerPage() {
               Yes, sync all to Level {levelSyncDetails?.newLevel}
             </Button>
           </UIAlertDialogFooter>
-        </UIAlertDialogContent>
+        </AlertDialogContent>
       </AlertDialog>
 
       <LevelDiscrepancyDialog
@@ -783,12 +798,12 @@ export default function PartyManagerPage() {
 
       {/* Delete Character Confirmation Dialog 1 */}
       <AlertDialog open={isDeleteCharacterConfirm1Open} onOpenChange={setIsDeleteCharacterConfirm1Open}>
-        <UIAlertDialogContent>
+        <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Delete Character "{characterToDelete?.name}"?</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription>
               This action cannot be undone. This will permanently delete this character from the party.
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteCharacterConfirm1Open(false); setCharacterToDelete(null); }}>Cancel</AlertDialogCancel>
@@ -799,7 +814,7 @@ export default function PartyManagerPage() {
               Delete
             </AlertDialogAction>
           </UIAlertDialogFooter>
-        </UIAlertDialogContent>
+        </AlertDialogContent>
       </AlertDialog>
 
       {/* Delete Character Confirmation Dialog 2 (Type DELETE) */}
@@ -841,4 +856,3 @@ export default function PartyManagerPage() {
     </div>
   );
 }
-
