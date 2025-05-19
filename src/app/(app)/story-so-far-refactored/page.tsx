@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, Library, Users, Loader2, Trash2, Edit3 } from "lucide-react";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogFooter as StandardDialogFooter } from "@/components/ui/dialog"; // Aliased to avoid conflict if AlertDialogFooter is also used directly
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogFooter as StandardDialogFooter, DialogDescription } from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -238,10 +238,7 @@ export default function StorySoFarRefactoredPage() {
     const currentSessionPlotPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
 
     if (currentSessionPlotPoints.length === 0) {
-        // setIsAdvanceSessionConfirmOpen(true); // Now directly advances
-        setCurrentSessionNumber(prev => prev + 1);
-        clearFullCampaignSummaryCache();
-        toast({title: `Session ${currentSessionNumber + 1} Started`, description: "No plot points from the previous session to summarize."});
+        toast({title: `Cannot End Session ${currentSessionNumber}`, description: "Please log at least one plot point before advancing to the next session.", variant: "destructive"});
         return;
     }
 
@@ -257,13 +254,6 @@ export default function StorySoFarRefactoredPage() {
     }
     setCurrentSessionNumber(prev => prev + 1);
     clearFullCampaignSummaryCache();
-  };
-
-  const handleConfirmAdvanceEmptySession = () => { // This function is no longer used directly by the button
-    if (!activeCampaign) return;
-    setCurrentSessionNumber(prev => prev + 1);
-    clearFullCampaignSummaryCache();
-    setIsAdvanceSessionConfirmOpen(false);
   };
 
   const handleGenerateFullCampaignSummary = async () => {
@@ -404,8 +394,6 @@ export default function StorySoFarRefactoredPage() {
     currentSessionNumber
   ])).sort((a, b) => b - a);
 
-  const currentSessionHasPlotPoints = plotPoints.some(p => p.sessionNumber === currentSessionNumber);
-
 
   if (isLoadingCampaigns || isLoadingData) {
     return <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />Loading campaign data...</div>;
@@ -413,22 +401,20 @@ export default function StorySoFarRefactoredPage() {
 
   if (!activeCampaign) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
-        <Card className="text-center py-12">
-          <CardHeader>
-            <Library className="mx-auto h-16 w-16 text-muted-foreground" />
-            <CardTitle className="mt-4">No Active Campaign</CardTitle>
-            <CardDescription>Please select or create a campaign to manage its story.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/campaign-management">
-                <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="w-full text-center py-12">
+        <CardHeader>
+          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+          <CardTitle className="mt-4">No Active Campaign</CardTitle>
+          <CardDescription>Please select or create a campaign to manage its story.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/campaign-management">
+              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -437,111 +423,111 @@ export default function StorySoFarRefactoredPage() {
     <div className="flex flex-col h-full p-4 sm:p-6 lg:p-8">
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow min-h-0">
-         <div className="lg:col-span-2 flex flex-col h-full">
-            <Card className="flex flex-col flex-grow">
-                <CardHeader className="shrink-0 flex flex-row justify-between items-center">
-                  <CardTitle>Campaign Log</CardTitle>
-                  <Button
-                      onClick={handleAdvanceSession}
-                      variant="outline"
-                      disabled={isGeneratingSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary}
-                  >
-                      {isGeneratingSessionSummary[currentSessionNumber] ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Ending Session...</> : <><ChevronRightSquare className="mr-2 h-5 w-5" /> End Session {currentSessionNumber} & Start Next</>}
-                  </Button>
-                </CardHeader>
-                <CardContent className="p-0 flex-grow min-h-0">
-                <ScrollArea className="h-full">
-                    <div className="space-y-6">
-                    {allSessionNumbers.length === 0 || (allSessionNumbers.length === 1 && allSessionNumbers[0] === currentSessionNumber && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) ? (
-                        <p className="text-muted-foreground text-center py-4 px-6">No plot points recorded yet for this campaign. Add the first one using the input on the right!</p>
-                    ) : (
-                        allSessionNumbers.map(sessionNum => {
-                        const isCurrentSession = sessionNum === currentSessionNumber;
-                        const sessionPoints = plotPoints.filter(p => p.sessionNumber === sessionNum).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-                        const viewMode = isCurrentSession ? 'details' : (sessionViewModes[sessionNum] || (sessionPoints.length > 0 ? 'summary' : 'details'));
-                        const summaryText = sessionSummaries[sessionNum];
-                        const isLoadingThisSessionSummary = isGeneratingSessionSummary[sessionNum];
+        <div className="lg:col-span-2 flex flex-col h-full">
+          <Card className="flex flex-col flex-grow">
+            <CardHeader className="shrink-0 flex flex-row justify-between items-center">
+              <CardTitle>Adventure Recap</CardTitle>
+              <Button
+                onClick={handleAdvanceSession}
+                variant="outline"
+                disabled={isGeneratingSessionSummary[currentSessionNumber] || isGeneratingGlobalSummary || plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0}
+              >
+                {isGeneratingSessionSummary[currentSessionNumber] ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Ending Session...</> : <><ChevronRightSquare className="mr-2 h-5 w-5" /> End Session {currentSessionNumber}</>}
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0 flex-grow min-h-0">
+              <ScrollArea className="h-full">
+                <div className="space-y-6">
+                  {allSessionNumbers.length === 0 || (allSessionNumbers.length === 1 && allSessionNumbers[0] === currentSessionNumber && plotPoints.filter(p => p.sessionNumber === currentSessionNumber).length === 0) ? (
+                      <p className="text-muted-foreground text-center py-4 px-6">No plot points recorded yet for this campaign. Add the first one using the input on the right!</p>
+                  ) : (
+                      allSessionNumbers.map(sessionNum => {
+                      const isCurrentSession = sessionNum === currentSessionNumber;
+                      const sessionPoints = plotPoints.filter(p => p.sessionNumber === sessionNum).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                      const viewMode = isCurrentSession ? 'details' : (sessionViewModes[sessionNum] || (sessionPoints.length > 0 ? 'summary' : 'details'));
+                      const summaryText = sessionSummaries[sessionNum];
+                      const isLoadingThisSessionSummary = isGeneratingSessionSummary[sessionNum];
 
-                        return (
-                            <div key={`session-${sessionNum}`} className="border-b pb-4 last:border-b-0">
-                            <div className="sticky top-0 bg-background/80 backdrop-blur-sm py-2 px-6 z-10 flex justify-between items-center border-b">
-                                <h3 className={`text-xl font-semibold ${isCurrentSession ? 'text-primary' : 'text-foreground'}`}>
-                                Session {sessionNum} {isCurrentSession ? '(Current)' : ''}
-                                </h3>
-                                {!isCurrentSession && (summaryText || sessionPoints.length > 0) && (
-                                <Button variant="outline" size="sm" onClick={() => toggleSessionView(sessionNum)} disabled={isLoadingThisSessionSummary}>
-                                    {viewMode === 'summary' ? <List className="mr-2 h-4 w-4" /> : <AlignLeft className="mr-2 h-4 w-4" />}
-                                    {isLoadingThisSessionSummary ? "Loading..." : (viewMode === 'summary' ? 'View Details' : 'View Summary')}
-                                </Button>
-                                )}
-                            </div>
+                      return (
+                          <div key={`session-${sessionNum}`} className="border-b pb-4 last:border-b-0">
+                          <div className="sticky top-0 bg-background/80 backdrop-blur-sm py-2 px-6 z-10 flex justify-between items-center border-b">
+                              <h3 className={`text-xl font-semibold ${isCurrentSession ? 'text-primary' : 'text-foreground'}`}>
+                              Session {sessionNum} {isCurrentSession ? '(Current)' : ''}
+                              </h3>
+                              {!isCurrentSession && (summaryText || sessionPoints.length > 0) && (
+                              <Button variant="outline" size="sm" onClick={() => toggleSessionView(sessionNum)} disabled={isLoadingThisSessionSummary}>
+                                  {viewMode === 'summary' ? <List className="mr-2 h-4 w-4" /> : <AlignLeft className="mr-2 h-4 w-4" />}
+                                  {isLoadingThisSessionSummary ? "Loading..." : (viewMode === 'summary' ? 'View Details' : 'View Summary')}
+                              </Button>
+                              )}
+                          </div>
 
-                            <div className="px-6 pt-2">
-                                {isLoadingThisSessionSummary && (
-                                <div className="p-3 border rounded-md bg-muted/30 shadow-sm flex items-center justify-center">
-                                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                                    <p className="text-sm text-muted-foreground">Generating summary for Session {sessionNum}...</p>
-                                </div>
-                                )}
+                          <div className="px-6 pt-2">
+                              {isLoadingThisSessionSummary && (
+                              <div className="p-3 border rounded-md bg-muted/30 shadow-sm flex items-center justify-center">
+                                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                  <p className="text-sm text-muted-foreground">Generating summary for Session {sessionNum}...</p>
+                              </div>
+                              )}
 
-                                {!isLoadingThisSessionSummary && viewMode === 'summary' && summaryText && !isCurrentSession && (
-                                <div className="p-3 border rounded-md bg-primary/5 shadow-sm">
-                                    <p className="text-sm whitespace-pre-wrap">{summaryText}</p>
-                                </div>
-                                )}
+                              {!isLoadingThisSessionSummary && viewMode === 'summary' && summaryText && !isCurrentSession && (
+                              <div className="p-3 border rounded-md bg-primary/5 shadow-sm">
+                                  <p className="text-sm whitespace-pre-wrap">{summaryText}</p>
+                              </div>
+                              )}
 
-                                {!isLoadingThisSessionSummary && (viewMode === 'details' || isCurrentSession) && (
-                                <div className="space-y-4">
-                                    {renderFormattedPlotPoints(sessionPoints)}
-                                    {!isCurrentSession && viewMode === 'details' && (
-                                    <div className="space-y-4 mt-4 border-t pt-4">
-                                        <div>
-                                        <h4 className="font-semibold text-sm mb-2">Add Forgotten Event to Session {sessionNum}</h4>
-                                        <Textarea
-                                            id={`past-plot-point-${sessionNum}`}
-                                            value={pastPlotPointInput[sessionNum] || ""}
-                                            onChange={(e) => setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: e.target.value }))}
-                                            placeholder="e.g., Discovered a forgotten clue..."
-                                            rows={2}
-                                            className="my-1"
-                                        />
-                                        <Button
-                                            size="sm"
-                                            className="mt-1"
-                                            onClick={() => handleAddPlotPointToPastSession(sessionNum)}
-                                            disabled={!pastPlotPointInput[sessionNum]?.trim()}
-                                        >
-                                            <PlusCircle className="mr-2 h-4 w-4" /> Add Event
-                                        </Button>
-                                        </div>
-                                        {(summaryText || sessionPoints.length > 0) && (
-                                        <div>
-                                            <h4 className="font-semibold text-sm mb-2">Session Summary Tools</h4>
-                                            <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleRegenerateSessionSummary(sessionNum)}
-                                            disabled={isLoadingThisSessionSummary || isGeneratingGlobalSummary}
-                                            >
-                                            <Zap className="mr-2 h-4 w-4" />
-                                            {isLoadingThisSessionSummary ? 'Regenerating...' : 'Re-generate Summary'}
-                                            </Button>
-                                            <p className="text-xs text-muted-foreground mt-1">Uses the global detail level.</p>
-                                        </div>
-                                        )}
-                                    </div>
-                                    )}
-                                </div>
-                                )}
-                            </div>
-                            </div>
-                        );
-                        })
-                    )}
-                    </div>
-                </ScrollArea>
-                </CardContent>
-            </Card>
+                              {!isLoadingThisSessionSummary && (viewMode === 'details' || isCurrentSession) && (
+                              <div className="space-y-4">
+                                  {renderFormattedPlotPoints(sessionPoints)}
+                                  {!isCurrentSession && viewMode === 'details' && (
+                                  <div className="space-y-4 mt-4 border-t pt-4">
+                                      <div>
+                                      <h4 className="font-semibold text-sm mb-2">Add Forgotten Event to Session {sessionNum}</h4>
+                                      <Textarea
+                                          id={`past-plot-point-${sessionNum}`}
+                                          value={pastPlotPointInput[sessionNum] || ""}
+                                          onChange={(e) => setPastPlotPointInput(prev => ({ ...prev, [sessionNum]: e.target.value }))}
+                                          placeholder="e.g., Discovered a forgotten clue..."
+                                          rows={2}
+                                          className="my-1"
+                                      />
+                                      <Button
+                                          size="sm"
+                                          className="mt-1"
+                                          onClick={() => handleAddPlotPointToPastSession(sessionNum)}
+                                          disabled={!pastPlotPointInput[sessionNum]?.trim()}
+                                      >
+                                          <PlusCircle className="mr-2 h-4 w-4" /> Add Event
+                                      </Button>
+                                      </div>
+                                      {(summaryText || sessionPoints.length > 0) && (
+                                      <div>
+                                          <h4 className="font-semibold text-sm mb-2">Session Summary Tools</h4>
+                                          <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleRegenerateSessionSummary(sessionNum)}
+                                          disabled={isLoadingThisSessionSummary || isGeneratingGlobalSummary}
+                                          >
+                                          <Zap className="mr-2 h-4 w-4" />
+                                          {isLoadingThisSessionSummary ? 'Regenerating...' : 'Re-generate Summary'}
+                                          </Button>
+                                          <p className="text-xs text-muted-foreground mt-1">Uses the global detail level.</p>
+                                      </div>
+                                      )}
+                                  </div>
+                                  )}
+                              </div>
+                              )}
+                          </div>
+                          </div>
+                      );
+                      })
+                  )}
+                  </div>
+              </ScrollArea>
+              </CardContent>
+          </Card>
         </div>
 
 
@@ -679,13 +665,17 @@ export default function StorySoFarRefactoredPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmAdvanceEmptySession}>Yes, Advance Session</AlertDialogAction>
+                <AlertDialogAction onClick={() => { 
+                  setCurrentSessionNumber(prev => prev + 1);
+                  clearFullCampaignSummaryCache();
+                  setIsAdvanceSessionConfirmOpen(false);
+                }}>Yes, Advance Session</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
-        <DialogContent>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -701,7 +691,7 @@ export default function StorySoFarRefactoredPage() {
               Proceed to Final Confirmation
             </AlertDialogAction>
           </AlertDialogFooter>
-        </DialogContent>
+        </AlertDialogContent>
       </Dialog>
 
       <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
@@ -760,15 +750,15 @@ export function AdventureRecapHelpContent() {
           <p>
             1. Log key events as "Plot Points" for the{' '}
             <strong className="text-foreground">current session</strong> using the
-            input field on the right. Click "Add to Log".
+            input field on the right. Click "Add to Log". You can edit or delete plot points using the icons that appear on hover.
           </p>
           <p>
-            2. When a session ends, click "End Session {`{X}`} & Start Next".
+            2. When a session ends, click "End Session {`{X}`}". You must log at least one plot point to end the session.
             <ul className="list-disc pl-5 space-y-1 mt-1">
               <li>
                 An AI summary will be automatically generated for the completed
                 session using the selected detail level and displayed with an
-                "episode title" format. If the session is empty, you will be prompted to confirm before advancing.
+                "episode title" format.
               </li>
             </ul>
           </p>
@@ -822,5 +812,7 @@ export function AdventureRecapHelpContent() {
     </>
   );
 }
+
+    
 
     
