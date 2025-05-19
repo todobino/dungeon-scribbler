@@ -1,5 +1,4 @@
 
-
 // Removed: import type { DndClass } from './constants'; // DndClass is no longer defined in constants
 
 export interface PlayerCharacter {
@@ -96,6 +95,7 @@ export interface Combatant {
   ac?: number;
   hp?: number;
   currentHp?: number;
+  tempHp?: number; // Added for temporary hit points
   initiativeModifier?: number; 
   monsterIndex?: string; 
   cr?: string;
@@ -289,6 +289,7 @@ export interface RollLogEntry {
   modifier?: number;
   sides?: number;
   isRolling?: boolean;
+  isQuickRoll?: boolean;
 }
 
 export interface HomebrewMonsterFormData {
@@ -473,3 +474,4 @@ export interface ShopItem {
   rarity?: string; // e.g., Common, Uncommon, Rare
   // Add other properties as needed, like weight, damage, AC, etc.
 }
+

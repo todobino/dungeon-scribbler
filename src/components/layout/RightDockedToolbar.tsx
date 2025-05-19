@@ -8,41 +8,45 @@ import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDra
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { StatusConditionsDrawer } from "@/components/features/status-conditions/StatusConditionsDrawer";
 import { SpellbookDrawer } from "@/components/features/spellbook/SpellbookDrawer";
-import { ItemShopDrawer } from "@/components/features/item-shop/ItemShopDrawer"; // New Import
+import { ItemShopDrawer } from "@/components/features/item-shop/ItemShopDrawer";
 import { 
   TOOLBAR_ITEMS, 
   COMBINED_TOOLS_DRAWER_ID, 
   MONSTER_MASH_DRAWER_ID, 
   STATUS_CONDITIONS_DRAWER_ID,
   SPELLBOOK_DRAWER_ID,
-  ITEM_SHOP_DRAWER_ID, // New Import
+  ITEM_SHOP_DRAWER_ID,
   DICE_ROLLER_TAB_ID, 
   COMBAT_TRACKER_TAB_ID 
 } from "@/lib/constants";
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store } from "lucide-react"; // New: Store
+import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store } from "lucide-react";
 import { useCampaign } from "@/contexts/campaign-context";
+
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
   const { notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
 
-  // State for Dice Roller (lifted)
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
-  const getNewRollId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2,7)}`, []);
+  const rollIdCounterRef = useRef(0);
+  const getNewRollId = useCallback(() => {
+    rollIdCounterRef.current += 1;
+    return `${Date.now()}-${rollIdCounterRef.current}`;
+  }, []);
 
   const addRollToLog = useCallback((rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, entryIdToUpdate?: string) => {
     const idToUse = entryIdToUpdate || getNewRollId();
     setRollLog(prevLog => {
-      const newEntryBase = {
+      const newEntryBase: RollLogEntry = {
         ...rollData,
         id: idToUse,
         isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
       };
-      if (entryIdToUpdate && prevLog.find(entry => entry.id === entryIdToUpdate)) {
+      if (entryIdToUpdate && prevLog.some(entry => entry.id === entryIdToUpdate)) {
         return prevLog.map(entry => 
             entry.id === entryIdToUpdate 
             ? newEntryBase 
@@ -59,7 +63,6 @@ export function RightDockedToolbar() {
     setRollLog([]);
   }, []);
 
-  // State for Combat Tracker (lifted)
   const [combatants, setCombatants] = useState<Combatant[]>([]);
 
   const handleAddCombatant = useCallback((combatant: Combatant) => {
@@ -78,10 +81,10 @@ export function RightDockedToolbar() {
     setCombatants(prevCombatants => prevCombatants.filter(c => c.id !== combatantId));
   }, []);
 
-  const handleUpdateCombatantHp = useCallback((combatantId: string, newHp: number) => {
+  const handleUpdateCombatant = useCallback((combatantId: string, updates: Partial<Combatant>) => {
     setCombatants(prevCombatants =>
       prevCombatants.map(c =>
-        c.id === combatantId ? { ...c, currentHp: newHp } : c
+        c.id === combatantId ? { ...c, ...updates } : c
       )
     );
   }, []);
@@ -89,6 +92,7 @@ export function RightDockedToolbar() {
   const handleEndCombat = useCallback(() => {
     setCombatants([]);
   }, []);
+
 
   const handleToggleDrawer = (itemId: string) => {
     if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
@@ -99,7 +103,7 @@ export function RightDockedToolbar() {
         setOpenDrawerId(COMBINED_TOOLS_DRAWER_ID);
         setActiveCombinedTab(newTab);
       }
-    } else if (itemId === MONSTER_MASH_DRAWER_ID || itemId === STATUS_CONDITIONS_DRAWER_ID || itemId === SPELLBOOK_DRAWER_ID || itemId === ITEM_SHOP_DRAWER_ID) {
+    } else if ([MONSTER_MASH_DRAWER_ID, STATUS_CONDITIONS_DRAWER_ID, SPELLBOOK_DRAWER_ID, ITEM_SHOP_DRAWER_ID].includes(itemId)) {
       setOpenDrawerId(prev => (prev === itemId ? null : itemId));
     }
   };
@@ -133,13 +137,13 @@ export function RightDockedToolbar() {
               buttonBaseCn,
               isActiveTool && "bg-primary/20 text-primary ring-2 ring-primary",
               isThisCombatTrackerIcon && isCombatActive && !isActiveTool && "animate-pulse ring-2 ring-destructive bg-destructive/20 text-destructive",
-              isThisCombatTrackerIcon && isCombatActive && isActiveTool && "animate-pulse ring-2 ring-destructive" // Keeps pulse if active
+              isThisCombatTrackerIcon && isCombatActive && isActiveTool && "animate-pulse ring-2 ring-destructive" 
             );
             
             const isLastItem = index === TOOLBAR_ITEMS.length - 1;
             const nextItemIsSeparatorTarget = TOOLBAR_ITEMS[index + 1]?.id === MONSTER_MASH_DRAWER_ID || 
                                               TOOLBAR_ITEMS[index + 1]?.id === SPELLBOOK_DRAWER_ID ||
-                                              TOOLBAR_ITEMS[index + 1]?.id === ITEM_SHOP_DRAWER_ID; // Added Item Shop
+                                              TOOLBAR_ITEMS[index + 1]?.id === ITEM_SHOP_DRAWER_ID; 
 
             return (
               <React.Fragment key={item.id}>
@@ -172,17 +176,15 @@ export function RightDockedToolbar() {
             if(!isOpen) setOpenDrawerId(null);
         }}
         defaultTab={activeCombinedTab}
-        // Props for Dice Roller
         rollLog={rollLog}
         onInternalRoll={addRollToLog}
         getNewRollId={getNewRollId}
         onClearRollLog={handleClearRollLog}
-        // Props for Combat Tracker
         combatants={combatants}
         onAddCombatant={handleAddCombatant}
         onAddCombatants={handleAddCombatants}
         onRemoveCombatant={handleRemoveCombatant}
-        onUpdateCombatantHp={handleUpdateCombatantHp}
+        onUpdateCombatant={handleUpdateCombatant}
         onEndCombat={handleEndCombat}
       />
       <MonsterMashDrawer

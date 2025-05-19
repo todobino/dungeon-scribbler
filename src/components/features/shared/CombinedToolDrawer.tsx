@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 
-import { Dice5, Zap, Trash2, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, ShieldAlert, Settings2Icon, ChevronsRight } from "lucide-react";
+import { Dice5, Zap, Trash2, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, Shield, ShieldAlert, Settings2Icon, ChevronsRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
@@ -24,7 +24,7 @@ import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, Encounte
 import { useCampaign } from "@/contexts/campaign-context";
 import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
 import { useToast } from "@/hooks/use-toast";
 
 interface CombinedToolDrawerProps {
@@ -39,7 +39,7 @@ interface CombinedToolDrawerProps {
   onAddCombatant: (combatant: Combatant) => void;
   onAddCombatants: (newCombatants: Combatant[]) => void;
   onRemoveCombatant: (combatantId: string) => void;
-  onUpdateCombatantHp: (combatantId: string, newHp: number) => void;
+  onUpdateCombatant: (combatantId: string, updates: Partial<Combatant>) => void; // Changed prop name and signature
   onEndCombat: () => void;
 }
 
@@ -113,18 +113,16 @@ export function CombinedToolDrawer({
   onAddCombatant,
   onAddCombatants,
   onRemoveCombatant,
-  onUpdateCombatantHp,
+  onUpdateCombatant,
   onEndCombat
 }: CombinedToolDrawerProps) {
   const { activeCampaign, savedEncountersUpdateKey } = useCampaign();
   const { toast } = useToast();
 
-  // Dice Roller State
   const [inputValue, setInputValue] = useState("");
   const [rollMode, setRollMode] = useState<RollMode>("normal");
   const diceUniqueId = useId();
 
-  // Combat Tracker State
   const [currentTurnIndex, setCurrentTurnIndex] = useState<number | null>(null);
   const combatUniqueId = useId();
   const [damageInputs, setDamageInputs] = useState<Record<string, string>>({});
@@ -292,16 +290,53 @@ export function CombinedToolDrawer({
   const handleDamageInputChange = (combatantId: string, value: string) => setDamageInputs(prev => ({ ...prev, [combatantId]: value }));
   
   const handleApplyDamage = (combatantId: string, type: 'damage' | 'heal') => {
-    const amountStr = damageInputs[combatantId]; if (!amountStr) return;
-    const amount = parseInt(amountStr); if (isNaN(amount) || amount <= 0) return;
+    const amountStr = damageInputs[combatantId];
+    if (!amountStr) return;
+    const amount = parseInt(amountStr);
+    if (isNaN(amount) || amount <= 0) return;
+  
     const combatant = combatants.find(c => c.id === combatantId);
-    if (combatant && combatant.hp !== undefined) {
-      let newHp = combatant.currentHp ?? combatant.hp;
-      newHp = type === 'damage' ? Math.max(0, newHp - amount) : Math.min(combatant.hp, newHp + amount);
-      onUpdateCombatantHp(combatantId, newHp);
+    if (!combatant) return;
+  
+    let newCurrentHp = combatant.currentHp ?? combatant.hp ?? 0;
+    let newTempHp = combatant.tempHp ?? 0;
+    const updates: Partial<Combatant> = {};
+  
+    if (type === 'damage') {
+      if (newTempHp > 0) {
+        const damageToTemp = Math.min(amount, newTempHp);
+        newTempHp -= damageToTemp;
+        const remainingDamage = amount - damageToTemp;
+        if (remainingDamage > 0) {
+          newCurrentHp = Math.max(0, newCurrentHp - remainingDamage);
+        }
+      } else {
+        newCurrentHp = Math.max(0, newCurrentHp - amount);
+      }
+      updates.tempHp = newTempHp;
+      updates.currentHp = newCurrentHp;
+    } else if (type === 'heal') {
+      if (combatant.hp !== undefined) { // Can only heal if max HP is known
+        newCurrentHp = Math.min(combatant.hp, newCurrentHp + amount);
+        updates.currentHp = newCurrentHp;
+      }
     }
+    onUpdateCombatant(combatantId, updates);
     setDamageInputs(prev => ({ ...prev, [combatantId]: "" }));
   };
+
+  const handleAddTempHp = (combatantId: string) => {
+    const amountStr = damageInputs[combatantId];
+    if (!amountStr) return;
+    const amount = parseInt(amountStr);
+    if (isNaN(amount) || amount < 0) { // Temp HP can be 0 to remove it
+      toast({ title: "Invalid Amount", description: "Temporary HP amount must be a non-negative number.", variant: "destructive"});
+      return;
+    }
+    onUpdateCombatant(combatantId, { tempHp: amount }); // New Temp HP replaces old
+    setDamageInputs(prev => ({ ...prev, [combatantId]: "" }));
+  };
+
 
   const handleOpenDeleteConfirm = (combatant: Combatant) => {
     setCombatantToDelete(combatant);
@@ -364,10 +399,12 @@ export function CombinedToolDrawer({
   const handleAddFriendlyButtonClick = () => {
     if (availablePartyMembers.length > 0) {
       handleRollAllPlayerInitiatives();
+      // Do not open the manual form if players were added
     } else {
+      // Only toggle manual form if no players were available to add
       setShowAddFriendlySection(p => !p);
     }
-    setShowAddEnemySection(false);
+    setShowAddEnemySection(false); // Close enemy section if open
     setSelectedCombatantId(null);
   };
 
@@ -398,13 +435,13 @@ export function CombinedToolDrawer({
       id: `${combatUniqueId}-ally-${name.replace(/\s+/g, '')}-${Date.now()}`,
       name,
       initiative: initiativeValue,
-      type: 'player', 
-      color: undefined,
+      type: 'player', // Generic allies are treated as 'player' type for color/UI
+      color: undefined, // Or a default color for allies
       playerId: undefined,
       ac,
       hp,
       currentHp: hp,
-      initiativeModifier: undefined 
+      initiativeModifier: undefined // Generic allies typically don't have a stored mod
     };
     onAddCombatant(newCombatant);
     if (currentTurnIndex === null && combatants.length + 1 > 0) setCurrentTurnIndex(0);
@@ -490,14 +527,13 @@ export function CombinedToolDrawer({
     let groupInitiativeValue: number | undefined;
     const initMod = parseModifierString(enemyInitiativeModifierInput);
 
-    if (quantity > 1 && rollGroupInitiativeFlag) { // Group initiative for multiple enemies
+    if (quantity > 1 && rollGroupInitiativeFlag) { 
         groupInitiativeValue = rollDie(20) + initMod;
-    } else if (!isFixedInitiativeDisabled && enemyInitiativeInput.trim() !== "") { // Fixed initiative for single enemy or grouped multiple
+    } else if (!isFixedInitiativeDisabled && enemyInitiativeInput.trim() !== "") { 
         const fixedInit = parseInt(enemyInitiativeInput.trim());
         if (!isNaN(fixedInit)) {
-            groupInitiativeValue = fixedInit; // Treat as group initiative if set
+            groupInitiativeValue = fixedInit; 
         } else {
-            // If fixed init is invalid, roll (or could show error)
             groupInitiativeValue = rollDie(20) + initMod;
         }
     }
@@ -507,9 +543,9 @@ export function CombinedToolDrawer({
       let initiativeValue: number;
       const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
 
-      if (groupInitiativeValue !== undefined) { // Use group/fixed if set
+      if (groupInitiativeValue !== undefined) { 
         initiativeValue = groupInitiativeValue;
-      } else { // Individual roll (single enemy with no fixed, or multiple ungrouped)
+      } else { 
         initiativeValue = rollDie(20) + initMod;
       }
 
@@ -521,8 +557,10 @@ export function CombinedToolDrawer({
         ac: acValue,
         hp: hpValue,
         currentHp: hpValue,
+        tempHp: 0,
         initiativeModifier: initMod,
         monsterIndex: selectedFavoriteMonsterIndexForCombatAdd,
+        cr: undefined // CR is not typically tracked directly in combatant, but can be added from favorite if needed
       });
     }
     onAddCombatants(newEnemies);
@@ -557,6 +595,7 @@ export function CombinedToolDrawer({
           ac: isNaN(acValue!) ? undefined : acValue,
           hp: isNaN(hpValue!) ? undefined : hpValue,
           currentHp: isNaN(hpValue!) ? undefined : hpValue,
+          tempHp: 0,
           cr: monster.cr,
           initiativeModifier: monster.initiativeModifier,
           monsterIndex: monster.monsterIndex
@@ -708,8 +747,8 @@ export function CombinedToolDrawer({
                 <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
             </div>
             <div>
                 <Label htmlFor="friendly-initiative-inline">Initiative</Label>
@@ -739,7 +778,7 @@ export function CombinedToolDrawer({
                     </Button>
                 </div>
                 <Input id="enemy-name-inline" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} />
-                    <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <div><Label htmlFor="enemy-ac-inline">AC</Label><Input id="enemy-ac-inline" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
                     <div><Label htmlFor="enemy-hp-inline">HP</Label><Input id="enemy-hp-inline" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
                 </div>
@@ -754,7 +793,6 @@ export function CombinedToolDrawer({
                   </div>
                   <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())} disabled={isFixedInitiativeDisabled}><Dice5 className="h-4 w-4" /></Button>
                 </div>
-
                 <div className="flex items-end gap-3">
                     <div className="w-20"><Label htmlFor="enemy-quantity-inline">Quantity</Label><Input id="enemy-quantity-inline" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" /></div>
                     <div className="flex items-center space-x-2 pb-1"><Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} disabled={isGroupSwitchDisabled}/><Label htmlFor="roll-group-initiative-inline" className="cursor-pointer text-sm">Group</Label></div>
@@ -770,7 +808,7 @@ export function CombinedToolDrawer({
                     </Button>
                 </div>
                 </TabsContent>
-                <TabsContent value="load-encounter" className="mt-3 flex-grow flex flex-col min-h-0">
+                <TabsContent value="load-encounter" className="mt-4 flex-grow flex flex-col min-h-0">
                 {isLoadingSavedEncounters ? (
                 <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
                 ) : savedEncountersForCombat.length === 0 ? (
@@ -822,20 +860,22 @@ export function CombinedToolDrawer({
                         ref={(el) => combatantRefs.current.set(c.id, el)}
                         className={`p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm ${currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background'}`}
                         style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
+                        onClick={() => handleCombatantCardClick(c)}
                         >
                         <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center cursor-pointer flex-1" onClick={() => handleCombatantCardClick(c)}>
-                            <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
-                            <div>
-                                <p className={cn("font-medium", c.type === 'enemy' && 'text-destructive', selectedCombatantId === c.id && c.type === 'enemy' && 'text-primary')}>{c.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                    AC: {c.ac ?? 'N/A'}
-                                    {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
-                                </p>
-                            </div>
+                            <div className="flex items-center flex-1">
+                                <span className={`font-bold text-lg mr-3 ${currentTurnIndex === index ? 'text-primary' : ''}`}>{c.initiative}</span>
+                                <div>
+                                    <p className={cn("font-medium", c.type === 'enemy' && 'text-destructive', selectedCombatantId === c.id && c.type === 'enemy' && 'text-primary')}>{c.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        AC: {c.ac ?? 'N/A'}
+                                        {(c.hp !== undefined) && <span className="ml-1">| HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}</span>}
+                                        {c.tempHp !== undefined && c.tempHp > 0 && <span className="ml-1 text-blue-500">(+{c.tempHp} Temp)</span>}
+                                    </p>
+                                </div>
                             </div>
                             {c.type === 'enemy' && c.monsterIndex && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => handleOpenMonsterDetailDialog(c)}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={(e) => { e.stopPropagation(); handleOpenMonsterDetailDialog(c); }}>
                                     <BookOpen className="h-4 w-4 text-muted-foreground" />
                                 </Button>
                             )}
@@ -843,17 +883,21 @@ export function CombinedToolDrawer({
 
                         {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
                         <div className="mt-1">
-                            <Progress value={(c.currentHp / c.hp) * 100} className="h-2 [&>div]:bg-destructive" />
+                            <Progress value={Math.max(0, (c.currentHp / c.hp) * 100)} className="h-1.5 [&>div]:bg-destructive" />
                         </div>
                         )}
                         {c.type === 'enemy' && c.id === selectedCombatantId && c.currentHp !== undefined && c.currentHp > 0 && (
                              <div className="flex items-center justify-center gap-1.5 pt-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c);}}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
                                 <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
                                 <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
                                 <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
+                                <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-blue-500 text-blue-500 hover:bg-blue-500/10 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); handleAddTempHp(c.id); }}><Shield className="mr-1 h-3 w-3" /> Temp HP</Button>
                             </div>
                         )}
-                        {c.type === 'enemy' && c.currentHp !== undefined && c.currentHp === 0 && (
+                        {c.type === 'enemy' && c.currentHp !== undefined && c.currentHp <= 0 && (
                             <Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>
                         )}
                         </li>
@@ -925,7 +969,7 @@ export function CombinedToolDrawer({
             </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
-        </AlertDialog>
+    </AlertDialog>
 
     <Dialog open={isMonsterDetailDialogOpen} onOpenChange={setIsMonsterDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
