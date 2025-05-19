@@ -6,14 +6,14 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; 
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2, VenetianMask } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants"; 
-import { DND_CLASS_DETAILS } from "@/lib/data/class-data"; 
+import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants";
+import { DND_CLASS_DETAILS } from "@/lib/data/class-data";
 import { useCampaign, type CharacterFormData } from "@/contexts/campaign-context";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils";
 
 
 export default function PartyManagerPage() {
-  const { 
-    activeCampaign, 
-    activeCampaignParty, 
-    isLoadingCampaigns, 
+  const {
+    activeCampaign,
+    activeCampaignParty,
+    isLoadingCampaigns,
     isLoadingParty,
     addCharacterToActiveCampaign,
     updateCharacterInActiveCampaign,
@@ -53,7 +53,7 @@ export default function PartyManagerPage() {
   const [isLoadingApiRaces, setIsLoadingApiRaces] = useState(false);
   const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]);
   const [isLoadingApiSubclasses, setIsLoadingApiSubclasses] = useState(false);
-  
+
   const [characterToDelete, setCharacterToDelete] = useState<PlayerCharacter | null>(null);
   const [isDeleteCharacterConfirm1Open, setIsDeleteCharacterConfirm1Open] = useState(false);
   const [isDeleteCharacterConfirm2Open, setIsDeleteCharacterConfirm2Open] = useState(false);
@@ -63,8 +63,8 @@ export default function PartyManagerPage() {
   const initialCharacterFormState: CharacterFormData = {
     name: "",
     level: 1,
-    class: DND_CLASS_DETAILS[0]?.class || "", 
-    race: "", 
+    class: DND_CLASS_DETAILS[0]?.class || "",
+    race: "",
     subclass: "",
     armorClass: 10,
     initiativeModifier: 0,
@@ -93,25 +93,12 @@ export default function PartyManagerPage() {
 
   useEffect(() => {
     if (isFormDialogOpen && characterFormData.class) {
-      const fetchSubclasses = async () => {
-        setIsLoadingApiSubclasses(true);
-        setApiSubclasses([]); 
-        const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class);
-        if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
-          // Using local data
-          setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({ index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: '' })));
-        } else {
-           // Fallback or if you intend to fetch from API later
-          // For now, just clear if no local subclasses found
-          setApiSubclasses([]);
-        }
-        setIsLoadingApiSubclasses(false);
-      };
-      fetchSubclasses();
+      const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class);
+      setApiSubclasses(selectedClassDetail?.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})) || []);
     } else if (isFormDialogOpen) {
-      setApiSubclasses([]); // Clear subclasses if no class is selected
+      setApiSubclasses([]);
     }
-  }, [isFormDialogOpen, characterFormData.class, toast]);
+  }, [isFormDialogOpen, characterFormData.class]);
 
   const availableSubclasses = DND_CLASS_DETAILS.find(
     (cls) => cls.class === characterFormData.class
@@ -120,7 +107,7 @@ export default function PartyManagerPage() {
 
   const handleFormSubmit = async () => {
     if (characterFormData.name?.trim() && characterFormData.class && characterFormData.race?.trim() && activeCampaign) {
-      
+
       const dataToSave: CharacterFormData = {
         ...characterFormData,
         name: characterFormData.name.trim(),
@@ -136,17 +123,17 @@ export default function PartyManagerPage() {
           setLevelSyncDetails({
             characterId: editingCharacter.id,
             newLevel: newLevel,
-            allFormData: dataToSave 
+            allFormData: dataToSave
           });
           setIsLevelSyncDialogOpen(true);
-          return; 
+          return;
         } else {
           await updateCharacterInActiveCampaign({ ...editingCharacter, ...dataToSave });
         }
-      } else { 
+      } else {
         let dataToAdd = { ...dataToSave };
         if (linkedPartyLevel && activeCampaignParty.length > 0) {
-          dataToAdd.level = activeCampaignParty[0].level; 
+          dataToAdd.level = activeCampaignParty[0].level;
         }
         await addCharacterToActiveCampaign(dataToAdd);
       }
@@ -157,13 +144,13 @@ export default function PartyManagerPage() {
   };
 
   const handleLevelSyncConfirmation = async (syncAll: boolean) => {
-    if (!levelSyncDetails || !editingCharacter) return; 
+    if (!levelSyncDetails || !editingCharacter) return;
 
     const { newLevel, allFormData } = levelSyncDetails;
 
     if (syncAll) {
       try {
-        await setPartyLevel(newLevel); 
+        await setPartyLevel(newLevel);
         await updateCharacterInActiveCampaign({ ...editingCharacter, ...allFormData, level: newLevel });
       } catch (error) {
         console.error("Error syncing party levels:", error);
@@ -176,7 +163,7 @@ export default function PartyManagerPage() {
     setLevelSyncDetails(null);
     setCharacterFormData(initialCharacterFormState);
     setEditingCharacter(null);
-    setIsFormDialogOpen(false); 
+    setIsFormDialogOpen(false);
   };
 
 
@@ -192,13 +179,13 @@ export default function PartyManagerPage() {
      setCharacterFormData((prev) => {
       const newState = { ...prev, [name]: value };
       if (name === "class") {
-        newState.subclass = ""; // Reset subclass when class changes
-        setApiSubclasses([]); // Clear fetched subclasses
+        newState.subclass = "";
+        setApiSubclasses([]);
       }
       return newState;
     });
   };
-  
+
   const handleColorChange = (value: string) => {
     setCharacterFormData((prev) => ({
       ...prev,
@@ -209,6 +196,9 @@ export default function PartyManagerPage() {
   const openAddDialog = () => {
     setEditingCharacter(null);
     let newCharLevel = 1;
+    if (activeCampaign?.defaultStartingLevel && activeCampaign.defaultStartingLevel > 0) {
+      newCharLevel = activeCampaign.defaultStartingLevel;
+    }
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       newCharLevel = activeCampaignParty[0].level;
     }
@@ -235,7 +225,7 @@ export default function PartyManagerPage() {
     setCurrentCharacterDetails(character);
     setIsDetailsDialogOpen(true);
   };
-  
+
   const handleOpenDeleteCharacterDialog1 = (character: PlayerCharacter) => {
     setCharacterToDelete(character);
     setIsDeleteCharacterConfirm1Open(true);
@@ -258,7 +248,7 @@ export default function PartyManagerPage() {
       }
     } else if (deleteCharacterConfirmInput !== "DELETE") {
       toast({ title: "Incorrect Confirmation", description: "Please type DELETE to confirm.", variant: "destructive" });
-      return; 
+      return;
     }
     setIsDeleteCharacterConfirm2Open(false);
     setCharacterToDelete(null);
@@ -272,17 +262,17 @@ export default function PartyManagerPage() {
   };
 
   const handleLinkedPartyLevelChange = (newCheckedState: boolean) => {
-    if (newCheckedState) { 
+    if (newCheckedState) {
       if (activeCampaignParty.length > 0) {
         const uniqueLevels = [...new Set(activeCampaignParty.map(c => c.level))];
         if (uniqueLevels.length > 1) {
           setPartyUniqueLevels(uniqueLevels.sort((a,b) => a-b));
           setIsLevelDiscrepancyDialogOpen(true);
-          return; 
+          return;
         }
       }
       setLinkedPartyLevel(true);
-    } else { 
+    } else {
       setLinkedPartyLevel(false);
     }
   };
@@ -294,7 +284,7 @@ export default function PartyManagerPage() {
   };
 
   const handleLevelDiscrepancyCancel = () => {
-    setLinkedPartyLevel(false); 
+    setLinkedPartyLevel(false);
     setIsLevelDiscrepancyDialogOpen(false);
   };
 
@@ -322,7 +312,7 @@ export default function PartyManagerPage() {
       </div>
     );
   }
-  
+
   const isAddingNewCharacter = !editingCharacter;
   const isLevelInputDisabled = linkedPartyLevel && isAddingNewCharacter && activeCampaignParty.length > 0;
 
@@ -343,8 +333,8 @@ export default function PartyManagerPage() {
               onCheckedChange={handleLinkedPartyLevelChange}
             />
           </div>
-           <Button 
-            onClick={handleLevelUpPartyButton} 
+           <Button
+            onClick={handleLevelUpPartyButton}
             disabled={!linkedPartyLevel || activeCampaignParty.length === 0}
             className="w-full sm:w-auto"
           >
@@ -355,8 +345,8 @@ export default function PartyManagerPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {activeCampaignParty.map((char) => (
-          <Card 
-            key={char.id} 
+          <Card
+            key={char.id}
             className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col border-l-4"
             style={{ borderColor: char.color || 'hsl(var(--border))' }}
           >
@@ -371,7 +361,7 @@ export default function PartyManagerPage() {
             </CardHeader>
             <CardContent className="flex-grow space-y-3">
                <div className="flex items-center">
-                <VenetianMask className="mr-2 h-5 w-5 text-primary" /> 
+                <VenetianMask className="mr-2 h-5 w-5 text-primary" />
                 <span>Race: {char.race}</span>
               </div>
               <div className="flex items-center">
@@ -420,10 +410,10 @@ export default function PartyManagerPage() {
 
       <Dialog open={isFormDialogOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
-            setEditingCharacter(null); 
+            setEditingCharacter(null);
             setCharacterFormData(initialCharacterFormState);
-            setLevelSyncDetails(null); 
-            setIsLevelSyncDialogOpen(false); 
+            setLevelSyncDetails(null);
+            setIsLevelSyncDialogOpen(false);
           }
           setIsFormDialogOpen(isOpen);
         }}>
@@ -440,12 +430,12 @@ export default function PartyManagerPage() {
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" name="name" value={characterFormData.name} onChange={handleInputChange} placeholder="e.g., Elara Meadowlight" />
               </div>
-              
+
               <div>
                 <Label htmlFor="race-select">Race</Label>
-                <Select 
-                  name="race" 
-                  value={characterFormData.race} 
+                <Select
+                  name="race"
+                  value={characterFormData.race}
                   onValueChange={(value) => handleSelectChange("race", value || "")}
                 >
                   <SelectTrigger id="race-select" disabled={isLoadingApiRaces}>
@@ -465,35 +455,54 @@ export default function PartyManagerPage() {
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="class-select">Class</Label>
-                <Select name="class" value={characterFormData.class} onValueChange={(value) => handleSelectChange("class", value || (DND_CLASS_DETAILS[0]?.class || ""))}>
-                  <SelectTrigger id="class-select">
-                    <SelectValue placeholder="Select a class" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DND_CLASS_DETAILS.map((classDetail) => (
-                      <SelectItem key={classDetail.class} value={classDetail.class}>
-                        {classDetail.class}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="class-select">Class</Label>
+                  <Select name="class" value={characterFormData.class} onValueChange={(value) => handleSelectChange("class", value || (DND_CLASS_DETAILS[0]?.class || ""))}>
+                    <SelectTrigger id="class-select">
+                      <SelectValue placeholder="Select a class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DND_CLASS_DETAILS.map((classDetail) => (
+                        <SelectItem key={classDetail.class} value={classDetail.class}>
+                          {classDetail.class}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="level">Level</Label>
+                  <Input
+                    id="level"
+                    name="level"
+                    type="number"
+                    value={characterFormData.level.toString()}
+                    onChange={handleInputChange}
+                    min="1"
+                    disabled={isLevelInputDisabled}
+                  />
+                   {isLevelInputDisabled && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Level is linked to party (Level {activeCampaignParty[0]?.level || 1}). Unlink "Link Party Level" to set a different starting level.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div>
                 <Label htmlFor="subclass-select">Subclass</Label>
-                <Select 
-                  name="subclass" 
-                  value={characterFormData.subclass || ""} 
+                <Select
+                  name="subclass"
+                  value={characterFormData.subclass || ""}
                   onValueChange={(value) => handleSelectChange("subclass", value || "")}
                   disabled={!characterFormData.class || availableSubclasses.length === 0 || isLoadingApiSubclasses}
                 >
                   <SelectTrigger id="subclass-select">
                   <SelectValue placeholder={
                       isLoadingApiSubclasses ? "Loading subclasses..." :
-                      !characterFormData.class ? "Select class first" : 
-                      availableSubclasses.length === 0 ? "No subclasses available" : 
+                      !characterFormData.class ? "Select class first" :
+                      availableSubclasses.length === 0 ? "No subclasses available" :
                       "Select a subclass (Optional)"
                   }/>
                   </SelectTrigger>
@@ -512,31 +521,17 @@ export default function PartyManagerPage() {
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="level">Level</Label>
-                <Input 
-                  id="level" 
-                  name="level" 
-                  type="number" 
-                  value={characterFormData.level.toString()} 
-                  onChange={handleInputChange} 
-                  min="1" 
-                  disabled={isLevelInputDisabled}
-                />
-                 {isLevelInputDisabled && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Level is linked to party (Level {activeCampaignParty[0]?.level || 1}). Unlink "Link Party Level" to set a different starting level.
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="armorClass">Armor Class</Label>
+                  <Input id="armorClass" name="armorClass" type="number" value={characterFormData.armorClass.toString()} onChange={handleInputChange} />
+                </div>
+                <div>
+                  <Label htmlFor="initiativeModifier">Initiative Modifier</Label>
+                  <Input id="initiativeModifier" name="initiativeModifier" type="number" value={(characterFormData.initiativeModifier || 0).toString()} onChange={handleInputChange} placeholder="e.g., 2" />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="armorClass">Armor Class</Label>
-                <Input id="armorClass" name="armorClass" type="number" value={characterFormData.armorClass.toString()} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="initiativeModifier">Initiative Modifier</Label>
-                <Input id="initiativeModifier" name="initiativeModifier" type="number" value={(characterFormData.initiativeModifier || 0).toString()} onChange={handleInputChange} placeholder="e.g., 2" />
-              </div>
+
               <div>
                 <Label htmlFor="color-select">Character Color</Label>
                 <Select name="color" value={characterFormData.color} onValueChange={handleColorChange}>
@@ -558,15 +553,15 @@ export default function PartyManagerPage() {
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { 
-                setIsFormDialogOpen(false); 
-                setEditingCharacter(null); 
+            <Button variant="outline" onClick={() => {
+                setIsFormDialogOpen(false);
+                setEditingCharacter(null);
                 setCharacterFormData(initialCharacterFormState);
                 setLevelSyncDetails(null);
                 setIsLevelSyncDialogOpen(false);
             }}>Cancel</Button>
-            <Button 
-              onClick={handleFormSubmit} 
+            <Button
+              onClick={handleFormSubmit}
               disabled={!characterFormData.name?.trim() || !characterFormData.race?.trim()}
             >
               {editingCharacter ? "Save Changes" : "Add Character"}
@@ -575,7 +570,7 @@ export default function PartyManagerPage() {
         </DialogContent>
       </Dialog>
 
-      <CharacterDetailsDialog 
+      <CharacterDetailsDialog
         character={currentCharacterDetails}
         isOpen={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
@@ -585,10 +580,10 @@ export default function PartyManagerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
+            <AlertDialogDescription>
               Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
               Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
-            </UIAlertDialogDescription>
+            </AlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
@@ -670,4 +665,3 @@ export default function PartyManagerPage() {
   );
 }
 
-    

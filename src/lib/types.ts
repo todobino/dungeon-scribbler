@@ -5,7 +5,7 @@ export interface PlayerCharacter {
   id: string;
   name: string;
   level: number;
-  class: string; 
+  class: string;
   armorClass: number;
   race: string;
   subclass?: string;
@@ -70,13 +70,14 @@ export interface Campaign {
   id: string;
   name: string;
   description?: string;
-  activeParty?: PlayerCharacter[]; 
+  activeParty?: PlayerCharacter[];
+  defaultStartingLevel?: number; // Added
 }
 
 export interface CharacterFormData {
   name: string;
   level: number;
-  class: string; 
+  class: string;
   race: string;
   subclass?: string;
   armorClass: number;
@@ -91,13 +92,13 @@ export interface Combatant {
   initiative: number;
   type: 'player' | 'enemy';
   color?: string;
-  playerId?: string; 
+  playerId?: string;
   ac?: number;
   hp?: number;
   currentHp?: number;
-  tempHp?: number; // Added for temporary hit points
-  initiativeModifier?: number; 
-  monsterIndex?: string; 
+  tempHp?: number;
+  initiativeModifier?: number;
+  monsterIndex?: string;
   cr?: string;
 }
 
@@ -148,7 +149,7 @@ export interface MonsterSummaryWithCR {
   cr?: number;
   type?: string;
   url?: string;
-  source?: 'api' | 'homebrew'; 
+  source?: 'api' | 'homebrew';
 }
 
 
@@ -254,7 +255,7 @@ export interface MonsterDetail extends MonsterSummary {
   condition_immunities?: { index: string; name: string; url: string }[] | string[] | string;
   senses?: Sense | string;
   languages?: string;
-  challenge_rating?: number; 
+  challenge_rating?: number;
   xp?: number;
   special_abilities?: SpecialAbility[] | string;
   actions?: MonsterAction[] | string;
@@ -268,7 +269,7 @@ export interface MonsterDetail extends MonsterSummary {
 export interface FavoriteMonster {
   index: string;
   name: string;
-  cr: number; 
+  cr: number;
   type: string;
   source: 'api' | 'homebrew';
   acValue?: number;
@@ -342,16 +343,16 @@ export interface SpellSummary {
 export interface SpellDetail {
   index: string;
   name: string;
-  desc: string[] | string; 
-  higher_level?: string[] | string; 
+  desc: string[] | string;
+  higher_level?: string[] | string;
   range: string;
-  components: string[] | string; 
-  material?: string; 
+  components: string[] | string;
+  material?: string;
   ritual: boolean;
   duration: string;
   concentration: boolean;
   casting_time: string;
-  level: number; 
+  level: number;
   attack_type?: string;
   damage?: {
     damage_type?: {
@@ -365,18 +366,18 @@ export interface SpellDetail {
   school: {
     index: string;
     name: string;
-    url?: string; 
+    url?: string;
   };
-  classes: { 
+  classes: {
     index: string;
     name: string;
     url: string;
-  }[] | string; 
-  subclasses?: { 
+  }[] | string;
+  subclasses?: {
     index: string;
     name: string;
     url: string;
-  }[] | string; 
+  }[] | string;
   area_of_effect?: {
     type: string;
     size: number;
@@ -397,17 +398,17 @@ export interface SpellDetail {
 
 export interface HomebrewSpellFormData {
   name: string;
-  level: string; 
+  level: string;
   casting_time: string;
   range: string;
-  components: string; 
+  components: string;
   duration: string;
   concentration: boolean;
-  school: string; 
-  desc: string; 
-  higher_level?: string; 
-  classes?: string; 
-  subclasses?: string; 
+  school: string;
+  desc: string;
+  higher_level?: string;
+  classes?: string;
+  subclasses?: string;
 }
 
 export interface EncounterMonster {
@@ -418,7 +419,7 @@ export interface EncounterMonster {
   ac?: string;
   hp?: string;
   initiativeModifier?: number;
-  monsterIndex?: string; 
+  monsterIndex?: string;
 }
 
 export interface SavedEncounter {
