@@ -159,7 +159,7 @@ export default function CampaignManagementPage() {
 
       {/* Delete Confirmation Dialog 1 */}
       <AlertDialog open={isDeleteConfirm1Open} onOpenChange={setIsDeleteConfirm1Open}>
-        <UIAlertDialogContent>
+        <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Delete Campaign "{campaignToDelete?.name}"?</UIAlertDialogTitle>
             <UIAlertDialogDescription>
@@ -175,7 +175,7 @@ export default function CampaignManagementPage() {
               Delete
             </AlertDialogAction>
           </UIAlertDialogFooter>
-        </UIAlertDialogContent>
+        </AlertDialogContent>
       </AlertDialog>
 
       {/* Delete Confirmation Dialog 2 (Type DELETE) */}
@@ -225,3 +225,4 @@ function Badge({ variant = 'default', children }: { variant?: 'default' | 'secon
     </span>
   );
 }
+
