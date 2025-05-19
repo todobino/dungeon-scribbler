@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, Library, Users, Loader2, Trash2, Edit3 } from "lucide-react";
+import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, Library, Users, Loader2, Trash2, Edit3, HelpCircle } from "lucide-react";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -23,11 +23,11 @@ import {
 import {
   Dialog,
   DialogClose,
-  DialogContent as StandardDialogContent,
-  DialogHeader as StandardDialogHeader,
-  DialogTitle as StandardDialogTitle,
-  DialogDescription as StandardDialogDescription,
-  DialogFooter as StandardDialogFooter,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
@@ -627,7 +627,7 @@ export default function StorySoFarRefactoredPage() {
             <Card className="bg-primary/10 border-primary">
               <CardHeader>
                 <CardTitle className="text-primary">Generated Full Campaign Summary</CardTitle>
-                <StandardDialogDescription>Detail Level: {summaryDetailLevel}</StandardDialogDescription>
+                <DialogDescription>Detail Level: {summaryDetailLevel}</DialogDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{fullCampaignSummary}</p>
@@ -638,12 +638,12 @@ export default function StorySoFarRefactoredPage() {
       </div>
 
       {/* Edit Plot Point Dialog */}
-      <StandardDialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
-        <StandardDialogContent>
-          <StandardDialogHeader>
-            <StandardDialogTitle>Edit Plot Point</StandardDialogTitle>
-            <StandardDialogDescription>Modify the text for this plot point.</StandardDialogDescription>
-          </StandardDialogHeader>
+      <Dialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Plot Point</DialogTitle>
+            <DialogDescription>Modify the text for this plot point.</DialogDescription>
+          </DialogHeader>
           <div className="py-4">
             <Textarea
               value={editedPlotPointText}
@@ -651,12 +651,12 @@ export default function StorySoFarRefactoredPage() {
               rows={4}
             />
           </div>
-          <StandardDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditPlotPointDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveEditedPlotPoint} disabled={!editedPlotPointText.trim()}>Save Changes</Button>
-          </StandardDialogFooter>
-        </StandardDialogContent>
-      </StandardDialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Plot Point Confirmation Dialog */}
       <AlertDialog open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
@@ -716,19 +716,19 @@ export default function StorySoFarRefactoredPage() {
       </AlertDialog>
 
       {/* Clear Log Confirmation Dialog 2 (Standard Dialog) */}
-      <StandardDialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
+      <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
         if (!isOpen) {
           setDeleteConfirmInput("");
         }
         setIsClearLogConfirm2Open(isOpen);
       }}>
-        <StandardDialogContent>
-          <StandardDialogHeader>
-            <StandardDialogTitle>Final Confirmation to Delete Log</StandardDialogTitle>
-            <StandardDialogDescription>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Final Confirmation to Delete Log</DialogTitle>
+            <DialogDescription>
               To permanently delete the entire Adventure Recap for "{activeCampaign?.name}", please type "DELETE" in the box below.
-            </StandardDialogDescription>
-          </StandardDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           <div className="py-4">
             <Input
               value={deleteConfirmInput}
@@ -737,7 +737,7 @@ export default function StorySoFarRefactoredPage() {
               className="border-destructive focus-visible:ring-destructive"
             />
           </div>
-          <StandardDialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => { setIsClearLogConfirm2Open(false); setDeleteConfirmInput(""); }}>Cancel</Button>
             <Button
               variant="destructive"
@@ -746,9 +746,9 @@ export default function StorySoFarRefactoredPage() {
             >
               Confirm Deletion
             </Button>
-          </StandardDialogFooter>
-        </StandardDialogContent>
-      </StandardDialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
     </TooltipProvider>
@@ -758,15 +758,15 @@ export default function StorySoFarRefactoredPage() {
 export function AdventureRecapHelpContent() {
   return (
     <>
-      <StandardDialogHeader>
-        <StandardDialogTitle className="flex items-center">
+      <DialogHeader>
+        <DialogTitle className="flex items-center">
           <History className="mr-2 h-5 w-5 text-primary" />
           How to Use: Adventure Recap
-        </StandardDialogTitle>
-        <StandardDialogDescription>
+        </DialogTitle>
+        <DialogDescription>
           Track your campaign's progress and generate summaries.
-        </StandardDialogDescription>
-      </StandardDialogHeader>
+        </DialogDescription>
+      </DialogHeader>
       <ScrollArea className="max-h-[60vh] pr-3">
         <div className="text-sm text-muted-foreground space-y-3 py-4">
           <p>
@@ -826,11 +826,14 @@ export function AdventureRecapHelpContent() {
           </p>
         </div>
       </ScrollArea>
-      <StandardDialogFooter>
+      <DialogFooter>
         <DialogClose asChild>
           <Button>Close</Button>
         </DialogClose>
-      </StandardDialogFooter>
+      </DialogFooter>
     </>
   );
 }
+
+
+    
