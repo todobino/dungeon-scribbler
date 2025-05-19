@@ -10,8 +10,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, Library, Users, Loader2, Trash2, Edit3 } from "lucide-react";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogFooter as StandardDialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent as StandardDialogContent,
+  DialogHeader as StandardDialogHeader,
+  DialogTitle as StandardDialogTitle,
+  DialogDescription as StandardDialogDescription,
+  DialogFooter as StandardDialogFooter,
+} from "@/components/ui/dialog";
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -426,7 +443,7 @@ export default function StorySoFarRefactoredPage() {
         <div className="lg:col-span-2 flex flex-col h-full">
           <Card className="flex flex-col flex-grow">
             <CardHeader className="shrink-0 flex flex-row justify-between items-center">
-              <CardTitle>Adventure Recap</CardTitle>
+              <CardTitle>Campaign Log</CardTitle>
               <Button
                 onClick={handleAdvanceSession}
                 variant="outline"
@@ -610,7 +627,7 @@ export default function StorySoFarRefactoredPage() {
             <Card className="bg-primary/10 border-primary">
               <CardHeader>
                 <CardTitle className="text-primary">Generated Full Campaign Summary</CardTitle>
-                <CardDescription>Detail Level: {summaryDetailLevel}</CardDescription>
+                <StandardDialogDescription>Detail Level: {summaryDetailLevel}</StandardDialogDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{fullCampaignSummary}</p>
@@ -620,12 +637,13 @@ export default function StorySoFarRefactoredPage() {
         </div>
       </div>
 
-      <Dialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Plot Point</DialogTitle>
-            <DialogDescription>Modify the text for this plot point.</DialogDescription>
-          </DialogHeader>
+      {/* Edit Plot Point Dialog */}
+      <StandardDialog open={isEditPlotPointDialogOpen} onOpenChange={setIsEditPlotPointDialogOpen}>
+        <StandardDialogContent>
+          <StandardDialogHeader>
+            <StandardDialogTitle>Edit Plot Point</StandardDialogTitle>
+            <StandardDialogDescription>Modify the text for this plot point.</StandardDialogDescription>
+          </StandardDialogHeader>
           <div className="py-4">
             <Textarea
               value={editedPlotPointText}
@@ -637,9 +655,10 @@ export default function StorySoFarRefactoredPage() {
             <Button variant="outline" onClick={() => setIsEditPlotPointDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveEditedPlotPoint} disabled={!editedPlotPointText.trim()}>Save Changes</Button>
           </StandardDialogFooter>
-        </DialogContent>
-      </Dialog>
+        </StandardDialogContent>
+      </StandardDialog>
 
+      {/* Delete Plot Point Confirmation Dialog */}
       <AlertDialog open={isDeletePlotPointConfirmOpen} onOpenChange={setIsDeletePlotPointConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -655,6 +674,7 @@ export default function StorySoFarRefactoredPage() {
         </AlertDialogContent>
       </AlertDialog>
       
+      {/* Advance Empty Session Confirmation Dialog */}
       <AlertDialog open={isAdvanceSessionConfirmOpen} onOpenChange={setIsAdvanceSessionConfirmOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -664,7 +684,7 @@ export default function StorySoFarRefactoredPage() {
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => setIsAdvanceSessionConfirmOpen(false)}>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={() => { 
                   setCurrentSessionNumber(prev => prev + 1);
                   clearFullCampaignSummaryCache();
@@ -674,7 +694,8 @@ export default function StorySoFarRefactoredPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
+      {/* Clear Log Confirmation Dialog 1 (AlertDialog) */}
+      <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -685,28 +706,29 @@ export default function StorySoFarRefactoredPage() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsClearLogConfirm1Open(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { setIsClearLogConfirm1Open(false); setIsClearLogConfirm2Open(true); }}
+              onClick={() => { setIsClearLogConfirm1Open(false); setIsClearLogConfirm2Open(true); setDeleteConfirmInput(""); }}
               className={buttonVariants({ variant: "destructive" })}
             >
               Proceed to Final Confirmation
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </Dialog>
+      </AlertDialog>
 
-      <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
+      {/* Clear Log Confirmation Dialog 2 (Standard Dialog) */}
+      <StandardDialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
         if (!isOpen) {
           setDeleteConfirmInput("");
         }
         setIsClearLogConfirm2Open(isOpen);
       }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Final Confirmation to Delete Log</DialogTitle>
-            <DialogDescription>
+        <StandardDialogContent>
+          <StandardDialogHeader>
+            <StandardDialogTitle>Final Confirmation to Delete Log</StandardDialogTitle>
+            <StandardDialogDescription>
               To permanently delete the entire Adventure Recap for "{activeCampaign?.name}", please type "DELETE" in the box below.
-            </DialogDescription>
-          </DialogHeader>
+            </StandardDialogDescription>
+          </StandardDialogHeader>
           <div className="py-4">
             <Input
               value={deleteConfirmInput}
@@ -725,8 +747,8 @@ export default function StorySoFarRefactoredPage() {
               Confirm Deletion
             </Button>
           </StandardDialogFooter>
-        </DialogContent>
-      </Dialog>
+        </StandardDialogContent>
+      </StandardDialog>
 
     </div>
     </TooltipProvider>
@@ -736,15 +758,15 @@ export default function StorySoFarRefactoredPage() {
 export function AdventureRecapHelpContent() {
   return (
     <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center">
+      <StandardDialogHeader>
+        <StandardDialogTitle className="flex items-center">
           <History className="mr-2 h-5 w-5 text-primary" />
           How to Use: Adventure Recap
-        </DialogTitle>
-        <DialogDescription>
+        </StandardDialogTitle>
+        <StandardDialogDescription>
           Track your campaign's progress and generate summaries.
-        </DialogDescription>
-      </DialogHeader>
+        </StandardDialogDescription>
+      </StandardDialogHeader>
       <ScrollArea className="max-h-[60vh] pr-3">
         <div className="text-sm text-muted-foreground space-y-3 py-4">
           <p>
@@ -788,7 +810,7 @@ export function AdventureRecapHelpContent() {
                 campaign).
               </li>
               <li>
-                Click "Generate Full Campaign Summary" for a recap of everything. This
+                Click "Generate Full Summary" for a recap of everything. This
                 summary will be cached until new plot points are added or a
                 session advances.
               </li>
@@ -812,7 +834,3 @@ export function AdventureRecapHelpContent() {
     </>
   );
 }
-
-    
-
-    
