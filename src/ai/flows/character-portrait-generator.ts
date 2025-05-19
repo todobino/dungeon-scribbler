@@ -9,9 +9,9 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { z } from 'zod'; // Changed from 'genkit'
 
-export const CharacterPortraitInputSchema = z.object({
+const CharacterPortraitInputSchema = z.object({
   characterName: z.string().describe("The name of the character."),
   characterRace: z.string().describe("The race of the character (e.g., Elf, Dwarf, Human)."),
   characterClass: z.string().describe("The class of the character (e.g., Fighter, Wizard, Rogue)."),
@@ -20,7 +20,7 @@ export const CharacterPortraitInputSchema = z.object({
 });
 export type CharacterPortraitInput = z.infer<typeof CharacterPortraitInputSchema>;
 
-export const CharacterPortraitOutputSchema = z.object({
+const CharacterPortraitOutputSchema = z.object({
   generatedImageDataUri: z.string().describe("The generated character portrait as a base64 encoded data URI, including MIME type."),
   revisedPrompt: z.string().optional().describe("The revised prompt that was actually sent to the image generation model, if any.")
 });
@@ -29,14 +29,16 @@ export type CharacterPortraitOutput = z.infer<typeof CharacterPortraitOutputSche
 export async function generateCharacterPortrait(
   input: CharacterPortraitInput
 ): Promise<CharacterPortraitOutput> {
+  // Input validation could be done here if desired, though Genkit handles it at the flow boundary
+  // For example: CharacterPortraitInputSchema.parse(input);
   return characterPortraitGeneratorFlow(input);
 }
 
 const characterPortraitGeneratorFlow = ai.defineFlow(
   {
     name: 'characterPortraitGeneratorFlow',
-    inputSchema: CharacterPortraitInputSchema,
-    outputSchema: CharacterPortraitOutputSchema,
+    inputSchema: CharacterPortraitInputSchema, // Uses the local constant
+    outputSchema: CharacterPortraitOutputSchema, // Uses the local constant
   },
   async (input) => {
     const promptText = `Generate a character portrait.
@@ -50,10 +52,10 @@ Create a visually appealing and detailed portrait based on these characteristics
 
     try {
       const {media, prompt} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-exp', // Ensure this is the correct model for image generation
+        model: 'googleai/gemini-2.0-flash-exp',
         prompt: promptText,
         config: {
-          responseModalities: ['TEXT', 'IMAGE'], // Must provide both
+          responseModalities: ['TEXT', 'IMAGE'],
         },
       });
 
@@ -61,18 +63,17 @@ Create a visually appealing and detailed portrait based on these characteristics
         throw new Error('AI failed to generate an image. No media URL returned.');
       }
       
-      // The model might return a revised prompt if it modified the input for safety/clarity
       const finalPromptText = typeof prompt === 'string' ? prompt : (Array.isArray(prompt) && typeof prompt[0] === 'object' && 'text' in prompt[0]) ? (prompt[0] as {text: string}).text : promptText;
 
-
       return {
-        generatedImageDataUri: media.url, // This should be the data URI
+        generatedImageDataUri: media.url,
         revisedPrompt: finalPromptText
       };
     } catch (error: any) {
       console.error('Error in characterPortraitGeneratorFlow:', error);
-      // Consider re-throwing or returning a specific error structure
-      throw new Error(`AI image generation failed: ${error.message}`);
+      // It's often better to throw a new error with a more specific message
+      // or to ensure the error is an instance of Error for consistent handling.
+      throw new Error(`AI image generation failed: ${error.message || String(error)}`);
     }
   }
 );
