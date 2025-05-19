@@ -81,6 +81,7 @@ export interface CharacterFormData {
   level: number;
   class: string;
   race: string;
+  customRaceInput?: string;
   subclass?: string;
   armorClass: number;
   initiativeModifier?: number;
@@ -478,3 +479,4 @@ export interface ShopItem {
   rarity?: string; // e.g., Common, Uncommon, Rare
   // Add other properties as needed, like weight, damage, AC, etc.
 }
+

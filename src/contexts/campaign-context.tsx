@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { ReactNode } from 'react';
@@ -14,7 +15,7 @@ import {
 import { DND_CLASS_DETAILS } from '@/lib/data/class-data';
 
 
-export type CharacterFormData = Omit<PlayerCharacter, 'id'>;
+export type CharacterFormData = Omit<PlayerCharacter, 'id'> & { customRaceInput?: string };
 
 
 interface CampaignContextType {
@@ -56,11 +57,12 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     level: 1,
     class: DND_CLASS_DETAILS[0]?.class || "",
     race: "",
+    customRaceInput: "",
     subclass: "",
     armorClass: 10,
     initiativeModifier: 0,
     color: PREDEFINED_COLORS[0].value,
-    imageUrl: "", // Added imageUrl
+    imageUrl: "", 
   };
 
 
@@ -184,8 +186,12 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       console.warn("Cannot add character: No active campaign.");
       return;
     }
+    const { customRaceInput, ...baseData } = characterData;
+    const raceToSave = baseData.race === "Other" ? (customRaceInput?.trim() || "Unknown Custom Race") : baseData.race;
+
     const newCharacter: PlayerCharacter = {
-      ...characterData,
+      ...baseData,
+      race: raceToSave,
       id: Date.now().toString(),
       initiativeModifier: characterData.initiativeModifier || 0,
       imageUrl: characterData.imageUrl || "",
@@ -198,6 +204,8 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       console.warn("Cannot update character: No active campaign.");
       return;
     }
+    // Note: If CharacterFormData included customRaceInput, this would need to be handled
+    // when updating PlayerCharacter. For now, PlayerCharacter only stores the final race string.
     setActiveCampaignParty(prevParty =>
       prevParty.map(char => char.id === updatedCharacter.id ? {...updatedCharacter, initiativeModifier: updatedCharacter.initiativeModifier || 0, imageUrl: updatedCharacter.imageUrl || ""} : char)
     );
@@ -279,3 +287,4 @@ export function useCampaign() {
   }
   return context;
 }
+
