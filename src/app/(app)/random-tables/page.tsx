@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { RandomTable, RandomTableOption } from "@/lib/types";
@@ -82,12 +83,7 @@ export default function RandomTablesPage() {
   const selectedTable = tables.find(t => t.id === selectedTableId);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Random Tables</h1>
-        {/* <Button> <PlusCircle className="mr-2 h-5 w-5" /> Create Custom Table </Button> // Feature for later */}
-      </div>
-
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Roll the Dice</CardTitle>

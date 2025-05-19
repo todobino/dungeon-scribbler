@@ -159,18 +159,7 @@ export default function NpcBuilderPage() {
   // but adding a new NPC can pre-fill the 'setting' if a campaign is active.
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">NPC Builder {activeCampaign ? `(for ${activeCampaign.name})` : "(Global)"}</h1>
-        <Button onClick={() => {
-          setGeneratedNpc(null); 
-          setNpcInput({ name: "", race: "", occupation: "", setting: activeCampaign?.name || "", additionalDetails: ""}); 
-          setIsFormDialogOpen(true);
-        }}>
-          <PlusCircle className="mr-2 h-5 w-5" /> Create New NPC
-        </Button>
-      </div>
-
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -270,7 +259,16 @@ export default function NpcBuilderPage() {
         </Card>
       ) : npcs.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold">Your NPCs</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Your NPCs</h2>
+            <Button onClick={() => {
+                setGeneratedNpc(null); 
+                setNpcInput({ name: "", race: "", occupation: "", setting: activeCampaign?.name || "", additionalDetails: ""}); 
+                setIsFormDialogOpen(true);
+            }}>
+                <PlusCircle className="mr-2 h-5 w-5" /> Add NPC
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {npcs.map((npc) => (
               <Card key={npc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">

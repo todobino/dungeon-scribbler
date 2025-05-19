@@ -134,14 +134,7 @@ export default function MapIntegrationPage() {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Map Integration for {activeCampaign.name}</h1>
-        <Button onClick={() => setIsUploadDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-5 w-5" /> Upload New Map
-        </Button>
-      </div>
-
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -188,8 +181,11 @@ export default function MapIntegrationPage() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           <div className="md:col-span-4 lg:col-span-3">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row justify-between items-center">
                 <CardTitle>Your Maps</CardTitle>
+                <Button onClick={() => setIsUploadDialogOpen(true)} size="sm" variant="outline">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Upload
+                </Button>
               </CardHeader>
               <CardContent className="max-h-[60vh] overflow-y-auto">
                 {maps.length > 0 ? (

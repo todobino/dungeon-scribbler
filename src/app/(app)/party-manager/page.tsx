@@ -304,20 +304,22 @@ export default function PartyManagerPage() {
 
   if (!activeCampaign) {
     return (
-      <Card className="text-center py-12">
-        <CardHeader>
-          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
-          <CardTitle className="mt-4">No Active Campaign</CardTitle>
-          <CardDescription>Please select or create a campaign to manage your party.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/campaign-management">
-              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card className="text-center py-12">
+          <CardHeader>
+            <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+            <CardTitle className="mt-4">No Active Campaign</CardTitle>
+            <CardDescription>Please select or create a campaign to manage your party.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/campaign-management">
+                <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
   
@@ -326,9 +328,9 @@ export default function PartyManagerPage() {
 
 
   return (
-    <div className="space-y-6 w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Party Manager</h1>
+    <div className="space-y-6 w-full p-4 sm:p-6 lg:p-8">
+       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1>Party Manager</h1>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto ml-auto">
           <div className="flex items-center space-x-2 p-2 border rounded-md bg-card w-full sm:w-auto justify-between">
             <Label htmlFor="link-level-switch" className="flex items-center gap-1 cursor-pointer">

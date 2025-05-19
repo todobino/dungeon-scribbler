@@ -337,7 +337,7 @@ export default function NextSessionGoalsRefactoredPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
       <Card className="w-full">
         <CardHeader className="flex flex-row justify-between items-center">
           <div>

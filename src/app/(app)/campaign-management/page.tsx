@@ -7,7 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as UIAlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Library, CheckCircle, Users, PlusCircle, DraftingCompass, Trash2, History } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
@@ -54,7 +54,7 @@ export default function CampaignManagementPage() {
 
   if (isLoadingCampaigns) {
     return (
-      <div className="space-y-6 w-full">
+      <div className="space-y-6 w-full p-4 sm:p-6 lg:p-8">
         <Card>
           <CardHeader>
             <CardTitle>Loading campaigns...</CardTitle>
@@ -68,7 +68,7 @@ export default function CampaignManagementPage() {
   }
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full p-4 sm:p-6 lg:p-8">
       {activeCampaign && (
         <Card className="bg-primary/10 border-primary shadow-lg">
           <CardHeader>

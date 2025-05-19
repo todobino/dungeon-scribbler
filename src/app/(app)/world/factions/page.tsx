@@ -267,6 +267,7 @@ export default function FactionsPage() {
 
   if (!activeCampaign) {
     return (
+      <div className="p-4 sm:p-6 lg:p-8">
       <Card className="text-center py-12">
         <CardHeader>
           <Library className="mx-auto h-16 w-16 text-muted-foreground" />
@@ -281,18 +282,12 @@ export default function FactionsPage() {
           </Button>
         </CardContent>
       </Card>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Factions in {activeCampaign.name}</h1>
-        <Button onClick={openAddDialog}>
-          <PlusCircle className="mr-2 h-5 w-5" /> Add New Faction
-        </Button>
-      </div>
-
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       {factions.length === 0 ? (
         <Card className="text-center py-12">
           <CardHeader>
@@ -307,51 +302,59 @@ export default function FactionsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {factions.map(faction => (
-            <Card key={faction.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                    <CardTitle className="text-xl">{faction.name}</CardTitle>
-                    <ReputationDisplay reputation={faction.reputation} />
-                </div>
-                <CardDescription className="flex items-center gap-1 text-sm">
-                  <UserCircle2 className="h-4 w-4" /> Leader: {faction.leader || "N/A"}
-                </CardDescription>
-                {faction.lieutenant && (
-                    <CardDescription className="flex items-center gap-1 text-sm">
-                        <UserCog className="h-4 w-4" /> Lieutenant: {faction.lieutenant}
-                    </CardDescription>
-                )}
-                 <CardDescription className="flex items-center gap-1 text-sm">
-                  <Home className="h-4 w-4" /> HQ: {faction.headquarters || "N/A"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="flex items-start gap-2 mb-2">
-                  <Target className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-                  <p className="text-sm text-muted-foreground line-clamp-3"><span className="font-medium text-card-foreground">Goals:</span> {faction.goals}</p>
-                </div>
-                 {faction.philosophy && (
-                    <div className="flex items-start gap-2 mb-2">
-                        <Brain className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-                        <p className="text-sm text-muted-foreground line-clamp-2"><span className="font-medium text-card-foreground">Philosophy:</span> {faction.philosophy}</p>
-                    </div>
-                 )}
-              </CardContent>
-              <CardFooter className="flex justify-between gap-2">
-                <Button variant="outline" size="sm" onClick={() => openViewDialog(faction)} className="flex-1">
-                  <Eye className="mr-2 h-4 w-4" /> View
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => openEditDialog(faction)} className="flex-1">
-                  <Edit3 className="mr-2 h-4 w-4" /> Edit
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleDeleteFaction(faction.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+        <div className="space-y-4">
+           <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Factions in {activeCampaign.name}</h2>
+            <Button onClick={openAddDialog}>
+              <PlusCircle className="mr-2 h-5 w-5" /> Add New Faction
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {factions.map(faction => (
+              <Card key={faction.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                      <CardTitle className="text-xl">{faction.name}</CardTitle>
+                      <ReputationDisplay reputation={faction.reputation} />
+                  </div>
+                  <CardDescription className="flex items-center gap-1 text-sm">
+                    <UserCircle2 className="h-4 w-4" /> Leader: {faction.leader || "N/A"}
+                  </CardDescription>
+                  {faction.lieutenant && (
+                      <CardDescription className="flex items-center gap-1 text-sm">
+                          <UserCog className="h-4 w-4" /> Lieutenant: {faction.lieutenant}
+                      </CardDescription>
+                  )}
+                  <CardDescription className="flex items-center gap-1 text-sm">
+                    <Home className="h-4 w-4" /> HQ: {faction.headquarters || "N/A"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="flex items-start gap-2 mb-2">
+                    <Target className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                    <p className="text-sm text-muted-foreground line-clamp-3"><span className="font-medium text-card-foreground">Goals:</span> {faction.goals}</p>
+                  </div>
+                  {faction.philosophy && (
+                      <div className="flex items-start gap-2 mb-2">
+                          <Brain className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                          <p className="text-sm text-muted-foreground line-clamp-2"><span className="font-medium text-card-foreground">Philosophy:</span> {faction.philosophy}</p>
+                      </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex justify-between gap-2">
+                  <Button variant="outline" size="sm" onClick={() => openViewDialog(faction)} className="flex-1">
+                    <Eye className="mr-2 h-4 w-4" /> View
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => openEditDialog(faction)} className="flex-1">
+                    <Edit3 className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteFaction(faction.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 

@@ -21,8 +21,8 @@ export default function AppLayout({
           {/* This div is the main content column next to the sidebar */}
           <div className="flex flex-col flex-1 min-w-0"> {/* Added min-w-0 to prevent content overflow issues with flexbox */}
             <PageHeader /> {/* Sticky header at the top of this column */}
-            {/* SidebarInset is the main scrollable content area. Padding is applied here for overall content area. */}
-            <SidebarInset className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 relative">
+            {/* SidebarInset is the main scrollable content area. Padding is now managed by individual pages. */}
+            <SidebarInset className="flex-1 overflow-y-auto relative">
               {children}
             </SidebarInset>
           </div>

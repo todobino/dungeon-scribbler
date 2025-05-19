@@ -11,7 +11,7 @@ import { PlusCircle, History, Zap, Brain, ChevronRightSquare, List, AlignLeft, L
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter as StandardDialogFooter } from "@/components/ui/dialog"; // Aliased to avoid conflict if AlertDialogFooter is also used directly
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogFooter as StandardDialogFooter } from "@/components/ui/dialog"; // Aliased to avoid conflict if AlertDialogFooter is also used directly
 import type { PlotPoint } from "@/lib/types";
 import { useCampaign } from "@/contexts/campaign-context";
 import {
@@ -238,7 +238,10 @@ export default function StorySoFarRefactoredPage() {
     const currentSessionPlotPoints = plotPoints.filter(p => p.sessionNumber === currentSessionNumber);
 
     if (currentSessionPlotPoints.length === 0) {
-        setIsAdvanceSessionConfirmOpen(true); // Open confirmation dialog
+        // setIsAdvanceSessionConfirmOpen(true); // Now directly advances
+        setCurrentSessionNumber(prev => prev + 1);
+        clearFullCampaignSummaryCache();
+        toast({title: `Session ${currentSessionNumber + 1} Started`, description: "No plot points from the previous session to summarize."});
         return;
     }
 
@@ -256,7 +259,7 @@ export default function StorySoFarRefactoredPage() {
     clearFullCampaignSummaryCache();
   };
 
-  const handleConfirmAdvanceEmptySession = () => {
+  const handleConfirmAdvanceEmptySession = () => { // This function is no longer used directly by the button
     if (!activeCampaign) return;
     setCurrentSessionNumber(prev => prev + 1);
     clearFullCampaignSummaryCache();
@@ -410,26 +413,28 @@ export default function StorySoFarRefactoredPage() {
 
   if (!activeCampaign) {
     return (
-      <Card className="text-center py-12">
-        <CardHeader>
-          <Library className="mx-auto h-16 w-16 text-muted-foreground" />
-          <CardTitle className="mt-4">No Active Campaign</CardTitle>
-          <CardDescription>Please select or create a campaign to manage its story.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/campaign-management">
-              <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card className="text-center py-12">
+          <CardHeader>
+            <Library className="mx-auto h-16 w-16 text-muted-foreground" />
+            <CardTitle className="mt-4">No Active Campaign</CardTitle>
+            <CardDescription>Please select or create a campaign to manage its story.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/campaign-management">
+                <Users className="mr-2 h-5 w-5" /> Go to Campaign Management
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <TooltipProvider>
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full p-4 sm:p-6 lg:p-8">
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow min-h-0">
          <div className="lg:col-span-2 flex flex-col h-full">
@@ -591,7 +596,7 @@ export default function StorySoFarRefactoredPage() {
                 disabled={isGeneratingGlobalSummary || plotPoints.length === 0 || Object.values(isGeneratingSessionSummary).some(loading => loading)}
               >
                 {isGeneratingGlobalSummary ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                {isGeneratingGlobalSummary ? "Generating..." : "Generate Full Summary"}
+                Generate Full Summary
               </Button>
             </CardContent>
             <CardFooter>
@@ -679,8 +684,8 @@ export default function StorySoFarRefactoredPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
-        <AlertDialogContent>
+      <Dialog open={isClearLogConfirm1Open} onOpenChange={setIsClearLogConfirm1Open}>
+        <DialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -696,8 +701,8 @@ export default function StorySoFarRefactoredPage() {
               Proceed to Final Confirmation
             </AlertDialogAction>
           </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isClearLogConfirm2Open} onOpenChange={(isOpen) => {
         if (!isOpen) {
@@ -758,12 +763,12 @@ export function AdventureRecapHelpContent() {
             input field on the right. Click "Add to Log".
           </p>
           <p>
-            2. When a session ends, click "End Session {`{X}`} & Start Next". This button is only active if the current session has at least one plot point. If it's empty, a confirmation will appear.
+            2. When a session ends, click "End Session {`{X}`} & Start Next".
             <ul className="list-disc pl-5 space-y-1 mt-1">
               <li>
                 An AI summary will be automatically generated for the completed
                 session using the selected detail level and displayed with an
-                "episode title" format.
+                "episode title" format. If the session is empty, you will be prompted to confirm before advancing.
               </li>
             </ul>
           </p>
@@ -793,7 +798,7 @@ export function AdventureRecapHelpContent() {
                 campaign).
               </li>
               <li>
-                Click "Generate Full Summary" for a recap of everything. This
+                Click "Generate Full Campaign Summary" for a recap of everything. This
                 summary will be cached until new plot points are added or a
                 session advances.
               </li>
