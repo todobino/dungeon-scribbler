@@ -6,10 +6,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2, VenetianMask } from "lucide-react";
+import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2, VenetianMask, Image as ImageIcon, UploadCloud } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants";
@@ -21,6 +21,7 @@ import { CharacterDetailsDialog } from "@/components/features/party-manager/char
 import { LevelDiscrepancyDialog } from "@/components/features/party-manager/level-discrepancy-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import NextImage from "next/image";
 
 
 export default function PartyManagerPage() {
@@ -69,6 +70,7 @@ export default function PartyManagerPage() {
     armorClass: 10,
     initiativeModifier: 0,
     color: PREDEFINED_COLORS[0].value,
+    imageUrl: "",
   };
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
 
@@ -117,6 +119,7 @@ export default function PartyManagerPage() {
         name: characterFormData.name.trim(),
         race: characterFormData.race.trim(),
         subclass: characterFormData.subclass?.trim() || "",
+        imageUrl: characterFormData.imageUrl?.trim() || "",
       };
 
       if (editingCharacter) {
@@ -206,7 +209,7 @@ export default function PartyManagerPage() {
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       newCharLevel = activeCampaignParty[0].level;
     }
-    setCharacterFormData({...initialCharacterFormState, level: newCharLevel, race: "", class: DND_CLASS_DETAILS[0]?.class || "", subclass: ""});
+    setCharacterFormData({...initialCharacterFormState, level: newCharLevel, race: "", class: DND_CLASS_DETAILS[0]?.class || "", subclass: "", imageUrl: ""});
     setIsFormDialogOpen(true);
   };
 
@@ -221,8 +224,9 @@ export default function PartyManagerPage() {
       armorClass: character.armorClass,
       initiativeModifier: character.initiativeModifier || 0,
       color: character.color || PREDEFINED_COLORS[0].value,
+      imageUrl: character.imageUrl || "",
     });
-    // Trigger subclass fetch if class is set
+    
     if (character.class) {
       const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === character.class);
       if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
@@ -360,45 +364,46 @@ export default function PartyManagerPage() {
         {activeCampaignParty.map((char) => (
           <Card
             key={char.id}
-            className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col border-l-4"
-            style={{ borderColor: char.color || 'hsl(var(--border))' }}
+            className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col rounded-lg overflow-hidden"
+            style={{ borderTop: `6px solid ${char.color || 'hsl(var(--border))'}` }}
           >
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-2xl">{char.name}</CardTitle>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive -mt-2 -mr-2" onClick={() => handleOpenDeleteCharacterDialog1(char)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <CardDescription>Level {char.level} {char.race} {char.class}{char.subclass ? ` (${char.subclass})` : ""}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-3">
-               <div className="flex items-center">
-                <VenetianMask className="mr-2 h-5 w-5 text-primary" />
-                <span>Race: {char.race}</span>
-              </div>
-              <div className="flex items-center">
-                <Wand className="mr-2 h-5 w-5 text-primary" />
-                <span>Class: {char.class}{char.subclass ? ` (${char.subclass})` : ""}</span>
-              </div>
-              <div className="flex items-center">
-                <User className="mr-2 h-5 w-5 text-primary" />
-                <span>Level: {char.level}</span>
-              </div>
-               <div className="flex items-center">
-                <Shield className="mr-2 h-5 w-5 text-primary" />
-                <span>Armor Class: {char.armorClass}</span>
-              </div>
-              <div className="flex items-center">
-                <ChevronsRight className="mr-2 h-5 w-5 text-primary" />
-                <span>Initiative Mod: {char.initiativeModifier !== undefined ? (char.initiativeModifier >= 0 ? `+${char.initiativeModifier}` : char.initiativeModifier) : '+0'}</span>
-              </div>
+            <CardContent className="p-0 flex flex-col flex-grow">
+                <div className="aspect-[3/4] w-full bg-muted/50 relative overflow-hidden flex items-center justify-center">
+                    {char.imageUrl ? (
+                        <NextImage src={char.imageUrl} alt={char.name} layout="fill" objectFit="cover" />
+                    ) : (
+                        <NextImage src="https://placehold.co/300x400.png" alt="Character Placeholder" layout="fill" objectFit="cover" data-ai-hint="character portrait fantasy" />
+                    )}
+                     <div className="absolute bottom-2 right-2 flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => toast({ title: "Image Upload Coming Soon!" })}>
+                            <UploadCloud className="h-4 w-4" />
+                        </Button>
+                         <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => toast({ title: "AI Portrait Generation Coming Soon!" })}>
+                            <Palette className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+                <div className="p-4 flex-grow">
+                    <div className="flex justify-between items-start mb-2">
+                        <CardTitle className="text-xl font-bold">{char.name}</CardTitle>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive -mt-1 -mr-1" onClick={() => handleOpenDeleteCharacterDialog1(char)}>
+                        <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <CardDescription className="text-sm text-muted-foreground mb-3">
+                        Level {char.level} {char.race} {char.class}{char.subclass ? ` (${char.subclass})` : ""}
+                    </CardDescription>
+                    <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center"><Shield className="mr-2 h-4 w-4 text-primary/70" /><span>AC: {char.armorClass}</span></div>
+                        <div className="flex items-center"><ChevronsRight className="mr-2 h-4 w-4 text-primary/70" /><span>Initiative: {char.initiativeModifier !== undefined ? (char.initiativeModifier >= 0 ? `+${char.initiativeModifier}` : char.initiativeModifier) : '+0'}</span></div>
+                    </div>
+                </div>
             </CardContent>
-            <CardFooter className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => openDetailsDialog(char)}>
+            <CardFooter className="flex gap-2 border-t p-3">
+              <Button variant="outline" className="flex-1 text-sm" onClick={() => openDetailsDialog(char)}>
                 <Eye className="mr-2 h-4 w-4" /> View
               </Button>
-              <Button variant="secondary" className="flex-1" onClick={() => openEditDialog(char)}>
+              <Button variant="secondary" className="flex-1 text-sm" onClick={() => openEditDialog(char)}>
                 <Edit3 className="mr-2 h-4 w-4" /> Edit
               </Button>
             </CardFooter>
@@ -406,7 +411,7 @@ export default function PartyManagerPage() {
         ))}
         {activeCampaignParty.length < 6 && (
           <Card
-            className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[280px]"
+            className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[320px] rounded-lg" // Increased min-h
             onClick={openAddDialog}
             role="button"
             tabIndex={0}
@@ -546,6 +551,11 @@ export default function PartyManagerPage() {
               </div>
 
               <div>
+                <Label htmlFor="imageUrl">Image URL (Optional)</Label>
+                <Input id="imageUrl" name="imageUrl" value={characterFormData.imageUrl || ""} onChange={handleInputChange} placeholder="https://example.com/image.png" />
+              </div>
+
+              <div>
                 <Label htmlFor="color-select">Character Color</Label>
                 <Select name="color" value={characterFormData.color} onValueChange={handleColorChange}>
                   <SelectTrigger id="color-select">
@@ -593,10 +603,10 @@ export default function PartyManagerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
+            <AlertDialogDescription>
               Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
               Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
-            </UIAlertDialogDescription>
+            </AlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
@@ -622,9 +632,9 @@ export default function PartyManagerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Delete Character "{characterToDelete?.name}"?</UIAlertDialogTitle>
-            <UIAlertDialogDescription>
+            <AlertDialogDescription>
               This action cannot be undone. This will permanently delete this character from the party.
-            </UIAlertDialogDescription>
+            </AlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteCharacterConfirm1Open(false); setCharacterToDelete(null); }}>Cancel</AlertDialogCancel>
@@ -677,5 +687,3 @@ export default function PartyManagerPage() {
     </div>
   );
 }
-
-

@@ -60,6 +60,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     armorClass: 10,
     initiativeModifier: 0,
     color: PREDEFINED_COLORS[0].value,
+    imageUrl: "", // Added imageUrl
   };
 
 
@@ -187,6 +188,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       ...characterData,
       id: Date.now().toString(),
       initiativeModifier: characterData.initiativeModifier || 0,
+      imageUrl: characterData.imageUrl || "",
     };
     setActiveCampaignParty(prevParty => [...prevParty, newCharacter]);
   }, [activeCampaignId]);
@@ -197,7 +199,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       return;
     }
     setActiveCampaignParty(prevParty =>
-      prevParty.map(char => char.id === updatedCharacter.id ? {...updatedCharacter, initiativeModifier: updatedCharacter.initiativeModifier || 0} : char)
+      prevParty.map(char => char.id === updatedCharacter.id ? {...updatedCharacter, initiativeModifier: updatedCharacter.initiativeModifier || 0, imageUrl: updatedCharacter.imageUrl || ""} : char)
     );
   }, [activeCampaignId]);
 
@@ -277,4 +279,3 @@ export function useCampaign() {
   }
   return context;
 }
-

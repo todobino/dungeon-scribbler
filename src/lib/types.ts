@@ -11,6 +11,7 @@ export interface PlayerCharacter {
   subclass?: string;
   initiativeModifier?: number;
   color?: string;
+  imageUrl?: string; // Added for character portrait
 }
 
 export interface NPC {
@@ -71,7 +72,7 @@ export interface Campaign {
   name: string;
   description?: string;
   activeParty?: PlayerCharacter[];
-  defaultStartingLevel?: number; // Added
+  defaultStartingLevel?: number;
 }
 
 export interface CharacterFormData {
@@ -83,6 +84,7 @@ export interface CharacterFormData {
   armorClass: number;
   initiativeModifier?: number;
   color?: string;
+  imageUrl?: string; // Added for character portrait
 }
 
 
@@ -475,4 +477,3 @@ export interface ShopItem {
   rarity?: string; // e.g., Common, Uncommon, Rare
   // Add other properties as needed, like weight, damage, AC, etc.
 }
-
