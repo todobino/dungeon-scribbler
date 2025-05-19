@@ -1,4 +1,5 @@
 
+
 // Removed: import type { DndClass } from './constants'; // DndClass is no longer defined in constants
 
 export interface PlayerCharacter {
@@ -11,7 +12,7 @@ export interface PlayerCharacter {
   subclass?: string;
   initiativeModifier?: number;
   color?: string;
-  imageUrl?: string; // Added for character portrait
+  imageUrl?: string; 
 }
 
 export interface NPC {
@@ -84,7 +85,7 @@ export interface CharacterFormData {
   armorClass: number;
   initiativeModifier?: number;
   color?: string;
-  imageUrl?: string; // Added for character portrait
+  imageUrl?: string; 
 }
 
 

@@ -6,9 +6,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2, VenetianMask, Image as ImageIcon, UploadCloud } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +23,7 @@ import { LevelDiscrepancyDialog } from "@/components/features/party-manager/leve
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import NextImage from "next/image";
+import { generateCharacterPortrait, type CharacterPortraitInput } from "@/ai/flows/character-portrait-generator";
 
 
 export default function PartyManagerPage() {
@@ -59,6 +61,15 @@ export default function PartyManagerPage() {
   const [isDeleteCharacterConfirm1Open, setIsDeleteCharacterConfirm1Open] = useState(false);
   const [isDeleteCharacterConfirm2Open, setIsDeleteCharacterConfirm2Open] = useState(false);
   const [deleteCharacterConfirmInput, setDeleteCharacterConfirmInput] = useState("");
+
+  // State for AI Portrait Generation
+  const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const [portraitGenerationCharacter, setPortraitGenerationCharacter] = useState<PlayerCharacter | null>(null);
+  const [isPortraitPromptDialogOpen, setIsPortraitPromptDialogOpen] = useState(false);
+  const [portraitPromptDetails, setPortraitPromptDetails] = useState<{ appearance: string; artStyle: string }>({
+    appearance: "",
+    artStyle: "fantasy oil painting",
+  });
 
 
   const initialCharacterFormState: CharacterFormData = {
@@ -101,14 +112,13 @@ export default function PartyManagerPage() {
       } else {
         setApiSubclasses([]);
       }
+       setCharacterFormData(prev => ({...prev, subclass: ""})); // Reset subclass when class changes
     } else if (isFormDialogOpen) {
       setApiSubclasses([]);
+       setCharacterFormData(prev => ({...prev, subclass: ""})); // Reset subclass
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFormDialogOpen, characterFormData.class]);
-
-  const availableSubclasses = DND_CLASS_DETAILS.find(
-    (cls) => cls.class === characterFormData.class
-  )?.subclasses || [];
 
 
   const handleFormSubmit = async () => {
@@ -174,12 +184,16 @@ export default function PartyManagerPage() {
   };
 
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setCharacterFormData((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? parseInt(value) || 0 : value,
-    }));
+    if(type === 'textarea' || e.target instanceof HTMLTextAreaElement) {
+      setPortraitPromptDetails(prev => ({...prev, [name]: value}))
+    } else {
+      setCharacterFormData((prev) => ({
+        ...prev,
+        [name]: type === 'number' ? parseInt(value) || 0 : value,
+      }));
+    }
   };
 
   const handleSelectChange = (name: keyof CharacterFormData, value: string) => {
@@ -187,7 +201,7 @@ export default function PartyManagerPage() {
       const newState = { ...prev, [name]: value };
       if (name === "class") {
         newState.subclass = "";
-        setApiSubclasses([]);
+        // Subclass fetching is handled by useEffect
       }
       return newState;
     });
@@ -227,14 +241,7 @@ export default function PartyManagerPage() {
       imageUrl: character.imageUrl || "",
     });
     
-    if (character.class) {
-      const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === character.class);
-      if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
-        setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})));
-      } else {
-        setApiSubclasses([]);
-      }
-    }
+    // Subclass fetching is handled by useEffect listening to characterFormData.class
     setIsFormDialogOpen(true);
   };
 
@@ -304,6 +311,44 @@ export default function PartyManagerPage() {
     setLinkedPartyLevel(false);
     setIsLevelDiscrepancyDialogOpen(false);
   };
+
+  const handleOpenPortraitPromptDialog = (character: PlayerCharacter) => {
+    setPortraitGenerationCharacter(character);
+    setPortraitPromptDetails({ appearance: "", artStyle: "fantasy oil painting" }); // Reset prompts
+    setIsPortraitPromptDialogOpen(true);
+  };
+
+  const handleGeneratePortrait = async () => {
+    if (!portraitGenerationCharacter) return;
+
+    setIsGeneratingPortrait(true);
+    try {
+      const input: CharacterPortraitInput = {
+        characterName: portraitGenerationCharacter.name,
+        characterRace: portraitGenerationCharacter.race,
+        characterClass: portraitGenerationCharacter.class,
+        appearanceDescription: portraitPromptDetails.appearance,
+        artStyle: portraitPromptDetails.artStyle,
+      };
+      const result = await generateCharacterPortrait(input);
+      if (result.generatedImageDataUri) {
+        await updateCharacterInActiveCampaign({
+          ...portraitGenerationCharacter,
+          imageUrl: result.generatedImageDataUri,
+        });
+        toast({ title: "Portrait Generated!", description: `New portrait for ${portraitGenerationCharacter.name} is set.` });
+      } else {
+        throw new Error("AI did not return an image.");
+      }
+    } catch (error: any) {
+      console.error("Error generating character portrait:", error);
+      toast({ title: "Portrait Generation Failed", description: error.message || "Could not generate portrait.", variant: "destructive" });
+    }
+    setIsGeneratingPortrait(false);
+    setIsPortraitPromptDialogOpen(false);
+    setPortraitGenerationCharacter(null);
+  };
+
 
   if (isLoadingCampaigns || isLoadingParty) {
     return <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2"/>Loading party data...</div>;
@@ -378,7 +423,7 @@ export default function PartyManagerPage() {
                         <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => toast({ title: "Image Upload Coming Soon!" })}>
                             <UploadCloud className="h-4 w-4" />
                         </Button>
-                         <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => toast({ title: "AI Portrait Generation Coming Soon!" })}>
+                         <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm" onClick={() => handleOpenPortraitPromptDialog(char)}>
                             <Palette className="h-4 w-4" />
                         </Button>
                     </div>
@@ -411,7 +456,7 @@ export default function PartyManagerPage() {
         ))}
         {activeCampaignParty.length < 6 && (
           <Card
-            className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[320px] rounded-lg" // Increased min-h
+            className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[320px] rounded-lg"
             onClick={openAddDialog}
             role="button"
             tabIndex={0}
@@ -514,22 +559,22 @@ export default function PartyManagerPage() {
                   name="subclass"
                   value={characterFormData.subclass || ""}
                   onValueChange={(value) => handleSelectChange("subclass", value || "")}
-                  disabled={!characterFormData.class || availableSubclasses.length === 0 || isLoadingApiSubclasses}
+                  disabled={!characterFormData.class || (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).length === 0 || isLoadingApiSubclasses}
                 >
                   <SelectTrigger id="subclass-select">
                   <SelectValue placeholder={
                       isLoadingApiSubclasses ? "Loading subclasses..." :
                       !characterFormData.class ? "Select class first" :
-                      availableSubclasses.length === 0 ? "No subclasses available" :
+                      (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).length === 0 ? "No subclasses available" :
                       "Select a subclass (Optional)"
                   }/>
                   </SelectTrigger>
                   <SelectContent key={characterFormData.class || 'no-class-selected'}>
                     {isLoadingApiSubclasses && <SelectItem value="loading-subclasses" disabled>Loading...</SelectItem>}
-                    {!isLoadingApiSubclasses && availableSubclasses.length === 0 && characterFormData.class ? (
+                    {!isLoadingApiSubclasses && (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).length === 0 && characterFormData.class ? (
                         <SelectItem value="none" disabled>No subclasses for {characterFormData.class}</SelectItem>
                     ) : (
-                      availableSubclasses.map((subclass) => (
+                      (DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class)?.subclasses || []).map((subclass) => (
                         <SelectItem key={subclass.name} value={subclass.name}>
                           {subclass.name}
                         </SelectItem>
@@ -593,6 +638,49 @@ export default function PartyManagerPage() {
         </DialogContent>
       </Dialog>
 
+      {/* AI Portrait Generation Prompt Dialog */}
+      <Dialog open={isPortraitPromptDialogOpen} onOpenChange={setIsPortraitPromptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate AI Portrait for {portraitGenerationCharacter?.name}</DialogTitle>
+            <DialogDescription>
+              Provide details to guide the AI. The character's name, race, and class will be automatically included in the prompt.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="appearanceDescription">Appearance Description</Label>
+              <Textarea
+                id="appearanceDescription"
+                name="appearance"
+                value={portraitPromptDetails.appearance}
+                onChange={handleInputChange}
+                placeholder="e.g., battle-scarred veteran with a grim expression, wearing dark, practical leather armor, short-cropped grey hair, a prominent scar over their left eye."
+                rows={4}
+              />
+            </div>
+            <div>
+              <Label htmlFor="artStyle">Art Style</Label>
+              <Input
+                id="artStyle"
+                name="artStyle"
+                value={portraitPromptDetails.artStyle}
+                onChange={handleInputChange}
+                placeholder="e.g., fantasy oil painting, photorealistic, anime sketch, pixel art"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPortraitPromptDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleGeneratePortrait} disabled={isGeneratingPortrait || !portraitPromptDetails.appearance.trim()}>
+              {isGeneratingPortrait ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Palette className="mr-2 h-4 w-4" />}
+              {isGeneratingPortrait ? "Generating..." : "Generate Portrait"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <CharacterDetailsDialog
         character={currentCharacterDetails}
         isOpen={isDetailsDialogOpen}
@@ -603,10 +691,10 @@ export default function PartyManagerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription>
               Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
               Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
@@ -632,9 +720,9 @@ export default function PartyManagerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Delete Character "{characterToDelete?.name}"?</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription>
               This action cannot be undone. This will permanently delete this character from the party.
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <AlertDialogCancel onClick={() => { setIsDeleteCharacterConfirm1Open(false); setCharacterToDelete(null); }}>Cancel</AlertDialogCancel>
