@@ -15,7 +15,6 @@ import {z} from 'genkit';
 const SuggestibleCampaignFieldsSchema = z.enum([
     "campaignConcept",
     "factionTypes"
-    // Removed: "tone", "length", "worldStyle", "regionFocus", "technologyLevel", "powerBalance" 
 ]);
 
 export const GenerateCampaignIdeaInputSchema = z.object({
@@ -50,17 +49,19 @@ export async function generateCampaignIdea(
   let suggestion = `Mock suggestion for ${input.fieldToSuggest}.`;
   if (input.currentName) suggestion += ` Considering campaign name: "${input.currentName}".`;
   
-  // Add more context to mock if available
-  if (input.fieldToSuggest === "factionTypes" && input.currentWorldStyle === "Steampunk") {
-    suggestion = "Clockwork Artisans Guild, Sky-Pirate Confederacy, Alchemists' Collective.";
-  } else if (input.fieldToSuggest === "factionTypes" && input.currentConcept) {
-    suggestion = `For a campaign like "${input.currentConcept.substring(0,20)}...", consider: The Silent Watchers, The Crimson Banner Mercenaries, The Scholars of the Lost Age.`;
+  if (input.fieldToSuggest === "factionTypes") {
+    if (input.currentWorldStyle === "Steampunk") {
+      suggestion = "Clockwork Artisans Guild (Inventors pushing dangerous tech)\nSky-Pirate Confederacy (Rebels ruling the airwaves)\nAlchemists' Collective (Seekers of forbidden knowledge)";
+    } else if (input.currentConcept) {
+        suggestion = `The Silent Watchers (Guardians of ancient secrets)\nThe Crimson Banner Mercenaries (Sellswords with a surprisingly strict code of honor)\nThe Scholars of the Lost Age (Academics obsessed with forgotten lore for "${input.currentConcept.substring(0,20)}...")`;
+    } else {
+        suggestion = "The Midnight Circle (Practitioners of dark magic)\nKeepers of the Green (Protectors of the natural world)\nGuild of Iron (Master crafters and traders)";
+    }
   } else if (input.fieldToSuggest === "campaignConcept" && input.currentName) {
     suggestion = `A thrilling adventure where heroes must uncover the secrets of the ${input.currentName} to save the land from an ancient evil.`;
   } else if (input.fieldToSuggest === "campaignConcept") {
     suggestion = `The players awaken with amnesia in a world on the brink of magical catastrophe.`;
   }
-
 
   return { suggestedValue: suggestion };
   // return campaignWizardFlow(input); // Actual flow call
@@ -83,10 +84,10 @@ Current campaign details provided by the user:
 {{#if currentFactionTypes}}- Faction Types: {{{currentFactionTypes}}}{{/if}}
 {{#if currentPowerBalance}}- Power Balance: {{{currentPowerBalance}}}{{/if}}
 
-Based on the existing details (if any), provide a concise and creative suggestion for "{{fieldToSuggest}}".
+Based on the existing details (if any), provide a creative suggestion for "{{fieldToSuggest}}".
 
 If "{{fieldToSuggest}}" is "campaignConcept", provide a 1-2 sentence high-level concept.
-If "{{fieldToSuggest}}" is "factionTypes", list 2-3 distinct and thematic faction archetypes.
+If "{{fieldToSuggest}}" is "factionTypes", list 2-3 distinct faction names. Each name should be followed by a concise (5-10 word) parenthetical description of their archetype or core concept. Example: 'The Silent Watchers (Guardians of ancient secrets), The Crimson Banner Mercenaries (Sellswords with a surprisingly strict code of honor)'. Each faction should be on a new line.
 
 Be creative and inspiring.
 `;

@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useCampaign } from "@/contexts/campaign-context";
+import { useCampaign, type Campaign } from "@/contexts/campaign-context";
+import type { Faction } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,9 +23,10 @@ import {
   FACTION_TYPE_EXAMPLES, 
   POWER_BALANCE_OPTIONS,
   CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX,
+  FACTIONS_STORAGE_KEY_PREFIX,
   type CampaignOption
 } from "@/lib/constants";
-// import { generateCampaignIdea, type GenerateCampaignIdeaInput, type GenerateCampaignIdeaOutput } from "@/ai/flows/campaign-wizard-flow"; // Placeholder for actual AI flow
+import { generateCampaignIdea, type GenerateCampaignIdeaInput, type GenerateCampaignIdeaOutput } from "@/ai/flows/campaign-wizard-flow";
 
 interface CampaignWizardFormState {
   name: string;
@@ -34,7 +36,7 @@ interface CampaignWizardFormState {
   playerLevelEnd: number;
   worldStyle: string;
   regionFocus: string;
-  customRegionFocus?: string; // Added for "Other" option
+  customRegionFocus?: string;
   technologyLevel: string;
   factionTypes: string;
   powerBalance: string;
@@ -69,8 +71,6 @@ export default function CampaignWizardPage() {
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
   
   const getDraftStorageKey = () => {
-    // Ensure there's always a draft key, even if it's just a default one.
-    // This avoids issues if activeCampaign is temporarily null during initialization.
     return `${CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX}current`;
   };
 
@@ -80,16 +80,16 @@ export default function CampaignWizardPage() {
       const storedDraft = localStorage.getItem(draftKey);
       if (storedDraft) {
         const parsedDraft = JSON.parse(storedDraft);
-        // Ensure customRegionFocus defaults to empty string if not in draft
         setFormState({ ...initialFormState, ...parsedDraft, customRegionFocus: parsedDraft.customRegionFocus || "" });
       } else {
         setFormState(initialFormState);
       }
     } catch (error) {
       console.error("Error loading campaign draft:", error);
-      setFormState(initialFormState); // Reset to initial if error
+      setFormState(initialFormState);
     }
-  }, []); // Empty dependency array: run only on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
   useEffect(() => {
     try {
@@ -110,7 +110,7 @@ export default function CampaignWizardPage() {
     setFormState(prev => {
         const newState = { ...prev, [name]: value };
         if (name === "regionFocus" && value !== "Other") {
-            newState.customRegionFocus = ""; // Clear custom input if "Other" is not selected
+            newState.customRegionFocus = ""; 
         }
         return newState;
     });
@@ -123,21 +123,46 @@ export default function CampaignWizardPage() {
   
   const handleGenerateIdea = async (field: IdeaField) => {
     setIsLoadingIdea(prev => ({ ...prev, [field]: true }));
-    // const inputForAI: GenerateCampaignIdeaInput = { /* ... */ }; // Actual AI input
+    
+    const aiInput: GenerateCampaignIdeaInput = {
+        fieldToSuggest: field,
+        currentName: formState.name,
+        currentConcept: formState.campaignConcept,
+        currentLength: formState.length,
+        currentTone: formState.tone,
+        playerLevelStart: formState.playerLevelStart,
+        playerLevelEnd: formState.playerLevelEnd,
+        currentWorldStyle: formState.worldStyle,
+        currentRegionFocus: formState.regionFocus,
+        customRegionFocus: formState.customRegionFocus,
+        currentTechnologyLevel: formState.technologyLevel,
+        currentFactionTypes: formState.factionTypes,
+        currentPowerBalance: formState.powerBalance,
+    };
+
     try {
+      // const result: GenerateCampaignIdeaOutput = await generateCampaignIdea(aiInput); // Actual AI call
+      // Mock for now based on original logic
       await new Promise(resolve => setTimeout(resolve, 1000)); 
       let suggestion = `AI generated idea for ${field} based on current form values.`;
       if (field === "factionTypes") {
-        suggestion = "The Shadow Syndicate, The Sunstone Order, The Clockwork Artisans";
+        if (formState.worldStyle === "Steampunk") {
+            suggestion = "Clockwork Artisans Guild (Inventors pushing dangerous tech)\nSky-Pirate Confederacy (Rebels ruling the airwaves)\nAlchemists' Collective (Seekers of forbidden knowledge)";
+        } else if (formState.campaignConcept) {
+            suggestion = `The Silent Watchers (Guardians of ancient secrets)\nThe Crimson Banner Mercenaries (Sellswords with a surprisingly strict code of honor)\nThe Scholars of the Lost Age (Academics obsessed with forgotten lore for "${formState.campaignConcept.substring(0,20)}...")`;
+        } else {
+            suggestion = "The Midnight Circle (Practitioners of dark magic)\nKeepers of the Green (Protectors of the natural world)\nGuild of Iron (Master crafters and traders)";
+        }
       } else if (field === "campaignConcept" && formState.name) {
-        suggestion = `The players must unravel the mystery of the \"${formState.name}\" before it's too late.`;
+        suggestion = `A thrilling adventure where heroes must uncover the secrets of the \"${formState.name}\" before it's too late.`;
       } else if (field === "campaignConcept") {
         suggestion = "A classic tale of heroes rising against an encroaching darkness.";
       }
+      const result = { suggestedValue: suggestion }; // Mocked result
 
-      if (suggestion) {
+      if (result.suggestedValue) {
         if (field === "campaignConcept" || field === "factionTypes") {
-             setFormState(prev => ({ ...prev, [field]: suggestion }));
+             setFormState(prev => ({ ...prev, [field]: result.suggestedValue }));
         }
         toast({ title: `Idea Generated for ${field.replace(/([A-Z])/g, ' $1')}`});
       } else {
@@ -158,8 +183,55 @@ export default function CampaignWizardPage() {
     }
     setIsCreatingCampaign(true);
     try {
-      await addCampaign(formState.name.trim()); 
-      toast({ title: "Campaign Created!", description: `"${formState.name.trim()}" is ready.` });
+      const newCampaign = await addCampaign(formState.name.trim()); 
+      
+      // Auto-create factions
+      if (formState.factionTypes.trim()) {
+        const factionLines = formState.factionTypes.split('\n').filter(line => line.trim() !== "");
+        const newFactions: Faction[] = [];
+
+        factionLines.forEach((line, index) => {
+            let factionName = line.trim();
+            let factionGoal = `To pursue their interests in the campaign: ${newCampaign.name}.`; // Default goal
+
+            const match = line.match(/^(.*?)\s*\((.*?)\)\s*$/);
+            if (match && match[1] && match[2]) {
+                factionName = match[1].trim();
+                factionGoal = match[2].trim(); 
+            }
+
+            if (factionName) {
+                newFactions.push({
+                    id: `${Date.now().toString()}-${index}`,
+                    campaignId: newCampaign.id,
+                    name: factionName,
+                    goals: factionGoal,
+                    reputation: 0,
+                    notes: "",
+                    leader: "",
+                    headquarters: "",
+                    allies: "",
+                    enemies: "",
+                    lieutenant: "",
+                    philosophy: "",
+                    supportingCast: "",
+                    introductionScene: "",
+                });
+            }
+        });
+
+        if (newFactions.length > 0) {
+            const factionsStorageKey = `${FACTIONS_STORAGE_KEY_PREFIX}${newCampaign.id}`;
+            try {
+                localStorage.setItem(factionsStorageKey, JSON.stringify(newFactions));
+            } catch (error) {
+                console.error("Error saving initial factions to localStorage:", error);
+                toast({ title: "Faction Creation Note", description: "Campaign created, but could not auto-save initial factions. Please add them manually.", variant: "default" });
+            }
+        }
+      }
+
+      toast({ title: "Campaign Created!", description: `"${newCampaign.name}" is ready.` });
       const draftKey = getDraftStorageKey();
       localStorage.removeItem(draftKey); 
       router.push("/campaign-management");
@@ -253,44 +325,9 @@ export default function CampaignWizardPage() {
                       <Textarea id="campaignConcept" name="campaignConcept" value={formState.campaignConcept} onChange={handleInputChange} placeholder="A brief, 1-2 sentence high-level concept for your campaign. What is it about?" rows={3} className="text-base"/>
                   )}
 
-                  <div className="space-y-1.5">
-                      <Label htmlFor="length">Length/Commitment</Label>
-                      <Select value={formState.length} onValueChange={(value) => handleSelectChange("length", value || "")}>
-                          <SelectTrigger id="length" className="text-base"><SelectValue placeholder="Select length/commitment"/></SelectTrigger>
-                          <SelectContent>
-                            {CAMPAIGN_LENGTH_OPTIONS.map(opt => (
-                                <Tooltip key={opt.value} delayDuration={100}>
-                                    <TooltipTrigger asChild>
-                                        <SelectItem value={opt.value}>{opt.value}</SelectItem>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right" align="start" className="max-w-xs z-[60]">
-                                        <p>{opt.description}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            ))}
-                          </SelectContent>
-                      </Select>
-                  </div>
+                  {renderSelectWithTooltips("length", "Length/Commitment", CAMPAIGN_LENGTH_OPTIONS, "Select length/commitment")}
+                  {renderSelectWithTooltips("tone", "Tone", CAMPAIGN_TONE_OPTIONS, "Select a tone")}
                 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="tone">Tone</Label>
-                    <Select value={formState.tone} onValueChange={(value) => handleSelectChange("tone", value || "")}>
-                        <SelectTrigger id="tone" className="text-base"><SelectValue placeholder="Select a tone"/></SelectTrigger>
-                        <SelectContent>
-                        {CAMPAIGN_TONE_OPTIONS.map(opt => (
-                            <Tooltip key={opt.value} delayDuration={100}>
-                                <TooltipTrigger asChild>
-                                    <SelectItem value={opt.value}>{opt.value}</SelectItem>
-                                </TooltipTrigger>
-                                <TooltipContent side="right" align="start" className="max-w-xs z-[60]">
-                                    <p>{opt.description}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                  </div>
-
                   <div>
                       <Label className="block mb-1.5">Player Level Range</Label>
                       <div className="flex items-center gap-4">
@@ -344,7 +381,8 @@ export default function CampaignWizardPage() {
                   {renderSelectWithTooltips("technologyLevel", "Technology Level", TECHNOLOGY_LEVEL_OPTIONS, "Select a technology level")}
                   
                   {renderFieldWithGenerator("factionTypes", "Key Faction Archetypes", 
-                      <Textarea id="factionTypes" name="factionTypes" value={formState.factionTypes} onChange={handleInputChange} placeholder={FACTION_TYPE_EXAMPLES} rows={3} className="text-base"/>
+                      <Textarea id="factionTypes" name="factionTypes" value={formState.factionTypes} onChange={handleInputChange} placeholder={FACTION_TYPE_EXAMPLES} rows={3} className="text-base"/>,
+                      "List 2-3 faction names. AI can suggest archetypes like 'Name (Description)'. Each on a new line."
                   )}
 
                   {renderSelectWithTooltips("powerBalance", "Power Balance", POWER_BALANCE_OPTIONS, "Select power balance")}
@@ -367,3 +405,4 @@ export default function CampaignWizardPage() {
     </TooltipProvider>
   );
 }
+
