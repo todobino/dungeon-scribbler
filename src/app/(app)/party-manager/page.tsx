@@ -94,7 +94,11 @@ export default function PartyManagerPage() {
   useEffect(() => {
     if (isFormDialogOpen && characterFormData.class) {
       const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class);
-      setApiSubclasses(selectedClassDetail?.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})) || []);
+      if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
+        setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})));
+      } else {
+        setApiSubclasses([]);
+      }
     } else if (isFormDialogOpen) {
       setApiSubclasses([]);
     }
@@ -218,6 +222,15 @@ export default function PartyManagerPage() {
       initiativeModifier: character.initiativeModifier || 0,
       color: character.color || PREDEFINED_COLORS[0].value,
     });
+    // Trigger subclass fetch if class is set
+    if (character.class) {
+      const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === character.class);
+      if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
+        setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})));
+      } else {
+        setApiSubclasses([]);
+      }
+    }
     setIsFormDialogOpen(true);
   };
 
@@ -580,10 +593,10 @@ export default function PartyManagerPage() {
         <AlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
-            <AlertDialogDescription>
+            <UIAlertDialogDescription>
               Party level is linked. You've changed {editingCharacter?.name}'s level to {levelSyncDetails?.newLevel}.
               Do you want to update all other party members to Level {levelSyncDetails?.newLevel} as well?
-            </AlertDialogDescription>
+            </UIAlertDialogDescription>
           </UIAlertDialogHeader>
           <UIAlertDialogFooter>
             <Button variant="outline" onClick={() => handleLevelSyncConfirmation(false)}>
@@ -664,4 +677,5 @@ export default function PartyManagerPage() {
     </div>
   );
 }
+
 
