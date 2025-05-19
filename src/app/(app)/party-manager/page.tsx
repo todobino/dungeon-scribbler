@@ -2,24 +2,25 @@
 "use client";
 
 import type { PlayerCharacter, ApiListItem } from "@/lib/types";
-// Removed: import type { DndClass } from "@/lib/constants"; // DndClass removed
 import { useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; // Renamed imports
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, VenetianMask, ChevronsRight, Loader2 } from "lucide-react";
+import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants"; // DND_CLASSES removed
-import { DND_CLASS_DETAILS } from "@/lib/data/class-data"; // Import new class data
+import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants"; 
+import { DND_CLASS_DETAILS } from "@/lib/data/class-data"; 
 import { useCampaign, type CharacterFormData } from "@/contexts/campaign-context";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { CharacterDetailsDialog } from "@/components/features/party-manager/character-details-dialog";
 import { LevelDiscrepancyDialog } from "@/components/features/party-manager/level-discrepancy-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 
 export default function PartyManagerPage() {
@@ -34,6 +35,7 @@ export default function PartyManagerPage() {
     incrementPartyLevel,
     setPartyLevel
   } = useCampaign();
+  const { toast } = useToast();
 
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -49,15 +51,17 @@ export default function PartyManagerPage() {
 
   const [apiRaces, setApiRaces] = useState<ApiListItem[]>([]);
   const [isLoadingApiRaces, setIsLoadingApiRaces] = useState(false);
-  // No longer need apiSubclasses and isLoadingApiSubclasses from API
-  // const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]);
-  // const [isLoadingApiSubclasses, setIsLoadingApiSubclasses] = useState(false);
+  
+  const [characterToDelete, setCharacterToDelete] = useState<PlayerCharacter | null>(null);
+  const [isDeleteCharacterConfirm1Open, setIsDeleteCharacterConfirm1Open] = useState(false);
+  const [isDeleteCharacterConfirm2Open, setIsDeleteCharacterConfirm2Open] = useState(false);
+  const [deleteCharacterConfirmInput, setDeleteCharacterConfirmInput] = useState("");
 
 
   const initialCharacterFormState: CharacterFormData = {
     name: "",
     level: 1,
-    class: DND_CLASS_DETAILS[0]?.class || "", // Default to first class from data or empty
+    class: DND_CLASS_DETAILS[0]?.class || "", 
     race: "", 
     subclass: "",
     armorClass: 10,
@@ -66,7 +70,6 @@ export default function PartyManagerPage() {
   };
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
 
-  // Fetch Races (remains the same)
   useEffect(() => {
     if (isFormDialogOpen && apiRaces.length === 0 && !isLoadingApiRaces) {
       const fetchRaces = async () => {
@@ -85,7 +88,6 @@ export default function PartyManagerPage() {
     }
   }, [isFormDialogOpen, apiRaces.length, isLoadingApiRaces]);
 
-  // Subclasses are now derived from DND_CLASS_DETAILS, not fetched via API
   const availableSubclasses = DND_CLASS_DETAILS.find(
     (cls) => cls.class === characterFormData.class
   )?.subclasses || [];
@@ -126,7 +128,6 @@ export default function PartyManagerPage() {
       setCharacterFormData(initialCharacterFormState);
       setEditingCharacter(null);
       setIsFormDialogOpen(false);
-      // No longer need to clear apiSubclasses here as it's derived
     }
   };
 
@@ -166,7 +167,7 @@ export default function PartyManagerPage() {
      setCharacterFormData((prev) => {
       const newState = { ...prev, [name]: value };
       if (name === "class") {
-        newState.subclass = ""; // Reset subclass when class changes
+        newState.subclass = ""; 
       }
       return newState;
     });
@@ -209,10 +210,33 @@ export default function PartyManagerPage() {
     setIsDetailsDialogOpen(true);
   };
   
-  const handleDeleteCharacter = async (id: string) => {
-    if (activeCampaign) {
-      await deleteCharacterFromActiveCampaign(id);
+  const handleOpenDeleteCharacterDialog1 = (character: PlayerCharacter) => {
+    setCharacterToDelete(character);
+    setIsDeleteCharacterConfirm1Open(true);
+  };
+
+  const handleConfirmCharacterDelete1 = () => {
+    setIsDeleteCharacterConfirm1Open(false);
+    setIsDeleteCharacterConfirm2Open(true);
+    setDeleteCharacterConfirmInput("");
+  };
+
+  const handleFinalCharacterDelete = async () => {
+    if (characterToDelete && deleteCharacterConfirmInput === "DELETE") {
+      try {
+        await deleteCharacterFromActiveCampaign(characterToDelete.id);
+        toast({ title: "Character Deleted", description: `"${characterToDelete.name}" has been removed from the party.` });
+      } catch (error) {
+        console.error("Error deleting character:", error);
+        toast({ title: "Error Deleting Character", description: "Could not remove the character.", variant: "destructive" });
+      }
+    } else if (deleteCharacterConfirmInput !== "DELETE") {
+      toast({ title: "Incorrect Confirmation", description: "Please type DELETE to confirm.", variant: "destructive" });
+      return; 
     }
+    setIsDeleteCharacterConfirm2Open(false);
+    setCharacterToDelete(null);
+    setDeleteCharacterConfirmInput("");
   };
 
   const handleLevelUpPartyButton = async () => {
@@ -276,8 +300,8 @@ export default function PartyManagerPage() {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 w-full">
+       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Party Manager</h1>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto ml-auto">
           <div className="flex items-center space-x-2 p-2 border rounded-md bg-card w-full sm:w-auto justify-between">
@@ -311,7 +335,7 @@ export default function PartyManagerPage() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle className="text-2xl">{char.name}</CardTitle>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive -mt-2 -mr-2" onClick={() => handleDeleteCharacter(char.id)}>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive -mt-2 -mr-2" onClick={() => handleOpenDeleteCharacterDialog1(char)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -349,18 +373,20 @@ export default function PartyManagerPage() {
             </CardFooter>
           </Card>
         ))}
-        <Card
-          className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[280px]"
-          onClick={openAddDialog}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openAddDialog(); }}
-          aria-label="Add new character"
-        >
-          <PlusCircle className="h-12 w-12 text-muted-foreground group-hover:text-primary mb-3 transition-colors" />
-          <p className="text-lg font-medium text-muted-foreground group-hover:text-primary transition-colors">Add Character</p>
-          <p className="text-sm text-muted-foreground text-center mt-1">Click to add a new character to the party.</p>
-        </Card>
+        {activeCampaignParty.length < 6 && (
+          <Card
+            className="col-span-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted hover:border-primary hover:bg-muted/50 transition-colors duration-200 cursor-pointer group min-h-[280px]"
+            onClick={openAddDialog}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openAddDialog(); }}
+            aria-label="Add new character"
+          >
+            <PlusCircle className="h-12 w-12 text-muted-foreground group-hover:text-primary mb-3 transition-colors" />
+            <p className="text-lg font-medium text-muted-foreground group-hover:text-primary transition-colors">Add Character</p>
+            <p className="text-sm text-muted-foreground text-center mt-1">Click to add a new character to the party.</p>
+          </Card>
+        )}
       </div>
 
 
@@ -368,7 +394,6 @@ export default function PartyManagerPage() {
           if (!isOpen) {
             setEditingCharacter(null); 
             setCharacterFormData(initialCharacterFormState);
-            // No longer need to clear apiSubclasses here
             setLevelSyncDetails(null); 
             setIsLevelSyncDialogOpen(false); 
           }
@@ -553,6 +578,63 @@ export default function PartyManagerPage() {
         onConfirmSync={handleLevelDiscrepancyConfirm}
         onCancel={handleLevelDiscrepancyCancel}
       />
+
+      {/* Delete Character Confirmation Dialog 1 */}
+      <AlertDialog open={isDeleteCharacterConfirm1Open} onOpenChange={setIsDeleteCharacterConfirm1Open}>
+        <AlertDialogContent>
+          <UIAlertDialogHeader>
+            <UIAlertDialogTitle>Delete Character "{characterToDelete?.name}"?</UIAlertDialogTitle>
+            <UIAlertDialogDescription>
+              This action cannot be undone. This will permanently delete this character from the party.
+            </UIAlertDialogDescription>
+          </UIAlertDialogHeader>
+          <UIAlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setIsDeleteCharacterConfirm1Open(false); setCharacterToDelete(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCharacterDelete1}
+              className={cn(buttonVariants({ variant: "destructive" }))}
+            >
+              Delete
+            </AlertDialogAction>
+          </UIAlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Character Confirmation Dialog 2 (Type DELETE) */}
+      <Dialog open={isDeleteCharacterConfirm2Open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setCharacterToDelete(null);
+          setDeleteCharacterConfirmInput("");
+        }
+        setIsDeleteCharacterConfirm2Open(isOpen);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion of "{characterToDelete?.name}"</DialogTitle>
+            <DialogDescription>
+              To permanently delete this character, please type "DELETE" in the box below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={deleteCharacterConfirmInput}
+              onChange={(e) => setDeleteCharacterConfirmInput(e.target.value)}
+              placeholder="DELETE"
+              className="border-destructive focus-visible:ring-destructive"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsDeleteCharacterConfirm2Open(false); setCharacterToDelete(null); setDeleteCharacterConfirmInput(""); }}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={handleFinalCharacterDelete}
+              disabled={deleteCharacterConfirmInput !== "DELETE"}
+            >
+              Confirm Permanent Deletion
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
