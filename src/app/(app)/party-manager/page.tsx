@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { PlayerCharacter, ApiListItem } from "@/lib/types";
@@ -23,6 +24,7 @@ import { LevelDiscrepancyDialog } from "@/components/features/party-manager/leve
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import NextImage from "next/image";
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { generateCharacterPortrait, type CharacterPortraitInput } from "@/ai/flows/character-portrait-generator";
 
 
@@ -74,7 +76,7 @@ export default function PartyManagerPage() {
 
   const initialCharacterFormState: CharacterFormData = {
     name: "",
-    level: 1,
+    level: activeCampaign?.defaultStartingLevel || 1,
     class: DND_CLASS_DETAILS[0]?.class || "",
     race: "",
     customRaceInput: "",
@@ -82,7 +84,6 @@ export default function PartyManagerPage() {
     armorClass: 10,
     initiativeModifier: 0,
     color: PREDEFINED_COLORS[0].value,
-    imageUrl: "",
   };
   const [characterFormData, setCharacterFormData] = useState<CharacterFormData>(initialCharacterFormState);
 
@@ -94,8 +95,8 @@ export default function PartyManagerPage() {
           const response = await fetch(`${DND5E_API_BASE_URL}/api/races`);
           if (!response.ok) throw new Error("Failed to fetch races");
           const data = await response.json();
-          const standardRaces = data.results || [];
-          setApiRaces([{ index: 'other', name: 'Other', url: '' }, ...standardRaces]);
+          const standardRaces: ApiListItem[] = data.results || [];
+          setApiRaces([{ index: 'other', name: 'Other', url: '' }, ...standardRaces.sort((a,b) => a.name.localeCompare(b.name))]);
         } catch (error) {
           console.error("Error fetching races:", error);
           toast({ title: "Error", description: "Could not fetch races from D&D API.", variant: "destructive" });
@@ -111,7 +112,7 @@ export default function PartyManagerPage() {
     if (isFormDialogOpen && characterFormData.class) {
       const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class);
       if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
-        setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})));
+        setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: ''})).sort((a,b) => a.name.localeCompare(b.name)));
       } else {
         setApiSubclasses([]);
       }
@@ -131,38 +132,45 @@ export default function PartyManagerPage() {
         finalRace = characterFormData.customRaceInput?.trim() || "Unknown Custom Race";
       }
       
-      const dataToSave: PlayerCharacter = { // Construct as PlayerCharacter for saving
-        id: editingCharacter ? editingCharacter.id : Date.now().toString(), // Ensure ID is handled
+      const characterDataForContext: CharacterFormData = {
         name: characterFormData.name.trim(),
         level: characterFormData.level,
         class: characterFormData.class,
-        race: finalRace,
+        race: finalRace, // this will be the final string (custom or selected)
+        // customRaceInput is not part of PlayerCharacter, so it's omitted here
         subclass: characterFormData.subclass?.trim() || "",
         armorClass: characterFormData.armorClass,
         initiativeModifier: characterFormData.initiativeModifier || 0,
         color: characterFormData.color || PREDEFINED_COLORS[0].value,
-        imageUrl: characterFormData.imageUrl?.trim() || "",
       };
 
 
       if (editingCharacter) {
         const originalLevel = editingCharacter.level;
-        const newLevel = dataToSave.level;
+        const newLevel = characterDataForContext.level;
+
+        const characterToUpdate: PlayerCharacter = {
+            ...editingCharacter,
+            ...characterDataForContext,
+        };
+
 
         if (linkedPartyLevel && newLevel !== originalLevel && activeCampaignParty.length > 1) {
-           // Pass the fully constructed PlayerCharacter for update context
           setLevelSyncDetails({
             characterId: editingCharacter.id,
             newLevel: newLevel,
-            allFormData: characterFormData // Pass original form data for re-evaluation if needed
+            allFormData: characterFormData 
           });
           setIsLevelSyncDialogOpen(true);
           return;
         } else {
-          await updateCharacterInActiveCampaign(dataToSave);
+          await updateCharacterInActiveCampaign(characterToUpdate);
         }
       } else {
-        let dataToAdd: CharacterFormData = { ...characterFormData, race: finalRace };
+        let dataToAdd: CharacterFormData = { ...characterDataForContext };
+         if (characterFormData.race === "Other") { // ensure customRaceInput is used for the 'race' field in PlayerCharacter
+            dataToAdd.race = characterFormData.customRaceInput?.trim() || "Unknown Custom Race";
+        }
         if (linkedPartyLevel && activeCampaignParty.length > 0) {
           dataToAdd.level = activeCampaignParty[0].level;
         }
@@ -184,16 +192,21 @@ export default function PartyManagerPage() {
     }
     const characterToUpdate: PlayerCharacter = {
       ...editingCharacter,
-      ...allFormData,
+      name: allFormData.name.trim(),
+      level: newLevel, 
+      class: allFormData.class,
       race: finalRace,
-      level: newLevel // Ensure the new level is applied here
+      subclass: allFormData.subclass?.trim() || "",
+      armorClass: allFormData.armorClass,
+      initiativeModifier: allFormData.initiativeModifier || 0,
+      color: allFormData.color || PREDEFINED_COLORS[0].value,
+      imageUrl: editingCharacter.imageUrl || "", 
     };
 
 
     if (syncAll) {
       try {
         await setPartyLevel(newLevel);
-        // Update the current character explicitly as setPartyLevel might not trigger re-render of this specific char's details in time
         await updateCharacterInActiveCampaign(characterToUpdate); 
       } catch (error) {
         console.error("Error syncing party levels:", error);
@@ -244,14 +257,13 @@ export default function PartyManagerPage() {
 
   const openAddDialog = () => {
     setEditingCharacter(null);
-    let newCharLevel = 1;
-    if (activeCampaign?.defaultStartingLevel && activeCampaign.defaultStartingLevel > 0) {
-      newCharLevel = activeCampaign.defaultStartingLevel;
-    }
+    let newCharLevel = activeCampaign?.defaultStartingLevel && activeCampaign.defaultStartingLevel > 0 
+                        ? activeCampaign.defaultStartingLevel 
+                        : 1;
     if (linkedPartyLevel && activeCampaignParty.length > 0) {
       newCharLevel = activeCampaignParty[0].level;
     }
-    setCharacterFormData({...initialCharacterFormState, level: newCharLevel, race: "", class: DND_CLASS_DETAILS[0]?.class || "", subclass: "", imageUrl: "", customRaceInput: ""});
+    setCharacterFormData({...initialCharacterFormState, level: newCharLevel, race: "", class: DND_CLASS_DETAILS[0]?.class || "", subclass: "", customRaceInput: ""});
     setIsFormDialogOpen(true);
   };
 
@@ -277,7 +289,7 @@ export default function PartyManagerPage() {
       armorClass: character.armorClass,
       initiativeModifier: character.initiativeModifier || 0,
       color: character.color || PREDEFINED_COLORS[0].value,
-      imageUrl: character.imageUrl || "",
+      // imageUrl is not part of the form data for input
     });
     
     setIsFormDialogOpen(true);
@@ -596,9 +608,16 @@ export default function PartyManagerPage() {
                     disabled={isLevelInputDisabled}
                   />
                    {isLevelInputDisabled && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Level is linked to party (Level {activeCampaignParty[0]?.level || 1}). Unlink "Link Party Level" to set a different starting level.
-                    </p>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <LinkIcon className="h-4 w-4 text-muted-foreground ml-1 mt-1 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Level is linked to party (currently Level {activeCampaignParty[0]?.level || 1}).<br/>Uncheck "Link Party Level" on the main page to set a different starting level.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
               </div>
@@ -645,10 +664,7 @@ export default function PartyManagerPage() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="imageUrl">Image URL (Optional)</Label>
-                <Input id="imageUrl" name="imageUrl" value={characterFormData.imageUrl || ""} onChange={handleInputChange} placeholder="https://example.com/image.png" />
-              </div>
+              {/* Image URL input removed */}
 
               <div>
                 <Label htmlFor="color-select">Character Color</Label>
@@ -738,7 +754,7 @@ export default function PartyManagerPage() {
       />
 
       <AlertDialog open={isLevelSyncDialogOpen} onOpenChange={setIsLevelSyncDialogOpen}>
-        <AlertDialogContent>
+        <UIAlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Confirm Party Level Sync</UIAlertDialogTitle>
             <AlertDialogDescription>
@@ -754,7 +770,7 @@ export default function PartyManagerPage() {
               Yes, sync all to Level {levelSyncDetails?.newLevel}
             </Button>
           </UIAlertDialogFooter>
-        </AlertDialogContent>
+        </UIAlertDialogContent>
       </AlertDialog>
 
       <LevelDiscrepancyDialog
@@ -767,7 +783,7 @@ export default function PartyManagerPage() {
 
       {/* Delete Character Confirmation Dialog 1 */}
       <AlertDialog open={isDeleteCharacterConfirm1Open} onOpenChange={setIsDeleteCharacterConfirm1Open}>
-        <AlertDialogContent>
+        <UIAlertDialogContent>
           <UIAlertDialogHeader>
             <UIAlertDialogTitle>Delete Character "{characterToDelete?.name}"?</UIAlertDialogTitle>
             <AlertDialogDescription>
@@ -783,7 +799,7 @@ export default function PartyManagerPage() {
               Delete
             </AlertDialogAction>
           </UIAlertDialogFooter>
-        </AlertDialogContent>
+        </UIAlertDialogContent>
       </AlertDialog>
 
       {/* Delete Character Confirmation Dialog 2 (Type DELETE) */}

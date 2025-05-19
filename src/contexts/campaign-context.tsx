@@ -15,7 +15,7 @@ import {
 import { DND_CLASS_DETAILS } from '@/lib/data/class-data';
 
 
-export type CharacterFormData = Omit<PlayerCharacter, 'id'> & { customRaceInput?: string };
+export type CharacterFormData = Omit<PlayerCharacter, 'id' | 'imageUrl'> & { customRaceInput?: string };
 
 
 interface CampaignContextType {
@@ -62,7 +62,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     armorClass: 10,
     initiativeModifier: 0,
     color: PREDEFINED_COLORS[0].value,
-    imageUrl: "", 
+    // imageUrl: "", // Removed as it's not part of the form anymore
   };
 
 
@@ -194,7 +194,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       race: raceToSave,
       id: Date.now().toString(),
       initiativeModifier: characterData.initiativeModifier || 0,
-      imageUrl: characterData.imageUrl || "",
+      imageUrl: "", // Initialize imageUrl, will be set by AI or future upload
     };
     setActiveCampaignParty(prevParty => [...prevParty, newCharacter]);
   }, [activeCampaignId]);
@@ -204,8 +204,6 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       console.warn("Cannot update character: No active campaign.");
       return;
     }
-    // Note: If CharacterFormData included customRaceInput, this would need to be handled
-    // when updating PlayerCharacter. For now, PlayerCharacter only stores the final race string.
     setActiveCampaignParty(prevParty =>
       prevParty.map(char => char.id === updatedCharacter.id ? {...updatedCharacter, initiativeModifier: updatedCharacter.initiativeModifier || 0, imageUrl: updatedCharacter.imageUrl || ""} : char)
     );

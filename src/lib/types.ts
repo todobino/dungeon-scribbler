@@ -1,5 +1,4 @@
 
-
 // Removed: import type { DndClass } from './constants'; // DndClass is no longer defined in constants
 
 export interface PlayerCharacter {
@@ -86,7 +85,7 @@ export interface CharacterFormData {
   armorClass: number;
   initiativeModifier?: number;
   color?: string;
-  imageUrl?: string; 
+  // imageUrl?: string; // Removed as per request
 }
 
 
@@ -96,14 +95,14 @@ export interface Combatant {
   initiative: number;
   type: 'player' | 'enemy';
   color?: string;
-  playerId?: string;
+  playerId?: string; // Link to PlayerCharacter ID if applicable
   ac?: number;
   hp?: number;
   currentHp?: number;
   tempHp?: number;
   initiativeModifier?: number;
-  monsterIndex?: string;
-  cr?: string;
+  monsterIndex?: string; // For API monsters
+  cr?: string; // For API monsters
 }
 
 export interface Faction {
