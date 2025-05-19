@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogFooter as UIAlertDialogFooter, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle } from "@/components/ui/alert-dialog"; 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2 } from "lucide-react";
+import { PlusCircle, User, Shield, Wand, Users, Trash2, Eye, BookOpen, Library, Edit3, LinkIcon, Link2OffIcon, ArrowUpCircle, Palette, ChevronsRight, Loader2, VenetianMask } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PREDEFINED_COLORS, DND5E_API_BASE_URL } from "@/lib/constants"; 
@@ -51,6 +51,8 @@ export default function PartyManagerPage() {
 
   const [apiRaces, setApiRaces] = useState<ApiListItem[]>([]);
   const [isLoadingApiRaces, setIsLoadingApiRaces] = useState(false);
+  const [apiSubclasses, setApiSubclasses] = useState<ApiListItem[]>([]);
+  const [isLoadingApiSubclasses, setIsLoadingApiSubclasses] = useState(false);
   
   const [characterToDelete, setCharacterToDelete] = useState<PlayerCharacter | null>(null);
   const [isDeleteCharacterConfirm1Open, setIsDeleteCharacterConfirm1Open] = useState(false);
@@ -81,12 +83,35 @@ export default function PartyManagerPage() {
           setApiRaces(data.results || []);
         } catch (error) {
           console.error("Error fetching races:", error);
+          toast({ title: "Error", description: "Could not fetch races from D&D API.", variant: "destructive" });
         }
         setIsLoadingApiRaces(false);
       };
       fetchRaces();
     }
-  }, [isFormDialogOpen, apiRaces.length, isLoadingApiRaces]);
+  }, [isFormDialogOpen, apiRaces.length, isLoadingApiRaces, toast]);
+
+  useEffect(() => {
+    if (isFormDialogOpen && characterFormData.class) {
+      const fetchSubclasses = async () => {
+        setIsLoadingApiSubclasses(true);
+        setApiSubclasses([]); 
+        const selectedClassDetail = DND_CLASS_DETAILS.find(cd => cd.class === characterFormData.class);
+        if (selectedClassDetail && selectedClassDetail.subclasses && selectedClassDetail.subclasses.length > 0) {
+          // Using local data
+          setApiSubclasses(selectedClassDetail.subclasses.map(sc => ({ index: sc.name.toLowerCase().replace(/\s+/g, '-'), name: sc.name, url: '' })));
+        } else {
+           // Fallback or if you intend to fetch from API later
+          // For now, just clear if no local subclasses found
+          setApiSubclasses([]);
+        }
+        setIsLoadingApiSubclasses(false);
+      };
+      fetchSubclasses();
+    } else if (isFormDialogOpen) {
+      setApiSubclasses([]); // Clear subclasses if no class is selected
+    }
+  }, [isFormDialogOpen, characterFormData.class, toast]);
 
   const availableSubclasses = DND_CLASS_DETAILS.find(
     (cls) => cls.class === characterFormData.class
@@ -167,7 +192,8 @@ export default function PartyManagerPage() {
      setCharacterFormData((prev) => {
       const newState = { ...prev, [name]: value };
       if (name === "class") {
-        newState.subclass = ""; 
+        newState.subclass = ""; // Reset subclass when class changes
+        setApiSubclasses([]); // Clear fetched subclasses
       }
       return newState;
     });
@@ -301,7 +327,7 @@ export default function PartyManagerPage() {
 
   return (
     <div className="space-y-6 w-full">
-       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Party Manager</h1>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto ml-auto">
           <div className="flex items-center space-x-2 p-2 border rounded-md bg-card w-full sm:w-auto justify-between">
@@ -459,17 +485,19 @@ export default function PartyManagerPage() {
                   name="subclass" 
                   value={characterFormData.subclass || ""} 
                   onValueChange={(value) => handleSelectChange("subclass", value || "")}
-                  disabled={!characterFormData.class || availableSubclasses.length === 0}
+                  disabled={!characterFormData.class || availableSubclasses.length === 0 || isLoadingApiSubclasses}
                 >
                   <SelectTrigger id="subclass-select">
-                    <SelectValue placeholder={
-                        !characterFormData.class ? "Select class first" : 
-                        availableSubclasses.length === 0 ? "No subclasses available" : 
-                        "Select a subclass (Optional)"
-                    }/>
+                  <SelectValue placeholder={
+                      isLoadingApiSubclasses ? "Loading subclasses..." :
+                      !characterFormData.class ? "Select class first" : 
+                      availableSubclasses.length === 0 ? "No subclasses available" : 
+                      "Select a subclass (Optional)"
+                  }/>
                   </SelectTrigger>
                   <SelectContent key={characterFormData.class || 'no-class-selected'}>
-                    {availableSubclasses.length === 0 && characterFormData.class ? (
+                    {isLoadingApiSubclasses && <SelectItem value="loading-subclasses" disabled>Loading...</SelectItem>}
+                    {!isLoadingApiSubclasses && availableSubclasses.length === 0 && characterFormData.class ? (
                         <SelectItem value="none" disabled>No subclasses for {characterFormData.class}</SelectItem>
                     ) : (
                       availableSubclasses.map((subclass) => (
