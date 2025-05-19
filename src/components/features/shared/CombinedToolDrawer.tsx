@@ -25,6 +25,7 @@ import { Progress }
   from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle }
   from "@/components/ui/sheet";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // Added import
 
 
 import { Dice5, Zap, Trash2, PlusCircle, UserPlus, Users, ArrowRight, ArrowLeft, XCircle, Skull, Loader2, Swords, FolderOpen, MinusCircle, BookOpen, Star, Bandage, Shield, Settings2Icon, ChevronsRight, Square, ShieldAlert }
@@ -34,18 +35,13 @@ import { cn }
   from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie }
   from "@/lib/dice-utils";
-import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster, MonsterDetail, ArmorClass, SpecialAbility, MonsterAction, LegendaryAction }
-  from "@/lib/types";
+import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster, MonsterDetail, ArmorClass, SpecialAbility, MonsterAction, LegendaryAction } from "@/lib/types";
 import { useCampaign }
   from "@/contexts/campaign-context";
-import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL }
-  from "@/lib/constants";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue }
-  from "@/components/ui/select";
-import { formatCRDisplay }
-  from "@/components/features/monster-mash/MonsterMashDrawer";
-import { useToast }
-  from "@/hooks/use-toast";
+import { DICE_ROLLER_TAB_ID, COMBAT_TRACKER_TAB_ID, SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer"; 
+import { useToast } from "@/hooks/use-toast";
 
 interface CombinedToolDrawerProps {
   open: boolean;
@@ -104,10 +100,10 @@ const renderDetailTextField = (label: string, textContent: string | undefined | 
 type DetailActionType = MonsterAction | SpecialAbility | LegendaryAction;
 const renderDetailActions = (actions: DetailActionType[] | undefined | string, actionTypeLabel: string) => {
     if (!actions || (typeof actions === 'string' && actions.trim() === "") || (Array.isArray(actions) && actions.length === 0)) {
-        return null; // Return null or minimal UI if no actions
+        return null; 
     }
 
-    if (typeof actions === 'string') { // Handle simple string case (for basic homebrew)
+    if (typeof actions === 'string') { 
         return renderDetailTextField(actionTypeLabel, actions);
     }
 
@@ -163,6 +159,7 @@ export function CombinedToolDrawer({
   const [showAddFriendlySection, setShowAddFriendlySection] = useState(false);
   const [showAddEnemySection, setShowAddEnemySection] = useState(false);
   
+  const [selectedPlayerToAdd, setSelectedPlayerToAdd] = useState<PlayerCharacter | null>(null);
   const [allyNameInput, setAllyNameInput] = useState<string>("");
   const [allyACInput, setAllyACInput] = useState<string>("");
   const [allyHPInput, setAllyHPInput] = useState<string>("");
@@ -175,7 +172,7 @@ export function CombinedToolDrawer({
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
-  const [enemyCR, setEnemyCR] = useState<string>("");
+  const [enemyCR, setEnemyCR] = useState<string>(""); // Added for consistency, though not primary input
   const [selectedFavoriteMonsterIndexForCombatAdd, setSelectedFavoriteMonsterIndexForCombatAdd] = useState<string | undefined>(undefined);
   
   const [isFavoriteMonsterDialogOpen, setIsFavoriteMonsterDialogOpen] = useState(false);
@@ -521,9 +518,9 @@ export function CombinedToolDrawer({
     setEnemyName(fav.name);
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
-    setEnemyCR(formatCRDisplay(fav.cr)); // Still useful to show CR even if not primary input
+    setEnemyCR(formatCRDisplay(fav.cr)); 
     setSelectedFavoriteMonsterIndexForCombatAdd(fav.index); 
-    setEnemyInitiativeModifierInput("0"); // Default to 0, user can change
+    setEnemyInitiativeModifierInput("0"); 
     setIsFavoriteMonsterDialogOpen(false);
     toast({title: "Favorite Selected", description: `${fav.name} details pre-filled.`});
   };
@@ -568,7 +565,7 @@ export function CombinedToolDrawer({
         const fixedInit = parseInt(enemyInitiativeInput.trim());
         if (!isNaN(fixedInit)) {
             groupInitiativeValue = fixedInit; 
-        } else { // Invalid input for fixed init, roll instead
+        } else { 
             groupInitiativeValue = rollDie(20) + initMod;
         }
     }
@@ -741,7 +738,7 @@ export function CombinedToolDrawer({
                     {rollLog.map(entry => (
                      <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
                         {entry.isRolling ? (
-                           <div className="flex items-center h-10">
+                          <div className="flex items-center h-10">
                             <Dice5 className="h-6 w-6 animate-spin text-primary" />
                             <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
                           </div>
@@ -791,8 +788,8 @@ export function CombinedToolDrawer({
                 <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
             </div>
             <div>
                 <Label htmlFor="friendly-initiative-inline">Initiative</Label>
@@ -929,8 +926,8 @@ export function CombinedToolDrawer({
 
                         {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
                           <div className={cn(
-                            "mt-1", 
-                            c.tempHp && c.tempHp > 0 && "ring-1 ring-blue-500 ring-offset-1 ring-offset-background rounded-full p-px"
+                            "mt-1 rounded-full", 
+                            c.tempHp && c.tempHp > 0 && "ring-1 ring-blue-500 ring-offset-1 ring-offset-background p-px"
                           )}>
                             <Progress 
                               value={Math.max(0, (c.currentHp / c.hp) * 100)} 
@@ -1089,3 +1086,4 @@ export function CombinedToolDrawer({
     </>
   );
 }
+
