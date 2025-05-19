@@ -167,6 +167,11 @@ export function CombinedToolDrawer({
 
   const [activeTab, setActiveTab] = useState(defaultTab);
 
+  const enemyQuantityNum = parseInt(enemyQuantityInput) || 1;
+  const isGroupSwitchDisabled = enemyQuantityNum <= 1;
+  const isFixedInitiativeDisabled = enemyQuantityNum > 1 && !rollGroupInitiativeFlag;
+
+
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab, open]);
@@ -205,6 +210,12 @@ export function CombinedToolDrawer({
         }
     }
   }, [currentTurnIndex, combatants]);
+
+  useEffect(() => {
+    if (isGroupSwitchDisabled && rollGroupInitiativeFlag) {
+      setRollGroupInitiativeFlag(false);
+    }
+  }, [isGroupSwitchDisabled, rollGroupInitiativeFlag]);
 
   const handleDiceRoll = () => {
     const notationToParse = inputValue.trim() === "" ? "1d20" : inputValue.trim();
@@ -479,20 +490,26 @@ export function CombinedToolDrawer({
     let groupInitiativeValue: number | undefined;
     const initMod = parseModifierString(enemyInitiativeModifierInput);
 
-    if (rollGroupInitiativeFlag) {
-      groupInitiativeValue = rollDie(20) + initMod;
+    if (quantity > 1 && rollGroupInitiativeFlag) { // Group initiative for multiple enemies
+        groupInitiativeValue = rollDie(20) + initMod;
+    } else if (!isFixedInitiativeDisabled && enemyInitiativeInput.trim() !== "") { // Fixed initiative for single enemy or grouped multiple
+        const fixedInit = parseInt(enemyInitiativeInput.trim());
+        if (!isNaN(fixedInit)) {
+            groupInitiativeValue = fixedInit; // Treat as group initiative if set
+        } else {
+            // If fixed init is invalid, roll (or could show error)
+            groupInitiativeValue = rollDie(20) + initMod;
+        }
     }
+
 
     for (let i = 0; i < quantity; i++) {
       let initiativeValue: number;
       const currentEnemyName = quantity > 1 ? `${enemyName.trim()} ${i + 1}` : enemyName.trim();
 
-      if (rollGroupInitiativeFlag && groupInitiativeValue !== undefined) {
+      if (groupInitiativeValue !== undefined) { // Use group/fixed if set
         initiativeValue = groupInitiativeValue;
-      } else if (enemyInitiativeInput.trim() !== "" && !isNaN(parseInt(enemyInitiativeInput.trim()))) {
-        initiativeValue = parseInt(enemyInitiativeInput.trim());
-      }
-      else {
+      } else { // Individual roll (single enemy with no fixed, or multiple ungrouped)
         initiativeValue = rollDie(20) + initMod;
       }
 
@@ -603,11 +620,10 @@ export function CombinedToolDrawer({
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[380px] sm:w-[500px] flex flex-col p-0" hideCloseButton={true}>
-        {/* Visually hidden header for accessibility */}
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col h-full pr-8"> {/* Main content wrapper */}
+        <div className="flex flex-col h-full pr-8"> 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
             <TabsList className="grid w-full grid-cols-2 bg-primary text-primary-foreground sticky top-0 z-10">
             <TabsTrigger
@@ -684,11 +700,6 @@ export function CombinedToolDrawer({
                     <ShieldAlert className="mr-2 h-4 w-4" /> Add Enemy
                 </Button>
             </div>
-             {availablePartyMembers.length > 0 && !showAddFriendlySection && !showAddEnemySection && (
-              <div className="p-2 text-xs text-center text-muted-foreground bg-card shrink-0">
-                Click "Add Players" to quickly add all party members to combat.
-              </div>
-            )}
             
             {showAddFriendlySection && (
             <div className="px-4 pb-4 space-y-3 border-b bg-card shrink-0">
@@ -697,8 +708,8 @@ export function CombinedToolDrawer({
                 <Input id="ally-name-inline" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <div><Label htmlFor="ally-ac-inline">AC (Optional)</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                <div><Label htmlFor="ally-hp-inline">HP (Optional)</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-ac-inline">AC</Label><Input id="ally-ac-inline" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                <div><Label htmlFor="ally-hp-inline">HP</Label><Input id="ally-hp-inline" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
             </div>
             <div>
                 <Label htmlFor="friendly-initiative-inline">Initiative</Label>
@@ -739,18 +750,27 @@ export function CombinedToolDrawer({
                   </div>
                   <div className="w-28">
                     <Label htmlFor="enemy-initiative-input-inline">Initiative</Label>
-                    <Input id="enemy-initiative-input-inline" className="w-full" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" />
+                    <Input id="enemy-initiative-input-inline" className="w-full" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" disabled={isFixedInitiativeDisabled} />
                   </div>
-                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())}><Dice5 className="h-4 w-4" /></Button>
+                  <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())} disabled={isFixedInitiativeDisabled}><Dice5 className="h-4 w-4" /></Button>
                 </div>
 
                 <div className="flex items-end gap-3">
                     <div className="w-20"><Label htmlFor="enemy-quantity-inline">Quantity</Label><Input id="enemy-quantity-inline" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" /></div>
-                    <div className="flex items-center space-x-2 pb-1"><Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} /><Label htmlFor="roll-group-initiative-inline" className="cursor-pointer text-sm">Group</Label></div>
+                    <div className="flex items-center space-x-2 pb-1"><Switch id="roll-group-initiative-inline" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} disabled={isGroupSwitchDisabled}/><Label htmlFor="roll-group-initiative-inline" className="cursor-pointer text-sm">Group</Label></div>
                 </div>
-                <div className="mt-auto pt-4"><Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim()} className="w-full">Add to Combat</Button></div>
+                <div className="mt-auto pt-4">
+                    <Button 
+                        onClick={handleAddSingleEnemyGroup} 
+                        disabled={!enemyName.trim()} 
+                        className="w-full"
+                    >
+                        {isFixedInitiativeDisabled ? <Dice5 className="mr-2 h-4 w-4"/> : null}
+                        {isFixedInitiativeDisabled ? "Add & Roll Individually" : "Add to Combat"}
+                    </Button>
+                </div>
                 </TabsContent>
-                <TabsContent value="load-encounter" className="mt-4 flex-grow flex flex-col min-h-0">
+                <TabsContent value="load-encounter" className="mt-3 flex-grow flex flex-col min-h-0">
                 {isLoadingSavedEncounters ? (
                 <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
                 ) : savedEncountersForCombat.length === 0 ? (
@@ -791,7 +811,7 @@ export function CombinedToolDrawer({
             </div>
             )}
 
-            <div className="p-4 flex-grow flex flex-col min-h-0">
+            <div className="px-4 pt-4 pb-1 flex-grow flex flex-col min-h-0">
                 <Label className="mb-1 shrink-0">Combat Order (Highest to Lowest)</Label>
                 <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
                     {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
@@ -827,8 +847,8 @@ export function CombinedToolDrawer({
                         </div>
                         )}
                         {c.type === 'enemy' && c.id === selectedCombatantId && c.currentHp !== undefined && c.currentHp > 0 && (
-                            <div className="flex items-center justify-center gap-1.5 pt-1">
-                            <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
+                             <div className="flex items-center justify-center gap-1.5 pt-1">
+                                <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
                                 <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
                                 <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
                             </div>
@@ -852,7 +872,7 @@ export function CombinedToolDrawer({
             )}
         </TabsContent>
     </Tabs>
-    </div> {/* End Main content wrapper */}
+    </div> 
         <button
             onClick={() => onOpenChange(false)}
             className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
@@ -863,7 +883,6 @@ export function CombinedToolDrawer({
       </SheetContent>
     </Sheet>
 
-    {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
     <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
       <DialogContent className="max-w-md min-h-[480px] flex flex-col">
         <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
@@ -908,7 +927,6 @@ export function CombinedToolDrawer({
         </AlertDialogContent>
         </AlertDialog>
 
-    {/* Monster Detail Dialog (used by Combatant card book icon) */}
     <Dialog open={isMonsterDetailDialogOpen} onOpenChange={setIsMonsterDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -928,7 +946,7 @@ export function CombinedToolDrawer({
                     <div className="grid grid-cols-3 gap-2 text-xs border p-2 rounded-md bg-background">
                     <div><strong>AC:</strong> {formatDetailArmorClass(detail.armor_class)}</div>
                     <div><strong>HP:</strong> {detail.hit_points} {detail.hit_dice ? `(${detail.hit_dice})` : ''}</div>
-                    <div><strong>CR:</strong> {formatCRDisplay(detail.challenge_rating)} {detail.xp ? `(${detail.xp} XP)` : ''}</div>
+                    <div><strong>CR:</strong> {formatCRDisplay(detail.challenge_rating as number | string)} {detail.xp ? `(${detail.xp} XP)` : ''}</div>
                     </div>
                     <div><strong>Speed:</strong> {typeof detail.speed === 'string' ? detail.speed : detail.speed ? Object.entries(detail.speed).map(([key, val]) => `${key} ${val}`).join(', ') : 'N/A'}</div>
                     <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-xs border p-2 rounded-md bg-background">
@@ -940,9 +958,9 @@ export function CombinedToolDrawer({
                     <div className="text-center"><strong>CHA</strong><br/>{detail.charisma ?? 'N/A'} ({detail.charisma ? Math.floor((detail.charisma - 10) / 2) : 'N/A'})</div>
                     </div>
                     {detail.proficiencies?.length > 0 && (<div><strong>Saving Throws & Skills:</strong> {detail.proficiencies.map(p => `${p.proficiency.name.replace("Saving Throw: ", "").replace("Skill: ", "")} +${p.value}`).join(', ')}</div>)}
-                    {detail.damage_vulnerabilities?.length > 0 && <div><strong>Vulnerabilities:</strong> {detail.damage_vulnerabilities.join(', ')}</div>}
-                    {detail.damage_resistances?.length > 0 && <div><strong>Resistances:</strong> {detail.damage_resistances.join(', ')}</div>}
-                    {detail.damage_immunities?.length > 0 && <div><strong>Immunities:</strong> {detail.damage_immunities.join(', ')}</div>}
+                    {detail.damage_vulnerabilities?.length > 0 && <div><strong>Vulnerabilities:</strong> {Array.isArray(detail.damage_vulnerabilities) ? detail.damage_vulnerabilities.join(', ') : detail.damage_vulnerabilities}</div>}
+                    {detail.damage_resistances?.length > 0 && <div><strong>Resistances:</strong> {Array.isArray(detail.damage_resistances) ? detail.damage_resistances.join(', ') : detail.damage_resistances}</div>}
+                    {detail.damage_immunities?.length > 0 && <div><strong>Immunities:</strong> {Array.isArray(detail.damage_immunities) ? detail.damage_immunities.join(', ') : detail.damage_immunities}</div>}
                     {detail.condition_immunities && (typeof detail.condition_immunities === 'string' ? detail.condition_immunities.length > 0 : detail.condition_immunities.length > 0) && <div><strong>Condition Immunities:</strong> {(Array.isArray(detail.condition_immunities) && detail.condition_immunities.length > 0 && typeof detail.condition_immunities[0] !== 'string') ? (detail.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (Array.isArray(detail.condition_immunities) ? detail.condition_immunities.join(', ') : detail.condition_immunities) }</div>}
                     <div><strong>Senses:</strong> {typeof detail.senses === 'string' ? detail.senses : detail.senses ? Object.entries(detail.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ') : 'N/A'}</div>
                     <div><strong>Languages:</strong> {detail.languages || "None"}</div>
@@ -970,3 +988,4 @@ export function CombinedToolDrawer({
     </>
   );
 }
+
