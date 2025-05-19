@@ -34,13 +34,14 @@ interface CampaignWizardFormState {
   playerLevelEnd: number;
   worldStyle: string;
   regionFocus: string;
+  customRegionFocus?: string; // Added for "Other" option
   technologyLevel: string;
   factionTypes: string;
   powerBalance: string;
   campaignConcept: string;
 }
 
-type IdeaField = "campaignConcept" | "length" | "tone" | "factionTypes";
+type IdeaField = "campaignConcept" | "factionTypes";
 
 
 export default function CampaignWizardPage() {
@@ -50,15 +51,16 @@ export default function CampaignWizardPage() {
 
   const initialFormState: CampaignWizardFormState = {
     name: "",
-    length: "", // Default to empty for placeholder
+    length: "", 
     tone: "",
     playerLevelStart: 1,
     playerLevelEnd: 10,
-    worldStyle: "", // Default to empty for placeholder
-    regionFocus: "", // Default to empty for placeholder
-    technologyLevel: "", // Default to empty for placeholder
+    worldStyle: "", 
+    regionFocus: "", 
+    customRegionFocus: "",
+    technologyLevel: "", 
     factionTypes: "",
-    powerBalance: "", // Default to empty for placeholder
+    powerBalance: "", 
     campaignConcept: "",
   };
 
@@ -67,6 +69,8 @@ export default function CampaignWizardPage() {
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
   
   const getDraftStorageKey = () => {
+    // Ensure there's always a draft key, even if it's just a default one.
+    // This avoids issues if activeCampaign is temporarily null during initialization.
     return `${CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX}current`;
   };
 
@@ -75,12 +79,17 @@ export default function CampaignWizardPage() {
       const draftKey = getDraftStorageKey();
       const storedDraft = localStorage.getItem(draftKey);
       if (storedDraft) {
-        setFormState(JSON.parse(storedDraft));
+        const parsedDraft = JSON.parse(storedDraft);
+        // Ensure customRegionFocus defaults to empty string if not in draft
+        setFormState({ ...initialFormState, ...parsedDraft, customRegionFocus: parsedDraft.customRegionFocus || "" });
+      } else {
+        setFormState(initialFormState);
       }
     } catch (error) {
       console.error("Error loading campaign draft:", error);
+      setFormState(initialFormState); // Reset to initial if error
     }
-  }, []);
+  }, []); // Empty dependency array: run only on mount
 
   useEffect(() => {
     try {
@@ -98,7 +107,13 @@ export default function CampaignWizardPage() {
   };
 
   const handleSelectChange = (name: keyof CampaignWizardFormState, value: string) => {
-    setFormState(prev => ({ ...prev, [name]: value }));
+    setFormState(prev => {
+        const newState = { ...prev, [name]: value };
+        if (name === "regionFocus" && value !== "Other") {
+            newState.customRegionFocus = ""; // Clear custom input if "Other" is not selected
+        }
+        return newState;
+    });
   };
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,11 +126,18 @@ export default function CampaignWizardPage() {
     // const inputForAI: GenerateCampaignIdeaInput = { /* ... */ }; // Actual AI input
     try {
       await new Promise(resolve => setTimeout(resolve, 1000)); 
-      const result = { suggestedValue: `AI generated idea for ${field} based on current form values.` };
+      let suggestion = `AI generated idea for ${field} based on current form values.`;
+      if (field === "factionTypes") {
+        suggestion = "The Shadow Syndicate, The Sunstone Order, The Clockwork Artisans";
+      } else if (field === "campaignConcept" && formState.name) {
+        suggestion = `The players must unravel the mystery of the \"${formState.name}\" before it's too late.`;
+      } else if (field === "campaignConcept") {
+        suggestion = "A classic tale of heroes rising against an encroaching darkness.";
+      }
 
-      if (result.suggestedValue) {
-        if (field === "campaignConcept" || field === "tone" || field === "factionTypes" || field === "length") {
-             setFormState(prev => ({ ...prev, [field]: result.suggestedValue }));
+      if (suggestion) {
+        if (field === "campaignConcept" || field === "factionTypes") {
+             setFormState(prev => ({ ...prev, [field]: suggestion }));
         }
         toast({ title: `Idea Generated for ${field.replace(/([A-Z])/g, ' $1')}`});
       } else {
@@ -138,7 +160,8 @@ export default function CampaignWizardPage() {
     try {
       await addCampaign(formState.name.trim()); 
       toast({ title: "Campaign Created!", description: `"${formState.name.trim()}" is ready.` });
-      localStorage.removeItem(getDraftStorageKey()); 
+      const draftKey = getDraftStorageKey();
+      localStorage.removeItem(draftKey); 
       router.push("/campaign-management");
     } catch (error) {
       console.error("Error creating campaign:", error);
@@ -230,7 +253,8 @@ export default function CampaignWizardPage() {
                       <Textarea id="campaignConcept" name="campaignConcept" value={formState.campaignConcept} onChange={handleInputChange} placeholder="A brief, 1-2 sentence high-level concept for your campaign. What is it about?" rows={3} className="text-base"/>
                   )}
 
-                  {renderFieldWithGenerator("length", "Length/Commitment",
+                  <div className="space-y-1.5">
+                      <Label htmlFor="length">Length/Commitment</Label>
                       <Select value={formState.length} onValueChange={(value) => handleSelectChange("length", value || "")}>
                           <SelectTrigger id="length" className="text-base"><SelectValue placeholder="Select length/commitment"/></SelectTrigger>
                           <SelectContent>
@@ -246,11 +270,26 @@ export default function CampaignWizardPage() {
                             ))}
                           </SelectContent>
                       </Select>
-                  )}
-
-                  {renderFieldWithGenerator("tone", "Tone", 
-                      <Input id="tone" name="tone" value={formState.tone} onChange={handleInputChange} placeholder="e.g., Heroic, Gritty, Humorous, Mysterious" className="text-base"/>
-                  )}
+                  </div>
+                
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tone">Tone</Label>
+                    <Select value={formState.tone} onValueChange={(value) => handleSelectChange("tone", value || "")}>
+                        <SelectTrigger id="tone" className="text-base"><SelectValue placeholder="Select a tone"/></SelectTrigger>
+                        <SelectContent>
+                        {CAMPAIGN_TONE_OPTIONS.map(opt => (
+                            <Tooltip key={opt.value} delayDuration={100}>
+                                <TooltipTrigger asChild>
+                                    <SelectItem value={opt.value}>{opt.value}</SelectItem>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" align="start" className="max-w-xs z-[60]">
+                                    <p>{opt.description}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                  </div>
 
                   <div>
                       <Label className="block mb-1.5">Player Level Range</Label>
@@ -269,7 +308,39 @@ export default function CampaignWizardPage() {
 
               <div className="space-y-6">
                   {renderSelectWithTooltips("worldStyle", "World Style", WORLD_STYLE_OPTIONS, "Select a world style")}
-                  {renderSelectWithTooltips("regionFocus", "Primary Region Focus", REGION_FOCUS_OPTIONS, "Select a primary region type")}
+                  
+                  <div className="space-y-1.5">
+                    <Label htmlFor="regionFocus">Primary Region Focus</Label>
+                    <Select value={formState.regionFocus} onValueChange={(value) => handleSelectChange("regionFocus", value || "")}>
+                        <SelectTrigger id="regionFocus" className="text-base"><SelectValue placeholder="Select a primary region type"/></SelectTrigger>
+                        <SelectContent>
+                        {REGION_FOCUS_OPTIONS.map(opt => (
+                            <Tooltip key={opt.value} delayDuration={100}>
+                                <TooltipTrigger asChild>
+                                    <SelectItem value={opt.value}>{opt.value}</SelectItem>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" align="start" className="max-w-xs z-[60]">
+                                    <p>{opt.description}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    {formState.regionFocus === "Other" && (
+                        <div className="mt-2">
+                            <Label htmlFor="customRegionFocus">Custom Region Focus</Label>
+                            <Input 
+                                id="customRegionFocus" 
+                                name="customRegionFocus" 
+                                value={formState.customRegionFocus || ""} 
+                                onChange={handleInputChange} 
+                                placeholder="Describe your custom region"
+                                className="text-base mt-1"
+                            />
+                        </div>
+                    )}
+                  </div>
+
                   {renderSelectWithTooltips("technologyLevel", "Technology Level", TECHNOLOGY_LEVEL_OPTIONS, "Select a technology level")}
                   
                   {renderFieldWithGenerator("factionTypes", "Key Faction Archetypes", 

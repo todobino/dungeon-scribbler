@@ -1,5 +1,4 @@
 
-
 import type { LucideIcon } from 'lucide-react';
 import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle } from 'lucide-react';
 
@@ -137,7 +136,15 @@ export const CAMPAIGN_LENGTH_OPTIONS: CampaignOption[] = [
   { value: "Open-Ended/Sandbox", description: "A campaign focused on player agency and exploration, with no predefined endpoint." }
 ];
 
-export const CAMPAIGN_TONE_OPTIONS = ["Heroic Fantasy", "Dark Fantasy/Grimdark", "Lighthearted/Comedic", "Intrigue/Political", "Mystery/Horror", "Exploration/Discovery", "Action/Adventure"];
+export const CAMPAIGN_TONE_OPTIONS: CampaignOption[] = [
+    { value: "Heroic Fantasy", description: "Grand adventures, clear good vs. evil, powerful magic, and valiant heroes." },
+    { value: "Dark Fantasy/Grimdark", description: "A bleak and morally ambiguous world where choices are hard and happy endings are rare." },
+    { value: "Lighthearted/Comedic", description: "Focuses on humor, satire, and whimsical situations. Less emphasis on serious consequences." },
+    { value: "Intrigue/Political", description: "Centered around schemes, diplomacy, espionage, and power struggles between factions or nobles." },
+    { value: "Mystery/Horror", description: "Involves investigation, suspense, and potentially supernatural or terrifying elements." },
+    { value: "Exploration/Discovery", description: "Emphasizes travel to new lands, uncovering lost secrets, and mapping the unknown." },
+    { value: "Action/Adventure", description: "Fast-paced, combat-heavy, and focused on thrilling set pieces and daring feats." }
+];
 
 export const WORLD_STYLE_OPTIONS: CampaignOption[] = [
   { value: "High Fantasy", description: "A world brimming with magic, mythical creatures, and epic heroism. Think Lord of the Rings or Dungeons & Dragons' Forgotten Realms." },
@@ -157,7 +164,8 @@ export const REGION_FOCUS_OPTIONS: CampaignOption[] = [
   { value: "Frozen Icy North", description: "Harsh, cold climates, survival challenges, isolated communities, and creatures adapted to the frost." },
   { value: "Fae-Touched Woods", description: "An enchanted forest where the veil to the Feywild is thin, full of strange creatures and unpredictable magic." },
   { value: "Underground Society", description: "Civilizations that dwell beneath the earth's surface, such as dwarves, drow, or other subterranean races." },
-  { value: "Planar Crossroads", description: "A location where different planes of existence intersect, leading to diverse encounters and planar travel." }
+  { value: "Planar Crossroads", description: "A location where different planes of existence intersect, leading to diverse encounters and planar travel." },
+  { value: "Other", description: "Specify a custom region type or concept." }
 ];
 
 export const TECHNOLOGY_LEVEL_OPTIONS: CampaignOption[] = [
@@ -274,6 +282,5 @@ export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
   REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX,
   REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX,
   REFACTORED_GOALS_KEY_PREFIX,
+  CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX, // Added CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX here
 ];
-
-    

@@ -14,10 +14,8 @@ import {z} from 'genkit';
 // Define which fields the AI can provide suggestions for
 const SuggestibleCampaignFieldsSchema = z.enum([
     "campaignConcept",
-    "tone",
-    "length",
     "factionTypes"
-    // Removed: "worldStyle", "regionFocus", "technologyLevel", "powerBalance" 
+    // Removed: "tone", "length", "worldStyle", "regionFocus", "technologyLevel", "powerBalance" 
 ]);
 
 export const GenerateCampaignIdeaInputSchema = z.object({
@@ -26,6 +24,7 @@ export const GenerateCampaignIdeaInputSchema = z.object({
   currentTone: z.string().optional().describe("The current selected tone, if any."),
   currentWorldStyle: z.string().optional().describe("The current selected world style, if any."),
   currentRegionFocus: z.string().optional().describe("The current selected region focus, if any."),
+  customRegionFocus: z.string().optional().describe("The custom region focus if 'Other' was selected."),
   currentTechnologyLevel: z.string().optional().describe("The current selected technology level, if any."),
   currentFactionTypes: z.string().optional().describe("The current faction types, if any."),
   currentPowerBalance: z.string().optional().describe("The current power balance, if any."),
@@ -52,16 +51,14 @@ export async function generateCampaignIdea(
   if (input.currentName) suggestion += ` Considering campaign name: "${input.currentName}".`;
   
   // Add more context to mock if available
-  if (input.fieldToSuggest === "length" && input.currentConcept) {
-    suggestion = `For a concept like "${input.currentConcept.substring(0,30)}...", a "Medium Campaign (6-15 Sessions)" might fit well.`;
-  } else if (input.fieldToSuggest === "factionTypes" && input.currentWorldStyle === "Steampunk") {
+  if (input.fieldToSuggest === "factionTypes" && input.currentWorldStyle === "Steampunk") {
     suggestion = "Clockwork Artisans Guild, Sky-Pirate Confederacy, Alchemists' Collective.";
+  } else if (input.fieldToSuggest === "factionTypes" && input.currentConcept) {
+    suggestion = `For a campaign like "${input.currentConcept.substring(0,20)}...", consider: The Silent Watchers, The Crimson Banner Mercenaries, The Scholars of the Lost Age.`;
   } else if (input.fieldToSuggest === "campaignConcept" && input.currentName) {
     suggestion = `A thrilling adventure where heroes must uncover the secrets of the ${input.currentName} to save the land from an ancient evil.`;
   } else if (input.fieldToSuggest === "campaignConcept") {
     suggestion = `The players awaken with amnesia in a world on the brink of magical catastrophe.`;
-  } else if (input.fieldToSuggest === "tone" && input.currentConcept) {
-     suggestion = `Given the concept, perhaps a "Mysterious with Heroic undertones" tone?`;
   }
 
 
@@ -81,7 +78,7 @@ Current campaign details provided by the user:
 {{#if playerLevelStart}}- Starting Player Level: {{{playerLevelStart}}}{{/if}}
 {{#if playerLevelEnd}}- Ending Player Level: {{{playerLevelEnd}}}{{/if}}
 {{#if currentWorldStyle}}- World Style: {{{currentWorldStyle}}}{{/if}}
-{{#if currentRegionFocus}}- Region Focus: {{{currentRegionFocus}}}{{/if}}
+{{#if currentRegionFocus}}{{#if customRegionFocus}}- Region Focus: {{{customRegionFocus}}} (Custom){{else}}- Region Focus: {{{currentRegionFocus}}}{{/if}}{{/if}}
 {{#if currentTechnologyLevel}}- Technology Level: {{{currentTechnologyLevel}}}{{/if}}
 {{#if currentFactionTypes}}- Faction Types: {{{currentFactionTypes}}}{{/if}}
 {{#if currentPowerBalance}}- Power Balance: {{{currentPowerBalance}}}{{/if}}
@@ -90,9 +87,6 @@ Based on the existing details (if any), provide a concise and creative suggestio
 
 If "{{fieldToSuggest}}" is "campaignConcept", provide a 1-2 sentence high-level concept.
 If "{{fieldToSuggest}}" is "factionTypes", list 2-3 distinct and thematic faction archetypes.
-If "{{fieldToSuggest}}" is "tone", suggest a fitting tone or expand on the user's input.
-If "{{fieldToSuggest}}" is "length", suggest a suitable campaign length option.
-For other fields, provide a suitable single value or a short descriptive phrase.
 
 Be creative and inspiring.
 `;
@@ -118,4 +112,3 @@ const campaignWizardFlow = ai.defineFlow(
     return output;
   }
 );
-
