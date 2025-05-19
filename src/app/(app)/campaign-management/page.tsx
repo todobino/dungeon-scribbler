@@ -54,7 +54,7 @@ export default function CampaignManagementPage() {
 
   if (isLoadingCampaigns) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 w-full">
         <Card>
           <CardHeader>
             <CardTitle>Loading campaigns...</CardTitle>
