@@ -2,18 +2,19 @@
 "use client";
 
 import React, { useState, useEffect, useId, useRef, useCallback } from 'react';
-import { Sheet, SheetContent, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as UIAlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronRight, UserPlus, Dice5, XCircle, Skull, Loader2, Swords, FolderOpen,
   MinusCircle, BookOpen, Star, Bandage, Shield, PanelLeftOpen, PanelLeftClose, PlusCircle, Users as UsersIcon
@@ -29,16 +30,14 @@ import { useToast } from "@/hooks/use-toast";
 
 // Width definitions
 const PRIMARY_PANEL_CONTENT_WIDTH_VAL = 380;
-const SECONDARY_PANEL_CONTENT_WIDTH_VAL = 380;
-const CLOSE_BAR_WIDTH_VAL = 32; // w-8
+const SECONDARY_PANEL_CONTENT_WIDTH_VAL = 380; // Secondary panel will also be 380px
+const CLOSE_BAR_WIDTH_VAL = 32; // w-8, for the main drawer close bar
 
-// Tailwind classes for the content width of each panel
-const PRIMARY_PANEL_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL}px]`;
-const SECONDARY_PANEL_CLASS = `w-[${SECONDARY_PANEL_CONTENT_WIDTH_VAL}px]`;
-
-// Tailwind classes for the SheetContent's overall content width
 const PRIMARY_SHEET_WIDTH_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL + CLOSE_BAR_WIDTH_VAL}px]`;
 const COMBINED_SHEET_WIDTH_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL + SECONDARY_PANEL_CONTENT_WIDTH_VAL + CLOSE_BAR_WIDTH_VAL}px]`;
+
+const PRIMARY_PANEL_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL}px]`;
+const SECONDARY_PANEL_CLASS = `w-[${SECONDARY_PANEL_CONTENT_WIDTH_VAL}px]`;
 
 
 interface CombatTrackerDrawerProps {
@@ -51,25 +50,27 @@ interface CombatTrackerDrawerProps {
   onUpdateCombatant: (combatantId: string, updates: Partial<Combatant>) => void;
   onEndCombat: () => void;
   rollLog: RollLogEntry[];
-  onInternalRoll: (rollData: Omit<RollLogEntry, 'id'>, idToUpdate?: string) => void;
+  onInternalRoll: (rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & { isRolling?: boolean }, idToUpdate?: string) => void;
   onClearRollLog: () => void;
 }
 
 type AddCombatantSubTab = 'partyMembers' | 'genericFriendly' | 'enemies';
 type AddEnemySubTab = 'singleEnemy' | 'loadEncounter';
-type DiceRollMode = "normal" | "advantage" | "disadvantage"; // Renamed to avoid conflict
+type RollMode = "normal" | "advantage" | "disadvantage";
 type SecondaryPanelMode = 'addCombatant' | 'diceRoller' | null;
+
 
 // Helper functions for Monster Detail Dialog (copied from MonsterMashDrawer logic)
 const formatDetailArmorClass = (acArray: MonsterDetail["armor_class"] | undefined): string => {
     if (!acArray || acArray.length === 0) return "N/A";
+    // Ensure acArray[0] is an object and has 'value' and 'type' properties
     if (typeof acArray[0] === 'object' && acArray[0] !== null && 'value' in acArray[0] && 'type' in acArray[0]) {
-        const mainAc = acArray[0] as ArmorClass;
+        const mainAc = acArray[0] as ArmorClass; // Type assertion
         let str = `${mainAc.value} (${mainAc.type})`;
         if (mainAc.desc) { str += ` - ${mainAc.desc}`; }
         return str;
     }
-    return "N/A";
+    return "N/A"; // Fallback if structure is unexpected
 };
 
 type DetailActionType = MonsterAction | SpecialAbility | LegendaryAction;
@@ -78,16 +79,17 @@ const renderDetailActions = (actions: DetailActionType[] | undefined | string, a
     if (typeof actions === 'string') {
       const paragraphs = actions.split('\\n\\n').map(para => para.trim()).filter(Boolean);
       return ( <div className="mb-2"> <h4 className="font-semibold text-primary text-sm">{actionTypeLabel}</h4> {paragraphs.map((paragraph, index) => {
-            const parts = paragraph.split(/\*\*(.*?)\*\*/g);
+            const parts = paragraph.split(/\*\*(.*?)\*\*/g); // Split by **bolded text**
             return ( <p key={index} className="text-xs mb-1"> {parts.map((part, i) => i % 2 === 1 ? <strong key={i} className="font-medium">{part}</strong> : part )} </p> );
           })} </div> );
     }
+    // Handle array of action objects
     return ( <div className="mb-2"> <h4 className="font-semibold text-primary text-sm">{actionTypeLabel}</h4> <ul className="list-disc pl-4 space-y-1">
-        {actions.map((action: DetailActionType) => (
+        {actions.map((action: DetailActionType) => ( // Explicitly type action
           <li key={action.name} className="text-xs">
             <strong className="font-medium">{action.name}
             {('usage' in action && action.usage) ? ` (${action.usage.type}${(action.usage as any).times ? ` ${(action.usage as any).times} times` : ''}${(action.usage as any).dice ? `, recharges on ${(action.usage as any).dice}` : ''})` : ''}
-            .</strong> {(action as any).desc}
+            .</strong> {(action as any).desc} {/* Cast to any to access desc if not on all types */}
              { ('attack_bonus' in action && action.attack_bonus !== undefined) && <p className="text-2xs pl-2">Attack Bonus: +{action.attack_bonus}</p> }
             { ('damage' in action && action.damage) && ((action.damage as any[])).map((dmg: any, i: number) => ( <p key={i} className="text-2xs pl-2">Damage: {dmg.damage_dice} {dmg.damage_type?.name}</p> ))}
              { ('dc' in action && action.dc) && <p className="text-2xs pl-2">DC {(action.dc as any).dc_value} {(action.dc as any).dc_type.name} ({(action.dc as any).success_type})</p>}
@@ -116,34 +118,30 @@ export function CombatTrackerDrawer({
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
   const [secondaryPanelMode, setSecondaryPanelMode] = useState<SecondaryPanelMode>(null);
 
-  // States for Dice Roller
+  // States for Dice Roller (now in secondary panel)
   const [diceInputValue, setDiceInputValue] = useState("");
-  const [diceRollMode, setDiceRollMode] = useState<DiceRollMode>("normal");
+  const [rollMode, setRollMode] = useState<RollMode>("normal");
 
-  // States for Add Combatant (unified dialog)
-  const [isAddCombatantsDialogOpen, setIsAddCombatantsDialogOpen] = useState(false);
+  // States for Add Combatant forms (now in secondary panel)
   const [addCombatantActiveTab, setAddCombatantActiveTab] = useState<AddCombatantSubTab>('partyMembers');
-
-  // States for Party Members Tab
   const [manualPlayerInitiatives, setManualPlayerInitiatives] = useState<Record<string, string>>({});
-
-  // States for Generic Friendly Tab
+  
   const [allyNameInput, setAllyNameInput] = useState<string>("");
   const [allyACInput, setAllyACInput] = useState<string>("");
   const [allyHPInput, setAllyHPInput] = useState<string>("");
   const [friendlyInitiativeInput, setFriendlyInitiativeInput] = useState<string>("");
 
-  // States for Enemies Tab
   const [addEnemyActiveTab, setAddEnemyActiveTab] = useState<AddEnemySubTab>('singleEnemy');
   const [enemyName, setEnemyName] = useState("");
-  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>(""); // For fixed initiative
+  const [enemyInitiativeInput, setEnemyInitiativeInput] = useState<string>("");
   const [enemyInitiativeModifierInput, setEnemyInitiativeModifierInput] = useState<string>("0");
   const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
   const [enemyAC, setEnemyAC] = useState<string>("");
   const [enemyHP, setEnemyHP] = useState<string>("");
   const [enemyCR, setEnemyCR] = useState<string>("");
-  const [selectedFavoriteMonsterIndexForCombatAdd, setSelectedFavoriteMonsterIndexForCombatAdd] = useState<string | undefined>(undefined);
+  const [selectedMonsterIndexFromFavorite, setSelectedMonsterIndexFromFavorite] = useState<string | undefined>(undefined);
+
 
   const [isFavoriteMonsterDialogOpen, setIsFavoriteMonsterDialogOpen] = useState(false);
   const [favoritesList, setFavoritesList] = useState<FavoriteMonster[]>([]);
@@ -154,40 +152,34 @@ export function CombatTrackerDrawer({
   // States for Combat Tracker display
   const [currentTurnIndex, setCurrentTurnIndex] = useState<number | null>(null);
   const [damageInputs, setDamageInputs] = useState<Record<string, string>>({});
-  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
+  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null); // For showing Hit/Heal actions
   const [combatantToDelete, setCombatantToDelete] = useState<Combatant | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const combatantRefs = useRef<Map<string, HTMLLIElement | null>>(new Map());
 
-  // State for Monster Detail Dialog
+  // State for Monster Detail Dialog (for book icon)
   const [isMonsterDetailDialogOpen, setIsMonsterDetailDialogOpen] = useState(false);
   const [selectedMonsterForDetailDialog, setSelectedMonsterForDetailDialog] = useState<Combatant | null>(null);
   const [fullEnemyDetailsCache, setFullEnemyDetailsCache] = useState<Record<string, MonsterDetail>>({});
   const [isLoadingFullEnemyDetailsFor, setIsLoadingFullEnemyDetailsFor] = useState<string | null>(null);
+
+  // For Add Player section
+  const [showAddPlayersSection, setShowAddPlayersSection] = useState(false);
+  const [showAddGenericAllySection, setShowAddGenericAllySection] = useState(false);
 
 
   useEffect(() => {
     if (!open) {
       setIsSecondaryPanelVisible(false);
       setSecondaryPanelMode(null);
-      setIsAddCombatantsDialogOpen(false);
-      // Reset other relevant states if needed
       setCurrentTurnIndex(null);
       setSelectedCombatantId(null);
+      setShowAddPlayersSection(false);
+      setShowAddGenericAllySection(false);
     }
   }, [open]);
 
-  const handleToggleSecondaryPanel = (mode: SecondaryPanelMode) => {
-    if (isSecondaryPanelVisible && secondaryPanelMode === mode) {
-      setIsSecondaryPanelVisible(false);
-      setSecondaryPanelMode(null);
-    } else {
-      setSecondaryPanelMode(mode);
-      setIsSecondaryPanelVisible(true);
-    }
-  };
-
-  // --- Dice Roller Logic ---
+  // --- Dice Roller Logic (for secondary panel) ---
   const handleDiceRoll = () => {
     const notationToParse = diceInputValue.trim() === "" ? "1d20" : diceInputValue.trim();
     const parsed = parseDiceNotation(notationToParse);
@@ -206,14 +198,14 @@ export function CombatTrackerDrawer({
       inputText: notationToParse,
       resultText: "...",
       detailText: "Rolling...",
-      isAdvantage: diceRollMode === "advantage",
-      isDisadvantage: diceRollMode === "disadvantage",
+      isAdvantage: rollMode === "advantage",
+      isDisadvantage: rollMode === "disadvantage",
       isRolling: true,
     }, newRollId);
 
     setTimeout(() => {
       let finalResult: number; let resultRolls: number[] = []; let detailText = ""; let chosen: number | undefined = undefined;
-      if (diceRollMode === "normal") {
+      if (rollMode === "normal") {
         const { rolls, sum } = rollMultipleDice(parsed.count, parsed.sides); resultRolls = rolls; finalResult = sum + parsed.modifier;
         detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
       } else {
@@ -222,22 +214,23 @@ export function CombatTrackerDrawer({
             detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult} (Mode ignored for non-1d20)`;
         } else {
           const roll1Result = rollMultipleDice(1, 20); const roll2Result = rollMultipleDice(1, 20); const roll1 = roll1Result.sum; const roll2 = roll2Result.sum;
-          if (diceRollMode === "advantage") { chosen = Math.max(roll1, roll2); } else { chosen = Math.min(roll1, roll2); }
+          if (rollMode === "advantage") { chosen = Math.max(roll1, roll2); } else { chosen = Math.min(roll1, roll2); }
           finalResult = chosen + parsed.modifier; resultRolls = [roll1, roll2];
-          detailText = `Rolled 1d20 (${diceRollMode}) ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${roll1 === chosen ? `**${roll1}**` : roll1}, ${roll2 === chosen ? `**${roll2}**` : roll2}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
+          detailText = `Rolled 1d20 (${rollMode}) ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${roll1 === chosen ? `**${roll1}**` : roll1}, ${roll2 === chosen ? `**${roll2}**` : roll2}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
         }
       }
-      onInternalRoll({ inputText: notationToParse, resultText: finalResult.toString(), detailText, isAdvantage: diceRollMode === "advantage", isDisadvantage: diceRollMode === "disadvantage", rolls: resultRolls, chosenRoll: chosen, modifier: parsed.modifier, sides: parsed.sides, isRolling: false }, newRollId);
+      onInternalRoll({ inputText: notationToParse, resultText: finalResult.toString(), detailText, isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage", rolls: resultRolls, chosenRoll: chosen, modifier: parsed.modifier, sides: parsed.sides, isRolling: false }, newRollId);
     }, 500);
   };
 
-  // --- Add Combatant Dialog Logic ---
+  // --- Add Combatant Logic (for secondary panel) ---
   const availablePartyMembers = activeCampaign?.activeParty
     ? activeCampaign.activeParty.filter(p => !combatants.some(c => c.playerId === p.id))
     : [];
 
+  // Load saved encounters when "Add Combatant" form opens AND "Load Encounter" tab is active
   useEffect(() => {
-    if (isAddCombatantsDialogOpen && addCombatantActiveTab === 'enemies' && addEnemyActiveTab === "loadEncounter" && activeCampaign) {
+    if (isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' && addCombatantActiveTab === 'enemies' && addEnemyActiveTab === "loadEncounter" && activeCampaign) {
       setIsLoadingSavedEncounters(true);
       try {
         const storageKey = `${SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
@@ -249,10 +242,11 @@ export function CombatTrackerDrawer({
       }
       setIsLoadingSavedEncounters(false);
     }
-  }, [isAddCombatantsDialogOpen, addCombatantActiveTab, addEnemyActiveTab, activeCampaign, savedEncountersUpdateKey]);
+  }, [isSecondaryPanelVisible, secondaryPanelMode, addCombatantActiveTab, addEnemyActiveTab, activeCampaign, savedEncountersUpdateKey]);
 
+  // Load Monster Mash favorites when "Add Combatant" form opens AND "Single Enemy/Group" tab is active
   useEffect(() => {
-    if (isFavoriteMonsterDialogOpen) {
+    if (isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' && addCombatantActiveTab === 'enemies' && addEnemyActiveTab === "singleEnemy") {
       try {
         const storedFavorites = localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY);
         setFavoritesList(storedFavorites ? JSON.parse(storedFavorites) : []);
@@ -261,26 +255,26 @@ export function CombatTrackerDrawer({
         setFavoritesList([]);
       }
     }
-  }, [isFavoriteMonsterDialogOpen]);
+  }, [isSecondaryPanelVisible, secondaryPanelMode, addCombatantActiveTab, addEnemyActiveTab]);
 
-  const handleAddPlayersToCombat = () => {
-    if (!activeCampaign || !activeCampaign.activeParty) return;
-    const playersToAdd: Combatant[] = [];
-    availablePartyMembers.forEach(player => {
-        const manualInit = manualPlayerInitiatives[player.id];
-        let initiativeValue: number;
-        if (manualInit && !isNaN(parseInt(manualInit))) { initiativeValue = parseInt(manualInit); }
-        else { initiativeValue = rollDie(20) + (player.initiativeModifier || 0); }
-        playersToAdd.push({
-            id: `${combatUniqueId}-player-${player.id}-${Date.now()}`, name: player.name, initiative: initiativeValue, type: 'player',
-            color: player.color, playerId: player.id, ac: player.armorClass, hp: undefined, currentHp: undefined, tempHp: 0,
-            initiativeModifier: player.initiativeModifier,
-        });
-    });
-    if (playersToAdd.length > 0) { onAddCombatants(playersToAdd); }
-    setManualPlayerInitiatives({});
-    if (currentTurnIndex === null && combatants.length + playersToAdd.length > 0) { setCurrentTurnIndex(0); }
-    // setIsAddCombatantsDialogOpen(false); // Optionally close dialog
+  const handleRollAllPlayerInitiatives = () => {
+      if (!activeCampaign || !activeCampaign.activeParty || availablePartyMembers.length === 0) return;
+      const playersToAdd: Combatant[] = [];
+      availablePartyMembers.forEach(player => {
+          const manualInit = manualPlayerInitiatives[player.id];
+          let initiativeValue: number;
+          if (manualInit && !isNaN(parseInt(manualInit))) { initiativeValue = parseInt(manualInit); }
+          else { initiativeValue = rollDie(20) + (player.initiativeModifier || 0); }
+          playersToAdd.push({
+              id: `${combatUniqueId}-player-${player.id}-${Date.now()}`, name: player.name, initiative: initiativeValue, type: 'player',
+              color: player.color, playerId: player.id, ac: player.armorClass, hp: undefined, currentHp: undefined, tempHp: 0,
+              initiativeModifier: player.initiativeModifier,
+          });
+      });
+      if (playersToAdd.length > 0) { onAddCombatants(playersToAdd); }
+      setManualPlayerInitiatives({});
+      if (currentTurnIndex === null && combatants.length + playersToAdd.length > 0) { setCurrentTurnIndex(0); }
+      setShowAddPlayersSection(false);
   };
 
   const handleSaveGenericFriendly = () => {
@@ -293,17 +287,16 @@ export function CombatTrackerDrawer({
     if(allyACInput.trim() !== "" && (isNaN(ac!) || ac! < 0)) { toast({ title: "Invalid AC", variant: "destructive" }); return; }
     if(allyHPInput.trim() !== "" && (isNaN(hp!) || hp! <=0 )) { toast({ title: "Invalid HP", variant: "destructive" }); return; }
     const newCombatant: Combatant = {
-      id: `${combatUniqueId}-friendly-${name.replace(/\s+/g, '')}-${Date.now()}`, name, initiative: initiativeValue, type: 'player',
+      id: `${combatUniqueId}-friendly-${name.replace(/\s+/g, '')}-${Date.now()}`, name, initiative: initiativeValue, type: 'player', // Generic friendlies treated as 'player' type
       ac, hp, currentHp: hp, tempHp: 0,
     };
     onAddCombatant(newCombatant);
     if (currentTurnIndex === null && combatants.length + 1 > 0) setCurrentTurnIndex(0);
     setAllyNameInput(""); setFriendlyInitiativeInput(""); setAllyACInput(""); setAllyHPInput("");
-    // setIsAddCombatantsDialogOpen(false); // Optionally close dialog
+    setShowAddGenericAllySection(false);
   };
 
   const handleRollGenericFriendlyInitiative = () => setFriendlyInitiativeInput((rollDie(20)).toString());
-
   const parseModifierString = (modStr: string): number => { const num = parseInt(modStr.trim()); return isNaN(num) ? 0 : num; };
 
   const handleSelectFavoriteMonsterForCombat = (fav: FavoriteMonster) => {
@@ -311,7 +304,7 @@ export function CombatTrackerDrawer({
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
     setEnemyCR(fav.cr !== undefined ? formatCRDisplay(fav.cr) : "");
-    setSelectedFavoriteMonsterIndexForCombatAdd(fav.index);
+    setSelectedMonsterIndexFromFavorite(fav.index); // Store the index for potential detail lookup
     setEnemyInitiativeModifierInput("0"); // Reset modifier, user can adjust
     setIsFavoriteMonsterDialogOpen(false);
   };
@@ -347,14 +340,13 @@ export function CombatTrackerDrawer({
       }
       newEnemies.push({
         id: `${combatUniqueId}-enemy-${Date.now()}-${i}`, name: currentEnemyName, initiative: initiativeValue, type: 'enemy', ac: acValue, hp: hpValue, currentHp: hpValue, tempHp: 0,
-        initiativeModifier: initModValue, monsterIndex: selectedFavoriteMonsterIndexForCombatAdd, cr: enemyCR.trim() || undefined,
+        initiativeModifier: initModValue, monsterIndex: selectedMonsterIndexFromFavorite, cr: enemyCR.trim() || undefined,
       });
     }
     onAddCombatants(newEnemies);
     if (currentTurnIndex === null && (combatants.length > 0 || newEnemies.length > 0)) setCurrentTurnIndex(0);
     setEnemyName(""); setEnemyInitiativeInput(""); setEnemyQuantityInput("1"); setEnemyInitiativeModifierInput("0"); setRollGroupInitiativeFlag(false);
-    setEnemyAC(""); setEnemyHP(""); setEnemyCR(""); setSelectedFavoriteMonsterIndexForCombatAdd(undefined);
-    // setIsAddCombatantsDialogOpen(false); // Optionally close dialog
+    setEnemyAC(""); setEnemyHP(""); setEnemyCR(""); setSelectedMonsterIndexFromFavorite(undefined);
   };
 
   const handleLoadSavedEncounterToCombat = () => {
@@ -375,7 +367,6 @@ export function CombatTrackerDrawer({
     onAddCombatants(newEnemiesFromEncounter);
      if (currentTurnIndex === null && combatants.length + newEnemiesFromEncounter.length > 0) setCurrentTurnIndex(0);
     setSelectedSavedEncounterId(undefined);
-    // setIsAddCombatantsDialogOpen(false); // Optionally close dialog
   };
   const selectedEncounterDetails = selectedSavedEncounterId ? savedEncountersForCombat.find(e => e.id === selectedSavedEncounterId) : null;
 
@@ -407,11 +398,14 @@ export function CombatTrackerDrawer({
 
   const handleAddTempHp = (combatantId: string) => {
     const amountStr = damageInputs[combatantId]; if (!amountStr) return; const amount = parseInt(amountStr); if (isNaN(amount) || amount < 0) { toast({ title: "Invalid Amount", variant: "destructive"}); return; }
-    onUpdateCombatant(combatantId, { tempHp: Math.max(0, amount) }); setDamageInputs(prev => ({ ...prev, [combatantId]: "" }));
+    const currentCombatant = combatants.find(c => c.id === combatantId);
+    if (currentCombatant) {
+        onUpdateCombatant(combatantId, { tempHp: Math.max(0, amount) });
+    }
+    setDamageInputs(prev => ({ ...prev, [combatantId]: "" }));
   };
 
   const handleOpenDeleteConfirm = (combatant: Combatant) => { setCombatantToDelete(combatant); setIsDeleteConfirmOpen(true); };
-
   const handleConfirmDeleteCombatant = () => {
     if (!combatantToDelete) return; const id = combatantToDelete.id;
     const combatantIndex = combatants.findIndex(c => c.id === id);
@@ -421,12 +415,15 @@ export function CombatTrackerDrawer({
     } else if (currentTurnIndex !== null) {
       if(combatantIndex < currentTurnIndex) {
         setCurrentTurnIndex(currentTurnIndex - 1);
-      } else if (combatantIndex === currentTurnIndex) {
+      } else if (combatantIndex === currentTurnIndex && combatants.length -1 > 0) { // check length before modulo
         setCurrentTurnIndex(currentTurnIndex % (combatants.length -1));
+      } else if (currentTurnIndex >= combatants.length -1 && combatants.length -1 > 0) {
+        setCurrentTurnIndex(combatants.length - 2); // adjust if last element was removed
       }
     }
     if (selectedCombatantId === id) setSelectedCombatantId(null);
     if (isLoadingFullEnemyDetailsFor === id) setIsLoadingFullEnemyDetailsFor(null);
+    if (selectedMonsterForDetailDialog?.id === id) setSelectedMonsterForDetailDialog(null);
     setIsDeleteConfirmOpen(false); setCombatantToDelete(null);
   };
 
@@ -434,34 +431,45 @@ export function CombatTrackerDrawer({
   const prevTurn = () => { if (!combatants || combatants.length === 0 || currentTurnIndex === null) return; setCurrentTurnIndex((currentTurnIndex - 1 + combatants.length) % combatants.length); };
 
   const handleEndCombatLocal = () => {
-    onEndCombat(); // Clears combatants in parent
+    onEndCombat();
     setCurrentTurnIndex(null);
     setSelectedCombatantId(null);
     setDamageInputs({});
     setIsSecondaryPanelVisible(false);
     setSecondaryPanelMode(null);
-    setIsAddCombatantsDialogOpen(false);
+    setShowAddPlayersSection(false);
+    setShowAddGenericAllySection(false);
   };
 
   const handleCombatantCardClick = (combatant: Combatant) => {
-    setSelectedCombatantId(prevId => prevId === combatant.id ? null : combatant.id);
-    if (isMonsterDetailDialogOpen && selectedMonsterForDetailDialog?.id !== combatant.id) setIsMonsterDetailDialogOpen(false);
+    setSelectedCombatantId(prevId => {
+      if (prevId === combatant.id) { // If clicking the already selected card
+        setIsMonsterDetailDialogOpen(false); // Close detail dialog if open for this one
+        return null; // Deselect
+      }
+      return combatant.id; // Select new card
+    });
+     // Close detail dialog if a different combatant's details were open
+    if (selectedMonsterForDetailDialog && selectedMonsterForDetailDialog.id !== combatant.id) {
+      setIsMonsterDetailDialogOpen(false);
+    }
   };
 
   const fetchFullEnemyDetails = useCallback(async (combatant: Combatant) => {
     if (!combatant.monsterIndex) {
-      setSelectedMonsterForDetailDialog(combatant);
-      setIsMonsterDetailDialogOpen(true);
+      // setSelectedMonsterForDetailDialog(combatant); // Keep for basic info
+      // setIsMonsterDetailDialogOpen(true);
+      toast({title: "No API Data", description: "This enemy was manually added and has no detailed API data.", variant: "default"});
       return;
     }
     if (fullEnemyDetailsCache[combatant.monsterIndex]) {
-      setSelectedMonsterForDetailDialog(combatant);
+      setSelectedMonsterForDetailDialog(combatant); // Use combatant to ensure ID matches for dialog control
       setIsMonsterDetailDialogOpen(true);
       return;
     }
     setIsLoadingFullEnemyDetailsFor(combatant.id);
     setSelectedMonsterForDetailDialog(combatant);
-    setIsMonsterDetailDialogOpen(true);
+    setIsMonsterDetailDialogOpen(true); // Open dialog before fetch starts
     try {
       const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${combatant.monsterIndex}`);
       if (!response.ok) throw new Error(`Failed to fetch details for ${combatant.name}`);
@@ -469,31 +477,63 @@ export function CombatTrackerDrawer({
       setFullEnemyDetailsCache(prev => ({ ...prev, [combatant.monsterIndex!]: {...data, source: 'api'} }));
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Error", description: `Could not load details for ${combatant.name}. ${err.message}`, variant: "destructive" });
-      // Keep dialog open but with error indication, or close it. For now, it stays open with loading spinner.
+      toast({ title: "Error Loading Details", description: `Could not load details for ${combatant.name}. ${err.message}`, variant: "destructive" });
+      // Optionally close dialog on error or leave it to show error message
+      // setIsMonsterDetailDialogOpen(false); 
+      // setSelectedMonsterForDetailDialog(null);
     } finally {
       setIsLoadingFullEnemyDetailsFor(null);
     }
-  }, [fullEnemyDetailsCache, toast]); // Added toast
+  }, [fullEnemyDetailsCache, toast]);
 
   const handleOpenMonsterDetailDialog = (combatant: Combatant) => {
-    if (selectedCombatantId === combatant.id && combatant.type === 'enemy') setSelectedCombatantId(null); // Deselect for actions if opening details
-    setSelectedMonsterForDetailDialog(combatant);
-    setIsMonsterDetailDialogOpen(true);
-    if (combatant.monsterIndex && !fullEnemyDetailsCache[combatant.monsterIndex] && !isLoadingFullEnemyDetailsFor) {
-      fetchFullEnemyDetails(combatant);
+    if (combatant.type === 'enemy') { // Only for enemies
+        if (selectedCombatantId === combatant.id && isMonsterDetailDialogOpen) {
+             setIsMonsterDetailDialogOpen(false); // Close if already open for this one
+        } else {
+            setSelectedCombatantId(combatant.id); // Select the combatant
+            fetchFullEnemyDetails(combatant); // This will set selectedMonsterForDetailDialog and open dialog
+        }
     }
   };
 
+  // Handle Add Player/Friendly button click
+  const handleAddFriendlyButtonClick = () => {
+    setSecondaryPanelMode('addCombatant');
+    setShowAddGenericAllySection(false); // Ensure only one add section is open
+    setShowAddPlayersSection(prev => !prev);
+    setIsSecondaryPanelVisible(prev => !prev && !showAddPlayersSection); // Open if not already, unless addPlayers was just closed
+  };
 
+  const handleAddEnemyButtonClick = () => {
+    setSecondaryPanelMode('addCombatant');
+    setShowAddPlayersSection(false); // Ensure only one add section is open
+    setShowAddGenericAllySection(prev => !prev);
+    setIsSecondaryPanelVisible(prev => !prev && !showAddGenericAllySection); // Open if not already, unless addGeneric was just closed
+  };
+  
   const enemyQuantityNum = parseInt(enemyQuantityInput) || 1;
   const isGroupSwitchDisabled = enemyQuantityNum <= 1;
-
   useEffect(() => {
     if (isGroupSwitchDisabled && rollGroupInitiativeFlag) {
       setRollGroupInitiativeFlag(false);
     }
   }, [isGroupSwitchDisabled, rollGroupInitiativeFlag]);
+
+  const handleMainButtonClick = (mode: 'addCombatant' | 'diceRoller') => {
+    if (isSecondaryPanelVisible && secondaryPanelMode === mode) {
+      setIsSecondaryPanelVisible(false); // Close if same button clicked again
+      setSecondaryPanelMode(null);
+    } else {
+      setSecondaryPanelMode(mode);
+      setIsSecondaryPanelVisible(true);
+      // Reset sub-states if switching to a new mode or opening
+      if (mode === 'addCombatant') {
+        setShowAddPlayersSection(false);
+        setShowAddGenericAllySection(false);
+      }
+    }
+  };
 
 
   return (
@@ -509,301 +549,296 @@ export function CombatTrackerDrawer({
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
+        
+        {/* Main container for panels AND the close bar */}
+        <div className="flex flex-row h-full relative">
+          {/* This div handles the padding for the close bar */}
+          <div className="flex flex-row h-full w-full pr-8">
+            {/* Secondary Panel (Left) - for Add Combatant Forms / Dice Roller */}
+            {isSecondaryPanelVisible && (
+              <div className={cn(SECONDARY_PANEL_CLASS, "h-full flex flex-col bg-card border-r p-4 overflow-y-auto flex-shrink-0")}>
+                <ScrollArea className="flex-1 -mr-4 pr-4"> {/* Negative margin to extend scroll to edge, padding on ScrollArea child */}
+                  {secondaryPanelMode === 'addCombatant' && (
+                    <div className="space-y-4">
+                      <Tabs value={addCombatantActiveTab} onValueChange={(value) => setAddCombatantActiveTab(value as AddCombatantSubTab)} className="flex flex-col flex-grow">
+                        <TabsList className="grid w-full grid-cols-3 shrink-0 bg-primary/10">
+                          <TabsTrigger value="partyMembers" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Party</TabsTrigger>
+                          <TabsTrigger value="genericFriendly" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Friendly</TabsTrigger>
+                          <TabsTrigger value="enemies" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Enemies</TabsTrigger>
+                        </TabsList>
 
-        <div className="flex flex-row h-full">
-          {/* Secondary Panel (Left - for Add Combatant Forms / Dice Roller) */}
-          {isSecondaryPanelVisible && (
-            <div className={cn(SECONDARY_PANEL_CLASS, "h-full bg-card border-r border-border p-0 flex flex-col overflow-hidden flex-shrink-0 relative")}>
-              <ScrollArea className="flex-1">
-                {secondaryPanelMode === 'addCombatant' && (
-                   <Dialog open={isAddCombatantsDialogOpen} onOpenChange={setIsAddCombatantsDialogOpen}>
-                      <DialogContent className="max-w-xl min-h-[520px] flex flex-col">
-                          <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-6 mb-4">
-                            <DialogTitle className="text-primary-foreground">Add Combatants</DialogTitle>
-                            <DialogDescription className="text-primary-foreground/80">
-                              Add players, allies, or enemies to the tracker.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <Tabs value={addCombatantActiveTab} onValueChange={(value) => setAddCombatantActiveTab(value as AddCombatantSubTab)} className="pt-0 flex flex-col flex-grow">
-                            <TabsList className="grid w-full grid-cols-3 shrink-0 bg-primary/10">
-                              <TabsTrigger value="partyMembers" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Party</TabsTrigger>
-                              <TabsTrigger value="genericFriendly" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Friendly</TabsTrigger>
-                              <TabsTrigger value="enemies" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Enemies</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="partyMembers" className="mt-3 flex-grow flex flex-col">
-                              {availablePartyMembers.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-4 flex-grow flex items-center justify-center">
-                                  All party members in combat or no party defined.
-                                </p>
-                              ) : (
-                                <>
-                                  <ScrollArea className="flex-grow mb-3 border rounded-md min-h-0">
-                                    <div className="p-3 space-y-3">
-                                      {availablePartyMembers.map(player => (
-                                        <div key={player.id} className="flex items-center justify-between gap-3 p-2 border-b last:border-b-0">
-                                          <div className="flex-grow">
-                                            <p className="text-sm font-medium">{player.name}</p>
-                                            <p className="text-xs text-muted-foreground">Lvl {player.level} {player.race} {player.class} (Init Mod: {player.initiativeModifier !== undefined ? (player.initiativeModifier >= 0 ? '+':''):''}{player.initiativeModifier ?? '0'})</p>
-                                          </div>
-                                          <Input id={`player-init-${player.id}`} type="number" value={manualPlayerInitiatives[player.id] || ""} onChange={(e) => setManualPlayerInitiatives(prev => ({...prev, [player.id]: e.target.value}))} className="w-24 h-9 text-sm" />
-                                        </div>
-                                      ))}
+                        <TabsContent value="partyMembers" className="mt-3 flex-grow flex flex-col">
+                          {availablePartyMembers.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4 flex-grow flex items-center justify-center">
+                              All party members in combat or no party defined.
+                            </p>
+                          ) : (
+                            <>
+                              <ScrollArea className="flex-grow mb-3 border rounded-md min-h-0">
+                                <div className="p-3 space-y-3">
+                                  {availablePartyMembers.map(player => (
+                                    <div key={player.id} className="flex items-center justify-between gap-3 p-2 border-b last:border-b-0">
+                                      <div className="flex-grow">
+                                        <p className="text-sm font-medium">{player.name}</p>
+                                        <p className="text-xs text-muted-foreground">Lvl {player.level} {player.race} {player.class} (Init Mod: {player.initiativeModifier !== undefined ? (player.initiativeModifier >= 0 ? '+':''):''}{player.initiativeModifier ?? '0'})</p>
+                                      </div>
+                                      <Input id={`player-init-${player.id}`} type="number" value={manualPlayerInitiatives[player.id] || ""} onChange={(e) => setManualPlayerInitiatives(prev => ({...prev, [player.id]: e.target.value}))} className="w-24 h-9 text-sm" />
                                     </div>
-                                  </ScrollArea>
-                                  <Button onClick={handleAddPlayersToCombat} disabled={availablePartyMembers.length === 0} className="w-full shrink-0">
-                                    <UsersIcon className="mr-2 h-4 w-4"/> Add Players to Combat
-                                  </Button>
-                                </>
-                              )}
-                            </TabsContent>
-
-                            <TabsContent value="genericFriendly" className="mt-3 space-y-4 flex-grow flex flex-col">
-                              <div className="space-y-3 flex-grow">
-                                <div><Label htmlFor="ally-name-input">Friendly Name*</Label><Input id="ally-name-input" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} /></div>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div><Label htmlFor="ally-ac-input">AC</Label><Input id="ally-ac-input" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
-                                  <div><Label htmlFor="ally-hp-input">HP</Label><Input id="ally-hp-input" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                                  ))}
                                 </div>
+                              </ScrollArea>
+                              <Button onClick={handleRollAllPlayerInitiatives} disabled={availablePartyMembers.length === 0} className="w-full shrink-0">
+                                <UsersIcon className="mr-2 h-4 w-4"/> Add Players to Combat
+                              </Button>
+                            </>
+                          )}
+                        </TabsContent>
+
+                        <TabsContent value="genericFriendly" className="mt-3 space-y-3 flex-grow flex flex-col">
+                            <div className="space-y-3 flex-grow">
+                              <div><Label htmlFor="ally-name-input">Friendly Name*</Label><Input id="ally-name-input" value={allyNameInput} onChange={(e) => setAllyNameInput(e.target.value)} /></div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div><Label htmlFor="ally-ac-input">AC</Label><Input id="ally-ac-input" type="number" value={allyACInput} onChange={(e) => setAllyACInput(e.target.value)} /></div>
+                                <div><Label htmlFor="ally-hp-input">HP</Label><Input id="ally-hp-input" type="number" value={allyHPInput} onChange={(e) => setAllyHPInput(e.target.value)} /></div>
+                              </div>
+                              <div>
+                                <Label htmlFor="friendly-initiative-input">Initiative*</Label>
+                                <div className="flex gap-2 items-center">
+                                  <Input id="friendly-initiative-input" type="number" value={friendlyInitiativeInput} onChange={(e) => setFriendlyInitiativeInput(e.target.value)} className="flex-grow" />
+                                  <Button onClick={handleRollGenericFriendlyInitiative} variant="outline" size="sm" className="shrink-0"><Dice5 className="mr-1 h-4 w-4"/> Roll d20</Button>
+                                </div>
+                              </div>
+                            </div>
+                            <Button onClick={handleSaveGenericFriendly} disabled={!allyNameInput.trim() || !friendlyInitiativeInput.trim()} className="w-full shrink-0 mt-auto">
+                              <UserPlus className="mr-2 h-4 w-4"/> Add Friendly
+                            </Button>
+                        </TabsContent>
+
+                        <TabsContent value="enemies" className="flex-grow flex flex-col min-h-0">
+                          <Tabs value={addEnemyActiveTab} onValueChange={(value) => setAddEnemyActiveTab(value as AddEnemySubTab)} className="flex flex-col flex-grow mt-0"> {/* Removed pt-2 */}
+                            <TabsList className="grid w-full grid-cols-2 shrink-0"><TabsTrigger value="singleEnemy">Single/Group</TabsTrigger><TabsTrigger value="loadEncounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger></TabsList>
+
+                            <TabsContent value="singleEnemy" className="mt-4 space-y-3 flex-grow flex flex-col">
+                              <div className="space-y-3 flex-grow">
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor="enemy-name-input">Enemy Name*</Label>
+                                  <Button variant="ghost" size="icon" onClick={() => setIsFavoriteMonsterDialogOpen(true)} className="h-7 w-7">
+                                    <Star className="h-4 w-4 text-amber-400 hover:text-amber-500"/>
+                                  </Button>
+                                </div>
+                                <Input id="enemy-name-input" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} />
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div><Label htmlFor="enemy-ac-input">AC</Label><Input id="enemy-ac-input" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
+                                  <div><Label htmlFor="enemy-hp-input">HP</Label><Input id="enemy-hp-input" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
+                                </div>
+                                
+                                <div className="flex items-end gap-3">
+                                   <div className="w-20"><Label htmlFor="enemy-quantity-input">Quantity</Label><Input id="enemy-quantity-input" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" /></div>
+                                   <div className="flex items-center space-x-2 pb-1">
+                                      <Switch id="roll-group-initiative-flag" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} disabled={isGroupSwitchDisabled}/>
+                                      <Label htmlFor="roll-group-initiative-flag" className="cursor-pointer text-sm">Group</Label>
+                                    </div>
+                                </div>
+                                <div><Label htmlFor="enemy-init-mod-input">Init. Mod.</Label><Input id="enemy-init-mod-input" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} /></div>
                                 <div>
-                                  <Label htmlFor="friendly-initiative-input">Initiative*</Label>
+                                  <Label htmlFor="enemy-initiative-val-input">Initiative</Label>
                                   <div className="flex gap-2 items-center">
-                                    <Input id="friendly-initiative-input" type="number" value={friendlyInitiativeInput} onChange={(e) => setFriendlyInitiativeInput(e.target.value)} className="flex-grow" />
-                                    <Button onClick={handleRollGenericFriendlyInitiative} variant="outline" size="sm" className="shrink-0"><Dice5 className="mr-1 h-4 w-4"/> Roll d20</Button>
+                                    <Input id="enemy-initiative-val-input" className="w-24 h-10 text-sm" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" disabled={(parseInt(enemyQuantityInput) || 1) > 1 && !rollGroupInitiativeFlag} />
+                                    <Button variant="outline" size="sm" className="shrink-0 h-10" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())} disabled={(parseInt(enemyQuantityInput) || 1) > 1 && !rollGroupInitiativeFlag}>
+                                      <Dice5 className="mr-1 h-4 w-4"/> d20 + {parseModifierString(enemyInitiativeModifierInput)}
+                                    </Button>
                                   </div>
                                 </div>
                               </div>
-                              <Button onClick={handleSaveGenericFriendly} disabled={!allyNameInput.trim() || !friendlyInitiativeInput.trim()} className="w-full shrink-0 mt-auto">
-                                <UserPlus className="mr-2 h-4 w-4"/> Add Friendly
+                              <Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim()} className="w-full shrink-0 mt-auto">
+                                {(parseInt(enemyQuantityInput) || 1) > 1 && !rollGroupInitiativeFlag ? <Dice5 className="mr-2 h-4 w-4"/> : null}
+                                {(parseInt(enemyQuantityInput) || 1) > 1 && !rollGroupInitiativeFlag ? "Add & Roll Individually" : "Add to Combat"}
                               </Button>
                             </TabsContent>
 
-                            <TabsContent value="enemies" className="mt-1 flex-grow flex flex-col min-h-0">
-                              <Tabs value={addEnemyActiveTab} onValueChange={(value) => setAddEnemyActiveTab(value as AddEnemySubTab)} className="flex flex-col flex-grow">
-                                <TabsList className="grid w-full grid-cols-2 shrink-0"><TabsTrigger value="singleEnemy">Single/Group</TabsTrigger><TabsTrigger value="loadEncounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger></TabsList>
-
-                                <TabsContent value="singleEnemy" className="mt-4 space-y-3 flex-grow flex flex-col">
-                                  <div className="space-y-3 flex-grow">
-                                    <div className="flex items-center justify-between">
-                                      <Label htmlFor="enemy-name-input">Enemy Name*</Label>
-                                      <Button variant="ghost" size="icon" onClick={() => setIsFavoriteMonsterDialogOpen(true)} className="h-7 w-7">
-                                        <Star className="h-4 w-4 text-amber-400 hover:text-amber-500"/>
-                                      </Button>
-                                    </div>
-                                    <Input id="enemy-name-input" value={enemyName} onChange={(e) => setEnemyName(e.target.value)} />
-                                    <div className="grid grid-cols-2 gap-3">
-                                      <div><Label htmlFor="enemy-ac-input">AC</Label><Input id="enemy-ac-input" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
-                                      <div><Label htmlFor="enemy-hp-input">HP</Label><Input id="enemy-hp-input" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
-                                    </div>
-                                    <div className="flex items-end gap-3">
-                                       <div className="w-20"><Label htmlFor="enemy-quantity-input">Quantity</Label><Input id="enemy-quantity-input" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" /></div>
-                                       <div className="flex items-center space-x-2 pb-1">
-                                          <Switch id="roll-group-initiative-flag" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} disabled={isGroupSwitchDisabled}/>
-                                          <Label htmlFor="roll-group-initiative-flag" className="cursor-pointer text-sm">Group</Label>
-                                        </div>
-                                    </div>
-                                    <div><Label htmlFor="enemy-init-mod-input">Init. Mod.</Label><Input id="enemy-init-mod-input" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} /></div>
-                                    <div>
-                                      <Label htmlFor="enemy-initiative-val-input">Initiative</Label>
-                                      <div className="flex gap-2 items-center">
-                                        <Input id="enemy-initiative-val-input" className="w-24 h-10 text-sm" value={enemyInitiativeInput} onChange={(e) => setEnemyInitiativeInput(e.target.value)} type="number" disabled={enemyQuantityNum > 1 && !rollGroupInitiativeFlag} />
-                                        <Button variant="outline" size="sm" className="shrink-0 h-10" onClick={() => setEnemyInitiativeInput((rollDie(20) + parseModifierString(enemyInitiativeModifierInput)).toString())} disabled={enemyQuantityNum > 1 && !rollGroupInitiativeFlag}>
-                                          <Dice5 className="mr-1 h-4 w-4"/> d20 + {parseModifierString(enemyInitiativeModifierInput)}
-                                        </Button>
-                                      </div>
-                                    </div>
+                            <TabsContent value="loadEncounter" className="mt-4 flex-grow flex flex-col min-h-0">
+                              {isLoadingSavedEncounters ? <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                              : savedEncountersForCombat.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4 flex-grow flex items-center justify-center">No saved encounters found.</p>
+                              : <>
+                                  <div className="shrink-0">
+                                    <Label htmlFor="saved-encounter-select">Select Saved Encounter</Label>
+                                    <Select value={selectedSavedEncounterId} onValueChange={setSelectedSavedEncounterId}>
+                                      <SelectTrigger id="saved-encounter-select"><SelectValue placeholder="Choose an encounter..." /></SelectTrigger>
+                                      <SelectContent>{savedEncountersForCombat.map(enc => (<SelectItem key={enc.id} value={enc.id}>{enc.title}</SelectItem>))}</SelectContent>
+                                    </Select>
                                   </div>
-                                  <Button onClick={handleAddSingleEnemyGroup} disabled={!enemyName.trim()} className="w-full shrink-0 mt-auto">
-                                    {(enemyQuantityNum > 1 && !rollGroupInitiativeFlag) ? <Dice5 className="mr-2 h-4 w-4"/> : null}
-                                    {(enemyQuantityNum > 1 && !rollGroupInitiativeFlag) ? "Add & Roll Individually" : "Add to Combat"}
+                                  {selectedEncounterDetails &&
+                                    <div className="mt-2 flex-grow flex flex-col min-h-0">
+                                      <Label className="font-medium shrink-0">Monsters in "{selectedEncounterDetails.title}":</Label>
+                                      <ScrollArea className="mt-1 border rounded-md p-2 bg-muted/30 flex-grow">
+                                        <ul className="text-sm space-y-1">
+                                          {selectedEncounterDetails.monsters.map(monster => (
+                                            <li key={monster.id}>{monster.name} (x{monster.quantity})
+                                              <span className="text-xs text-muted-foreground ml-1">
+                                                {monster.cr && `CR:${monster.cr} `}
+                                                {monster.ac && `AC:${monster.ac} `}
+                                                {monster.hp && `HP:${monster.hp}`}
+                                                 {monster.initiativeModifier !== undefined && ` Init Mod:${monster.initiativeModifier >=0 ? '+' : ''}${monster.initiativeModifier}`}
+                                              </span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </ScrollArea>
+                                    </div>
+                                  }
+                                  <Button onClick={handleLoadSavedEncounterToCombat} disabled={!selectedSavedEncounterId} className="w-full shrink-0 mt-auto">
+                                    <FolderOpen className="mr-2 h-4 w-4"/> Add Encounter to Combat
                                   </Button>
-                                </TabsContent>
-
-                                <TabsContent value="loadEncounter" className="mt-4 flex-grow flex flex-col min-h-0">
-                                  {isLoadingSavedEncounters ? <div className="flex items-center justify-center h-32 flex-grow"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                                  : savedEncountersForCombat.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4 flex-grow flex items-center justify-center">No saved encounters found.</p>
-                                  : <>
-                                      <div className="shrink-0">
-                                        <Label htmlFor="saved-encounter-select">Select Saved Encounter</Label>
-                                        <Select value={selectedSavedEncounterId} onValueChange={setSelectedSavedEncounterId}>
-                                          <SelectTrigger id="saved-encounter-select"><SelectValue placeholder="Choose an encounter..." /></SelectTrigger>
-                                          <SelectContent>{savedEncountersForCombat.map(enc => (<SelectItem key={enc.id} value={enc.id}>{enc.title}</SelectItem>))}</SelectContent>
-                                        </Select>
-                                      </div>
-                                      {selectedEncounterDetails &&
-                                        <div className="mt-2 flex-grow flex flex-col min-h-0">
-                                          <Label className="font-medium shrink-0">Monsters in "{selectedEncounterDetails.title}":</Label>
-                                          <ScrollArea className="mt-1 border rounded-md p-2 bg-muted/30 flex-grow">
-                                            <ul className="text-sm space-y-1">
-                                              {selectedEncounterDetails.monsters.map(monster => (
-                                                <li key={monster.id}>{monster.name} (x{monster.quantity})
-                                                  <span className="text-xs text-muted-foreground ml-1">
-                                                    {monster.cr && `CR:${monster.cr} `}
-                                                    {monster.ac && `AC:${monster.ac} `}
-                                                    {monster.hp && `HP:${monster.hp}`}
-                                                    {monster.initiativeModifier !== undefined && ` Init Mod:${monster.initiativeModifier >=0 ? '+' : ''}${monster.initiativeModifier}`}
-                                                  </span>
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </ScrollArea>
-                                        </div>
-                                      }
-                                      <Button onClick={handleLoadSavedEncounterToCombat} disabled={!selectedSavedEncounterId} className="w-full shrink-0 mt-auto">
-                                        <FolderOpen className="mr-2 h-4 w-4"/> Add Encounter to Combat
-                                      </Button>
-                                    </>}
-                                </TabsContent>
-                              </Tabs>
+                                </>}
                             </TabsContent>
                           </Tabs>
-                          <DialogFooter className="mt-4 border-t pt-4">
-                            <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-                          </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                )}
-                {secondaryPanelMode === 'diceRoller' && (
-                  <div className="p-4 space-y-4 h-full flex flex-col">
-                    <div>
-                      <Label htmlFor="dice-notation">Dice Notation</Label>
-                      <Input id="dice-notation" value={diceInputValue} onChange={(e) => setDiceInputValue(e.target.value)} placeholder="e.g., 2d6+3, d20" />
+                        </TabsContent>
+                      </Tabs>
                     </div>
-                    <div>
-                        <Label>Roll Mode</Label>
-                        <RadioGroup defaultValue="normal" value={diceRollMode} onValueChange={(value: string) => setDiceRollMode(value as DiceRollMode)} className="flex space-x-2 pt-1">
-                          <div className="flex items-center space-x-1"><RadioGroupItem value="normal" id={`${diceUniqueId}-mode-normal`} /><Label htmlFor={`${diceUniqueId}-mode-normal`} className="font-normal cursor-pointer">Normal</Label></div>
-                          <div className="flex items-center space-x-1"><RadioGroupItem value="advantage" id={`${diceUniqueId}-mode-advantage`} /><Label htmlFor={`${diceUniqueId}-mode-advantage`} className="font-normal cursor-pointer">Advantage</Label></div>
-                          <div className="flex items-center space-x-1"><RadioGroupItem value="disadvantage" id={`${diceUniqueId}-mode-disadvantage`} /><Label htmlFor={`${diceUniqueId}-mode-disadvantage`} className="font-normal cursor-pointer">Disadvantage</Label></div>
-                        </RadioGroup>
-                    </div>
-                    <Button onClick={handleDiceRoll} className={cn("w-full", diceRollMode === "advantage" && "border-2 border-green-500 hover:border-green-600", diceRollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600")}>
-                        {diceInputValue.trim() === "" ? <Dice5 className="mr-2 h-5 w-5" /> : <Zap className="mr-2 h-5 w-5" />}
-                        {diceInputValue.trim() === "" ? "Roll d20" : "Roll"}
-                    </Button>
-                    <div className="flex-grow flex flex-col min-h-0">
-                        <div className="flex justify-between items-center mb-1 shrink-0">
-                          <Label>Roll Log</Label>
-                          <Button variant="ghost" size="sm" onClick={onClearRollLog} className="text-xs text-muted-foreground hover:text-foreground"><XCircle className="mr-1 h-3 w-3" /> Clear Log</Button>
-                        </div>
-                        <ScrollArea className="border rounded-md p-2 flex-grow bg-muted/30 h-full">
-                            {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
-                            <div className="space-y-3">
-                              {rollLog.map(entry => (
-                                <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
-                                  {entry.isRolling ? (
-                                    <div className="flex items-center h-10">
-                                      <Dice5 className="h-6 w-6 animate-spin text-primary" />
-                                      <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
-                                    </div>
-                                  ) : ( <>
-                                      <p className="text-2xl font-bold text-primary">{entry.resultText}</p>
-                                      <p className="text-xs text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: (entry.detailText as string).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
-                                    </>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                        </ScrollArea>
-                    </div>
-                  </div>
-                )}
-              </ScrollArea>
-               <button
-                onClick={() => setIsSecondaryPanelVisible(false)}
-                className="absolute top-1/2 -translate-y-1/2 -right-0.5 h-16 w-5 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[70] rounded-l-md border-y border-l"
-                aria-label="Close Secondary Panel"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          )}
-
-          {/* Primary Panel (Right - for Combat Tracker List) */}
-          <div className={cn(
-              "h-full flex flex-col overflow-y-auto flex-shrink-0",
-              isSecondaryPanelVisible ? PRIMARY_PANEL_CLASS : "flex-1 w-full"
-          )}>
-            <div className="p-3 border-b bg-card flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <Button onClick={() => { setSecondaryPanelMode('addCombatant'); setIsSecondaryPanelVisible(true); setIsAddCombatantsDialogOpen(true); }} variant={isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' ? "secondary" : "outline"} size="sm">
-                      <UserPlus className="mr-2 h-4 w-4"/>Add Combatant
-                  </Button>
-                  <Button onClick={() => handleToggleSecondaryPanel('diceRoller')} variant={isSecondaryPanelVisible && secondaryPanelMode === 'diceRoller' ? "secondary" : "outline"} size="sm">
-                      <Dice5 className="mr-2 h-4 w-4"/>Dice Roller
-                  </Button>
-                </div>
-                {combatants.length > 0 && (
-                    <Button onClick={handleEndCombatLocal} variant="destructive" size="sm">
-                        <XCircle className="mr-2 h-4 w-4"/>End Combat
-                    </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="p-3 flex flex-col flex-grow min-h-0">
-                <Label className="mb-1 shrink-0">Combat Order (Highest to Lowest)</Label>
-                <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
-                    {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
-                    <ul className="space-y-1.5">
-                    {combatants.map((c, index) => (
-                        <li key={c.id} ref={(el) => combatantRefs.current.set(c.id, el)}
-                            className={cn("p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm", currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background')}
-                            style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
-                            onClick={() => handleCombatantCardClick(c)}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center flex-1">
-                                  <span className={cn("font-bold text-lg mr-3", currentTurnIndex === index ? 'text-primary' : '')}>{c.initiative}</span>
-                                  <div>
-                                    <p className={cn("font-medium", c.type === 'enemy' && 'text-destructive', c.type === 'enemy' && selectedCombatantId === c.id && currentTurnIndex !== index && 'text-primary', c.type === 'enemy' && selectedCombatantId === c.id && currentTurnIndex === index && 'text-primary' )}>{c.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      AC: {c.ac ?? 'N/A'} | HP: {c.currentHp ?? c.hp ?? 'N/A'}/{c.hp ?? 'N/A'}
-                                      {c.tempHp !== undefined && c.tempHp > 0 && <span className="text-blue-500 font-semibold"> (+{c.tempHp} Temp)</span>}
-                                    </p>
-                                  </div>
-                              </div>
-                              {c.type === 'enemy' && c.monsterIndex && (<Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={(e) => { e.stopPropagation(); handleOpenMonsterDetailDialog(c); }}><BookOpen className="h-4 w-4 text-muted-foreground" /></Button>)}
+                  )}
+                  {secondaryPanelMode === 'diceRoller' && (
+                    <div className="p-0 space-y-4 h-full flex flex-col"> {/* Remove p-4 here */}
+                      <div>
+                        <Label htmlFor="dice-notation">Dice Notation</Label>
+                        <Input id="dice-notation" value={diceInputValue} onChange={(e) => setDiceInputValue(e.target.value)} placeholder="e.g., 2d6+3, d20" />
+                      </div>
+                      <div>
+                          <Label>Roll Mode</Label>
+                          <RadioGroup defaultValue="normal" value={rollMode} onValueChange={(value: string) => setRollMode(value as RollMode)} className="flex space-x-2 pt-1">
+                            <div className="flex items-center space-x-1"><RadioGroupItem value="normal" id={`${diceUniqueId}-mode-normal`} /><Label htmlFor={`${diceUniqueId}-mode-normal`} className="font-normal cursor-pointer">Normal</Label></div>
+                            <div className="flex items-center space-x-1"><RadioGroupItem value="advantage" id={`${diceUniqueId}-mode-advantage`} /><Label htmlFor={`${diceUniqueId}-mode-advantage`} className="font-normal cursor-pointer">Advantage</Label></div>
+                            <div className="flex items-center space-x-1"><RadioGroupItem value="disadvantage" id={`${diceUniqueId}-mode-disadvantage`} /><Label htmlFor={`${diceUniqueId}-mode-disadvantage`} className="font-normal cursor-pointer">Disadvantage</Label></div>
+                          </RadioGroup>
+                      </div>
+                      <Button onClick={handleDiceRoll} className={cn("w-full", rollMode === "advantage" && "border-2 border-green-500 hover:border-green-600", rollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600")}>
+                          {diceInputValue.trim() === "" ? <Dice5 className="mr-2 h-5 w-5" /> : <Zap className="mr-2 h-5 w-5" />}
+                          {diceInputValue.trim() === "" ? "Roll d20" : "Roll"}
+                      </Button>
+                      <div className="flex-grow flex flex-col min-h-0">
+                          <div className="flex justify-between items-center mb-1 shrink-0">
+                            <Label>Roll Log</Label>
+                            <Button variant="ghost" size="sm" onClick={onClearRollLog} className="text-xs text-muted-foreground hover:text-foreground"><XCircle className="mr-1 h-3 w-3" /> Clear Log</Button>
                           </div>
-                          {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
-                            <div className={cn("mt-1 rounded-full", c.tempHp && c.tempHp > 0 && "ring-1 ring-blue-500 ring-offset-1 ring-offset-background p-px")}>
-                              <Progress value={Math.max(0, (c.currentHp / c.hp) * 100)} className="h-1.5 [&>div]:bg-destructive rounded-full" />
-                            </div>
-                          )}
-
-                          {c.type === 'enemy' && c.id === selectedCombatantId && c.currentHp !== undefined && c.currentHp > 0 && (
-                            <div className="flex items-center justify-center gap-1.5 pt-1">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c);}}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
-                                <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
-                                <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleAddTempHp(c.id);}} title="Add Temporary HP"><Shield className="h-4 w-4 text-blue-500"/></Button>
-                            </div> )}
-                          {c.type === 'enemy' && c.currentHp !== undefined && c.currentHp <= 0 && (<Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>)}
-                        </li> ))}
-                    </ul>
+                          <ScrollArea className="border rounded-md p-2 flex-grow bg-muted/30 h-full">
+                              {rollLog.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No rolls yet.</p>}
+                              <div className="space-y-3">
+                                {rollLog.map(entry => (
+                                  <div key={entry.id} className={cn("text-sm p-2 rounded-md bg-background shadow-sm", entry.isRolling ? "opacity-50" : "animate-in slide-in-from-top-2 fade-in duration-300")}>
+                                    {entry.isRolling ? (
+                                      <div className="flex items-center h-10">
+                                        <Dice5 className="h-6 w-6 animate-spin text-primary" />
+                                        <span className="ml-2 text-lg font-semibold text-primary">Rolling...</span>
+                                      </div>
+                                    ) : ( <>
+                                        <p className="text-2xl font-bold text-primary">{entry.resultText}</p>
+                                        <p className="text-xs text-muted-foreground whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: (entry.detailText as string).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+                                      </>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                          </ScrollArea>
+                      </div>
+                    </div>
+                  )}
                 </ScrollArea>
-                 {combatants.length > 0 && (
-                  <div className="pt-2 mt-auto flex gap-2 shrink-0">
-                      <Button onClick={prevTurn} variant="outline" className="flex-1">Prev Turn</Button>
-                      <Button onClick={nextTurn} className="flex-1 bg-primary hover:bg-primary/90">Next Turn</Button>
-                  </div>
-                )}
               </div>
-          </div>
-        </div>
+            )}
 
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
-          aria-label="Close DM Tools"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
+            {/* Primary Panel (Right) - Combat Order */}
+            <div className={cn(PRIMARY_PANEL_CLASS, "h-full flex flex-col bg-background p-4 overflow-y-auto flex-shrink-0")}>
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                  <div className="flex items-center gap-1">
+                      <Button 
+                        onClick={() => handleMainButtonClick('addCombatant')} 
+                        variant={isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' ? "secondary" : "outline"} 
+                        size="sm"
+                      >
+                          <UserPlus className="mr-2 h-4 w-4"/>Add Combatant
+                      </Button>
+                      <Button 
+                        onClick={() => handleMainButtonClick('diceRoller')} 
+                        variant={isSecondaryPanelVisible && secondaryPanelMode === 'diceRoller' ? "secondary" : "outline"} 
+                        size="sm"
+                      >
+                          <Dice5 className="mr-2 h-4 w-4"/>Dice Roller
+                      </Button>
+                  </div>
+                  {combatants.length > 0 && (
+                      <Button onClick={handleEndCombatLocal} variant="destructive" size="sm">
+                          <XCircle className="mr-2 h-4 w-4"/>End Combat
+                      </Button>
+                  )}
+              </div>
+              
+              <div className="flex flex-col flex-grow min-h-0">
+                  <Label className="mb-1 shrink-0">Combat Order (Highest to Lowest)</Label>
+                  <ScrollArea className="border rounded-md p-1 flex-grow bg-muted/30 h-full">
+                      {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
+                      <ul className="space-y-1.5">
+                      {combatants.map((c, index) => (
+                          <li key={c.id} ref={(el) => combatantRefs.current.set(c.id, el)}
+                              className={cn("p-2.5 rounded-md flex flex-col gap-1.5 transition-all shadow-sm", currentTurnIndex === index ? 'ring-2 ring-primary bg-primary/10' : 'bg-background')}
+                              style={c.type === 'player' && c.color ? { borderLeft: `4px solid ${c.color}` } : {}}
+                              onClick={() => handleCombatantCardClick(c)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center flex-1">
+                                    <span className={cn("font-bold text-lg mr-3", currentTurnIndex === index ? 'text-primary' : '')}>{c.initiative}</span>
+                                    <div>
+                                      <p className={cn("font-medium", 
+                                        c.type === 'enemy' && 'text-destructive', 
+                                        selectedCombatantId === c.id && currentTurnIndex !== index && 'text-primary', // Selected non-turn enemy
+                                        selectedCombatantId === c.id && currentTurnIndex === index && 'text-primary'  // Selected turn enemy
+                                      )}>{c.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        AC: {c.ac ?? 'N/A'} | HP: {c.currentHp ?? c.hp ?? 'N/A'}{c.hp !== undefined ? `/${c.hp}` : ''}
+                                        {c.tempHp !== undefined && c.tempHp > 0 && <span className="text-blue-500 font-semibold"> (+{c.tempHp} Temp)</span>}
+                                      </p>
+                                    </div>
+                                </div>
+                                {c.type === 'enemy' && c.monsterIndex && (<Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={(e) => { e.stopPropagation(); handleOpenMonsterDetailDialog(c); }}><BookOpen className="h-4 w-4 text-muted-foreground" /></Button>)}
+                            </div>
+                            {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
+                              <div className={cn("mt-1 rounded-full", c.tempHp && c.tempHp > 0 && "ring-1 ring-blue-500 ring-offset-1 ring-offset-background p-px")}>
+                                <Progress value={Math.max(0, (c.currentHp / c.hp) * 100)} className="h-1.5 [&>div]:bg-destructive rounded-full" />
+                              </div>
+                            )}
+
+                            {c.type === 'enemy' && c.id === selectedCombatantId && c.currentHp !== undefined && c.currentHp > 0 && (
+                              <div className="flex items-center justify-center gap-1.5 pt-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c);}}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
+                                  <Input type="number" className="h-8 text-sm w-20 px-2 py-1" value={damageInputs[c.id] || ""} onChange={(e) => handleDamageInputChange(c.id, e.target.value)} onClick={(e) => e.stopPropagation()} min="1" />
+                                  <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleAddTempHp(c.id);}} title="Add Temporary HP"><Shield className="h-4 w-4 text-blue-500"/></Button>
+                              </div> )}
+                            {c.type === 'enemy' && c.currentHp !== undefined && c.currentHp <= 0 && (<Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>)}
+                          </li> ))}
+                      </ul>
+                  </ScrollArea>
+                   {combatants.length > 0 && (
+                    <div className="pt-2 mt-auto flex gap-2 shrink-0">
+                        <Button onClick={prevTurn} variant="outline" className="flex-1">Prev Turn</Button>
+                        <Button onClick={nextTurn} className="flex-1 bg-primary hover:bg-primary/90">Next Turn</Button>
+                    </div>
+                  )}
+                </div>
+            </div>
+          </div>
+
+          {/* Custom Vertical Close Bar */}
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[70]"
+            aria-label="Close DM Tools"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </div>
       </SheetContent>
 
-      {/* Favorite Monster Dialog (used by Add Enemy section in secondary panel) */}
+      {/* Favorite Monster Dialog (used by secondary panel Add Enemy section) */}
       <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
         <DialogContent className="max-w-md min-h-[480px] flex flex-col">
           <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
@@ -820,12 +855,12 @@ export function CombatTrackerDrawer({
       {/* Delete Combatant Confirmation Dialog */}
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
-            <UIAlertDialogHeader><UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle><UIAlertDialogDescription>Are you sure you want to remove "{combatantToDelete?.name}" from the combat?</UIAlertDialogDescription></UIAlertDialogHeader>
+            <UIAlertDialogHeader><UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{combatantToDelete?.name}" from the combat?</AlertDialogDescription></UIAlertDialogHeader>
             <UIAlertDialogFooter><AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteCombatant} className={cn(buttonVariants({variant: 'destructive'}))}>Remove</AlertDialogAction></UIAlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Monster Detail Dialog (for combatants) */}
+      {/* Monster Detail Dialog (for book icon) */}
       <Dialog open={isMonsterDetailDialogOpen} onOpenChange={setIsMonsterDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
