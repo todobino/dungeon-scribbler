@@ -1,18 +1,18 @@
 
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CombatTrackerDrawer } from "@/components/features/combat-tracker/CombatTrackerDrawer"; // New/Renamed
+import { CombatTrackerDrawer } from "@/components/features/combat-tracker/CombatTrackerDrawer";
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { StatusConditionsDrawer } from "@/components/features/status-conditions/StatusConditionsDrawer";
 import { SpellbookDrawer } from "@/components/features/spellbook/SpellbookDrawer";
 import { ItemShopDrawer } from "@/components/features/item-shop/ItemShopDrawer";
-import { 
-  TOOLBAR_ITEMS, 
-  COMBAT_TRACKER_DRAWER_ID, 
-  MONSTER_MASH_DRAWER_ID, 
+import {
+  TOOLBAR_ITEMS,
+  COMBAT_TRACKER_DRAWER_ID,
+  MONSTER_MASH_DRAWER_ID,
   STATUS_CONDITIONS_DRAWER_ID,
   SPELLBOOK_DRAWER_ID,
   ITEM_SHOP_DRAWER_ID,
@@ -20,30 +20,30 @@ import {
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Swords, Skull, ShieldQuestion, BookOpen, Store, Beaker } from "lucide-react"; // Added Swords, Skull, etc.
+import { Swords, Skull, ShieldQuestion, BookOpen, Store, UserPlus } from "lucide-react"; // Added Swords, Skull, ShieldQuestion, BookOpen, Store
 import { useCampaign } from "@/contexts/campaign-context";
 
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
-  const { notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
+  const { activeCampaign, notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
 
   // Combatants state and handlers are now managed here
   const [combatants, setCombatants] = useState<Combatant[]>([]);
-  const combatUniqueId = useId(); // Moved from CombinedToolDrawer
+  const combatUniqueId = useId();
 
   const handleAddCombatant = useCallback((combatant: Combatant) => {
-    setCombatants(prevCombatants => 
+    setCombatants(prevCombatants =>
         [...prevCombatants, combatant].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
     );
   }, []);
 
   const handleAddCombatants = useCallback((newCombatants: Combatant[]) => {
-    setCombatants(prevCombatants => 
+    setCombatants(prevCombatants =>
         [...prevCombatants, ...newCombatants].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
     );
   }, []);
-  
+
   const handleRemoveCombatant = useCallback((combatantId: string) => {
     setCombatants(prevCombatants => prevCombatants.filter(c => c.id !== combatantId));
   }, []);
@@ -58,7 +58,7 @@ export function RightDockedToolbar() {
 
   const handleEndCombat = useCallback(() => {
     setCombatants([]);
-    // Potentially close the Combat Tracker Drawer if desired
+    // Optionally close the Combat Tracker Drawer if desired
     // if (openDrawerId === COMBAT_TRACKER_DRAWER_ID) {
     //   setOpenDrawerId(null);
     // }
@@ -73,7 +73,7 @@ export function RightDockedToolbar() {
     rollIdCounterRef.current += 1;
     return `${Date.now()}-${rollIdCounterRef.current}`;
   }, []);
-  
+
   const addRollToLog = useCallback((rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & {isRolling?: boolean}, entryIdToUpdate?: string) => {
     const idToUse = entryIdToUpdate || getNewRollId();
     setRollLog(prevLog => {
@@ -83,14 +83,14 @@ export function RightDockedToolbar() {
         isRolling: rollData.isRolling !== undefined ? rollData.isRolling : false,
       };
       if (entryIdToUpdate && prevLog.some(entry => entry.id === entryIdToUpdate)) {
-        return prevLog.map(entry => 
-            entry.id === entryIdToUpdate 
-            ? newEntryBase 
+        return prevLog.map(entry =>
+            entry.id === entryIdToUpdate
+            ? newEntryBase
             : entry
         );
       } else {
         const updatedLog = [newEntryBase, ...prevLog];
-        return updatedLog.slice(0, 10); 
+        return updatedLog.slice(0, 10);
       }
     });
   }, [getNewRollId]);
@@ -103,7 +103,7 @@ export function RightDockedToolbar() {
   const handleToggleDrawer = (drawerId: string) => {
     setOpenDrawerId(prevId => (prevId === drawerId ? null : drawerId));
   };
-  
+
   const isCombatActive = combatants.length > 0;
 
   return (
@@ -112,24 +112,20 @@ export function RightDockedToolbar() {
         <div className="fixed top-1/2 -translate-y-1/2 right-0 flex flex-col gap-1 p-1.5 bg-card/80 backdrop-blur-sm shadow-lg rounded-l-lg z-50 border border-r-0">
           {TOOLBAR_ITEMS.map((item, index) => {
             let IconToRender = item.icon;
-            let iconCn = "h-6 w-6"; 
-            let buttonBaseCn = "h-10 w-10 rounded-md"; 
-            
+            let iconCn = "h-6 w-6";
+            let buttonBaseCn = "h-10 w-10 rounded-md";
+
             let isActiveTool = openDrawerId === item.id;
-            
             let isThisCombatTrackerIcon = item.id === COMBAT_TRACKER_DRAWER_ID;
 
             let finalButtonCn = cn(
               buttonBaseCn,
               isActiveTool && "bg-primary/20 text-primary ring-2 ring-primary",
               isThisCombatTrackerIcon && isCombatActive && !isActiveTool && "animate-pulse ring-2 ring-destructive bg-destructive/20 text-destructive",
-              isThisCombatTrackerIcon && isCombatActive && isActiveTool && "animate-pulse ring-2 ring-destructive" 
+              isThisCombatTrackerIcon && isCombatActive && isActiveTool && "animate-pulse ring-2 ring-destructive"
             );
-            
-            const isLastItem = index === TOOLBAR_ITEMS.length - 1;
-            const isMonsterMashItem = item.id === MONSTER_MASH_DRAWER_ID;
-            const nextItemIsMonsterMash = TOOLBAR_ITEMS[index + 1]?.id === MONSTER_MASH_DRAWER_ID;
 
+            const isLastItem = index === TOOLBAR_ITEMS.length - 1;
 
             return (
               <React.Fragment key={item.id}>
@@ -163,6 +159,7 @@ export function RightDockedToolbar() {
         onOpenChange={(isOpen) => {
             if(!isOpen) setOpenDrawerId(null);
         }}
+        activeCampaign={activeCampaign}
         combatants={combatants}
         onAddCombatant={handleAddCombatant}
         onAddCombatants={handleAddCombatants}
