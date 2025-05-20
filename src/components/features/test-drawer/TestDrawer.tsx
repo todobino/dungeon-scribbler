@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Beaker, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { ChevronRight, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TestDrawerProps {
@@ -12,19 +12,17 @@ interface TestDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Define base widths for the content areas of the panels
+// Define content widths for the panels
 const PRIMARY_PANEL_CONTENT_WIDTH_VAL = 380;
-const SECONDARY_PANEL_CONTENT_WIDTH_VAL = 380;
-const CLOSE_BAR_WIDTH_VAL = 32; // Corresponds to w-8 (2rem)
+const SECONDARY_PANEL_CONTENT_WIDTH_VAL = 380; 
 
-// Tailwind classes for panel content areas
+// Define Tailwind classes for the content width of each panel
 const PRIMARY_PANEL_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL}px]`;
 const SECONDARY_PANEL_CLASS = `w-[${SECONDARY_PANEL_CONTENT_WIDTH_VAL}px]`;
 
-// Tailwind classes for the overall SheetContent width
-// These widths include the space for the panels AND the close bar
-const PRIMARY_SHEET_WIDTH_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL + CLOSE_BAR_WIDTH_VAL}px]`;
-const COMBINED_SHEET_WIDTH_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL + SECONDARY_PANEL_CONTENT_WIDTH_VAL + CLOSE_BAR_WIDTH_VAL}px]`;
+// Define Tailwind classes for the SheetContent's overall content width (excluding close bar padding)
+const PRIMARY_SHEET_CONTENT_WIDTH_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL}px]`; // e.g. w-[380px]
+const COMBINED_SHEET_CONTENT_WIDTH_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL + SECONDARY_PANEL_CONTENT_WIDTH_VAL}px]`; // e.g. w-[760px]
 
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
@@ -40,70 +38,60 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
       <SheetContent
         side="right"
         className={cn(
-          "flex flex-col p-0 overflow-hidden sm:max-w-none", // Base classes, p-0 to manage padding internally
-          isSecondaryPanelVisible ? COMBINED_SHEET_WIDTH_CLASS : PRIMARY_SHEET_WIDTH_CLASS
+          "flex flex-col p-0 pr-8 overflow-hidden sm:max-w-none", // p-0 and pr-8 for close bar
+          isSecondaryPanelVisible ? COMBINED_SHEET_CONTENT_WIDTH_CLASS : PRIMARY_SHEET_CONTENT_WIDTH_CLASS
         )}
-        hideCloseButton={true} // We use a custom vertical bar
+        hideCloseButton={true} 
       >
-        {/* Main wrapper for all content INCLUDING the space for the close bar */}
-        <div className="flex flex-col h-full relative pr-8"> {/* pr-8 for the w-8 close bar */}
-          {/* No SheetHeader as per request */}
+        {/* Horizontal layout for primary and (optional) secondary panels */}
+        {/* This div will fill the space defined by SheetContent's width class (before its pr-8) */}
+        <div className="flex flex-row h-full">
           
-          {/* Horizontal layout for primary and (optional) secondary panels */}
-          <div className="flex flex-row flex-1 min-h-0">
-            {/* Secondary Panel (Left side when visible) */}
-            {isSecondaryPanelVisible && (
-              <div
-                className={cn(
-                  SECONDARY_PANEL_CLASS,
-                  "h-full bg-muted border-r border-border p-4 flex flex-col overflow-y-auto flex-shrink-0"
-                )}
-              >
-                <h3 className="text-lg font-semibold mb-2 text-foreground">Secondary Panel</h3>
-                <p className="text-sm text-muted-foreground flex-grow">
-                  This is the secondary panel content. It appears to the left of the primary content.
-                  Its width is fixed.
-                </p>
-                <Button
-                  onClick={() => setIsSecondaryPanelVisible(false)}
-                  variant="outline"
-                  size="sm"
-                  className="mt-auto"
-                >
-                  Close Secondary
-                </Button>
-              </div>
-            )}
-
-            {/* Primary Panel (Right side, or full width of the padded area) */}
+          {/* Secondary Panel (Left side when visible) */}
+          {isSecondaryPanelVisible && (
             <div
               className={cn(
-                "h-full p-4 flex flex-col overflow-y-auto",
-                isSecondaryPanelVisible ? PRIMARY_PANEL_CLASS : "flex-1 w-full", // Takes fixed width if secondary is visible, else fills
-                isSecondaryPanelVisible && "flex-shrink-0" // Prevent shrinking if secondary is visible
+                SECONDARY_PANEL_CLASS, 
+                "h-full bg-muted border-r border-border p-4 flex flex-col overflow-y-auto flex-shrink-0"
               )}
             >
-              <h3 className="text-lg font-semibold mb-2 text-foreground">Primary Panel Content</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Main content of the Test Drawer. Its width adjusts.
+              <h3 className="text-lg font-semibold mb-2 text-foreground">Secondary Panel</h3>
+              <p className="text-sm text-muted-foreground flex-grow">
+                Secondary panel content. Its width is fixed at {SECONDARY_PANEL_CONTENT_WIDTH_VAL}px.
               </p>
-              <Button onClick={() => setIsSecondaryPanelVisible(prev => !prev)} className="mb-4">
+              <Button onClick={() => setIsSecondaryPanelVisible(false)} variant="outline" size="sm" className="mt-auto">
+                Close Secondary
+              </Button>
+            </div>
+          )}
+
+          {/* Primary Panel (Right side, or full width if secondary is hidden) */}
+          <div
+            className={cn(
+              "h-full p-4 flex flex-col overflow-y-auto flex-shrink-0", // Always has padding and flex-shrink-0
+              isSecondaryPanelVisible ? PRIMARY_PANEL_CLASS : "flex-1 w-full" // Takes fixed width if secondary is visible, else fills
+            )}
+          >
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Primary Panel Content</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Main content of the Test Drawer. Its content area width should be {PRIMARY_PANEL_CONTENT_WIDTH_VAL}px.
+            </p>
+            <Button onClick={() => setIsSecondaryPanelVisible(prev => !prev)} className="mb-4 self-start"> {/* self-start to prevent stretching if parent is flex */}
                 {isSecondaryPanelVisible ? (
-                  <PanelLeftClose className="mr-2" />
+                    <PanelLeftClose className="mr-2" />
                 ) : (
-                  <PanelLeftOpen className="mr-2" />
+                    <PanelLeftOpen className="mr-2" />
                 )}
                 {isSecondaryPanelVisible ? "Hide Secondary Panel" : "Show Secondary Panel Left"}
-              </Button>
-              <div className="mt-auto">
+            </Button>
+            <div className="mt-auto">
                 <p className="text-xs text-muted-foreground">
-                  SheetContent Width Class: {isSecondaryPanelVisible ? COMBINED_SHEET_WIDTH_CLASS : PRIMARY_SHEET_WIDTH_CLASS}
-                  <br />
-                  Primary Panel Class: {isSecondaryPanelVisible ? PRIMARY_PANEL_CLASS : "flex-1 w-full"}
-                  <br />
-                  {isSecondaryPanelVisible && `Secondary Panel Class: ${SECONDARY_PANEL_CLASS}`}
+                    Sheet Effective Content Width: {isSecondaryPanelVisible ? COMBINED_SHEET_CONTENT_WIDTH_CLASS : PRIMARY_SHEET_CONTENT_WIDTH_CLASS}
+                    <br />
+                    Primary Panel Content Width Class: {PRIMARY_PANEL_CLASS}
+                    <br />
+                    {isSecondaryPanelVisible && `Secondary Panel Content Width Class: ${SECONDARY_PANEL_CLASS}`}
                 </p>
-              </div>
             </div>
           </div>
         </div>
