@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut, Beaker } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut, Beaker, PanelLeftOpen, PanelLeftClose, PanelRight, PanelBottomOpen, PanelBottomClose } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
 export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
@@ -15,7 +15,7 @@ export interface NavItem {
   isGenAI?: boolean;
 }
 
-// Toolbar IDs
+// Toolbar IDs & Tab IDs
 export const DICE_ROLLER_TAB_ID = "dice-roller";
 export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
 export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
@@ -23,7 +23,7 @@ export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const SPELLBOOK_DRAWER_ID = "spellbook";
 export const ITEM_SHOP_DRAWER_ID = "item-shop";
-export const TEST_DRAWER_ID = "test-drawer";
+export const TEST_OVERLAY_ID = "test-overlay"; // Changed from TEST_DRAWER_ID
 
 
 // Toolbar items
@@ -34,7 +34,7 @@ export const TOOLBAR_ITEMS = [
   { id: STATUS_CONDITIONS_DRAWER_ID, label: 'Status Conditions', icon: ShieldQuestion },
   { id: SPELLBOOK_DRAWER_ID, label: 'Spellbook', icon: BookOpen },
   { id: ITEM_SHOP_DRAWER_ID, label: 'Item Shop', icon: Store },
-  { id: TEST_DRAWER_ID, label: 'Test Drawer', icon: Beaker },
+  { id: TEST_OVERLAY_ID, label: 'Test Overlay', icon: Beaker },
 ];
 
 export const NAV_ITEMS: NavItem[] = [
@@ -284,10 +284,4 @@ export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
   REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX,
   REFACTORED_GOALS_KEY_PREFIX,
   CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX,
-];
-
-export const DND_CLASSES_PLACEHOLDER = [
-    { class: "Barbarian", subclasses: ["Path of the Berserker", "Path of the Totem Warrior"] },
-    { class: "Bard", subclasses: ["College of Lore", "College of Valor"] },
-    // ... add all other classes and subclasses
 ];
