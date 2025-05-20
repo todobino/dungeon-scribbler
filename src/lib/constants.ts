@@ -23,8 +23,7 @@ export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const SPELLBOOK_DRAWER_ID = "spellbook";
 export const ITEM_SHOP_DRAWER_ID = "item-shop";
-export const TEST_OVERLAY_ID = "test-overlay"; // Changed from TEST_DRAWER_ID
-
+// export const TEST_OVERLAY_ID = "test-overlay"; // Removed
 
 // Toolbar items
 export const TOOLBAR_ITEMS = [
@@ -34,7 +33,7 @@ export const TOOLBAR_ITEMS = [
   { id: STATUS_CONDITIONS_DRAWER_ID, label: 'Status Conditions', icon: ShieldQuestion },
   { id: SPELLBOOK_DRAWER_ID, label: 'Spellbook', icon: BookOpen },
   { id: ITEM_SHOP_DRAWER_ID, label: 'Item Shop', icon: Store },
-  { id: TEST_OVERLAY_ID, label: 'Test Overlay', icon: Beaker },
+  // { id: TEST_OVERLAY_ID, label: 'Test Overlay', icon: Beaker }, // Removed
 ];
 
 export const NAV_ITEMS: NavItem[] = [
