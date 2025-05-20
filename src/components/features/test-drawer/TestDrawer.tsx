@@ -1,10 +1,11 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Beaker, LayoutPanelLeft, PanelRight } from "lucide-react"; // Changed LayoutPanelRight to PanelRight
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChevronRight, Beaker, PanelBottomOpen, PanelBottomClose } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 
 interface TestDrawerProps {
@@ -12,8 +13,7 @@ interface TestDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const PRIMARY_DRAWER_WIDTH = "w-[380px] sm:w-[500px]";
-const EXTENDED_DRAWER_WIDTH = "w-[700px] sm:w-[900px]"; 
+const DRAWER_WIDTH = "w-[380px] sm:w-[500px]";
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
@@ -23,7 +23,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   };
 
   // Ensure secondary panel closes if the main drawer is closed externally
-  React.useEffect(() => {
+  useEffect(() => {
     if (!open) {
       setIsSecondaryPanelVisible(false);
     }
@@ -34,10 +34,10 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
       <SheetContent
         side="right"
         className={cn(
-          "flex flex-col p-0 overflow-hidden transition-all duration-300 ease-in-out",
-          isSecondaryPanelVisible ? EXTENDED_DRAWER_WIDTH : PRIMARY_DRAWER_WIDTH
+          "flex flex-col p-0 overflow-hidden",
+          DRAWER_WIDTH
         )}
-        hideCloseButton={true} // We use a custom close bar
+        hideCloseButton={true} 
       >
         {/* Main content wrapper that has padding for the close bar */}
         <div className="flex flex-col h-full pr-8 relative">
@@ -48,39 +48,39 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
           </SheetHeader>
 
           {/* Flex container for primary and secondary panels */}
-          <div className="flex flex-1 min-h-0">
-            {/* Primary Panel Content */}
-            <div className={cn(
-                "flex-shrink-0 p-4 overflow-y-auto",
-                 isSecondaryPanelVisible ? "w-[calc(100%-300px)] border-r border-border" : "w-full" // Adjust width based on secondary panel
-            )}>
+          <ScrollArea className="flex-1"> {/* Make the content area scrollable */}
+            <div className="p-4"> {/* Primary panel content */}
               <h3 className="text-lg font-semibold mb-2">Primary Panel</h3>
               <p className="mb-4">This is the primary test drawer content.</p>
               <Button onClick={handleToggleSecondaryPanel} variant="outline">
                 {isSecondaryPanelVisible ? (
                   <>
-                    <LayoutPanelLeft className="mr-2 h-4 w-4" /> Hide Secondary Panel
+                    <PanelBottomClose className="mr-2 h-4 w-4" /> Hide Secondary Panel
                   </>
                 ) : (
                   <>
-                    <PanelRight className="mr-2 h-4 w-4" /> Show Secondary Panel 
+                    <PanelBottomOpen className="mr-2 h-4 w-4" /> Show Secondary Panel Below
                   </>
                 )}
               </Button>
               <p className="mt-4 text-sm text-muted-foreground">
-                Try clicking the button to toggle the secondary panel. The drawer will expand or contract.
+                Try clicking the button to toggle the secondary panel below.
               </p>
+              {/* Add more content to primary to test scrolling if needed */}
+              <div className="h-[200px] bg-background/30 my-4 flex items-center justify-center border rounded-md">Primary Placeholder Content</div>
             </div>
 
             {/* Secondary Panel Content (Conditionally Rendered) */}
             {isSecondaryPanelVisible && (
-              <div className="flex-1 w-[300px] p-4 overflow-y-auto bg-muted/30">
+              <div className="p-4 bg-muted/30 border-t"> 
                 <h3 className="text-lg font-semibold mb-2 text-primary">Secondary Panel</h3>
-                <p>This is the secondary panel content that appears when the drawer extends.</p>
-                <p className="mt-2">It takes up the remaining space.</p>
+                <p>This is the secondary panel content that appears underneath when toggled.</p>
+                <p className="mt-2">It will make the content scrollable if both panels are large.</p>
+                {/* Add more content to secondary to test scrolling */}
+                <div className="h-[300px] bg-background/30 my-4 flex items-center justify-center border rounded-md">Secondary Placeholder Content</div>
               </div>
             )}
-          </div>
+          </ScrollArea>
         </div>
 
         {/* Custom Vertical Close Bar */}
