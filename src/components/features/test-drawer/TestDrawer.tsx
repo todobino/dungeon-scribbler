@@ -14,9 +14,11 @@ interface TestDrawerProps {
 }
 
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px] sm:w-[500px]";
-const SECONDARY_PANEL_WIDTH_CLASS = "w-[250px] sm:w-[300px]";
-// Fixed combined width: 380 + 250 = 630px; 500 + 300 = 800px
-const COMBINED_WIDTH_CLASS = "w-[630px] sm:w-[800px]"; 
+// Make secondary panel as wide as the primary panel
+const SECONDARY_PANEL_WIDTH_CLASS = "w-[380px] sm:w-[500px]"; 
+// Combined width is now primary + new secondary
+const COMBINED_WIDTH_CLASS = "w-[760px] sm:w-[1000px]"; 
+
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
@@ -25,7 +27,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
     setIsSecondaryPanelVisible(!isSecondaryPanelVisible);
   };
 
-  // Close secondary panel when the main drawer is closed
+  // Close secondary panel when the main drawer is closed via external trigger (e.g., clicking another toolbar icon)
   useEffect(() => {
     if (!open) {
       setIsSecondaryPanelVisible(false);
@@ -96,7 +98,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
             {/* Primary Panel (Right) */}
             <div className={cn(
               "flex flex-col min-h-0 flex-shrink-0 p-4", 
-              PRIMARY_PANEL_BASE_WIDTH // Primary panel always takes its base width
+              PRIMARY_PANEL_BASE_WIDTH 
             )}>
               <ScrollArea className="flex-1">
                 <div> 
@@ -108,16 +110,18 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
                       </>
                     ) : (
                       <>
-                        <PanelLeftOpen className="mr-2 h-4 w-4" /> Show Secondary Panel
+                        <PanelLeftOpen className="mr-2 h-4 w-4" /> Show Secondary Panel Left
                       </>
                     )}
                   </Button>
                   <p className="mt-4 text-sm text-muted-foreground">
-                    This drawer has a fixed width. The secondary panel content appears on the left.
+                    This drawer always opens to its full combined width.
                   </p>
                   <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 1</div>
                   <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 2</div>
                   <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 3</div>
+                  <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 4</div>
+                  <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 5</div>
                 </div>
               </ScrollArea>
             </div>
@@ -128,7 +132,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
         <button
           onClick={() => {
             onOpenChange(false);
-            setIsSecondaryPanelVisible(false); // Also ensure secondary is hidden when main drawer closes
+            // setIsSecondaryPanelVisible(false); // Also ensure secondary is hidden when main drawer closes
           }}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
           aria-label="Close Test Drawer"
