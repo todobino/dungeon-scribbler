@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
 export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
@@ -36,7 +36,7 @@ export const TOOLBAR_ITEMS = [
 ];
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Party Manager', href: '/party-manager', icon: User },
+  // { label: 'Party Manager', href: '/party-manager', icon: User }, // Removed
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
   { label: 'Random Tables', href: '/random-tables', icon: Dice5, disabled: false },
@@ -55,7 +55,7 @@ export const WORLD_NAV_ITEMS: NavItem[] = [
 ];
 
 export const ADVANCED_NAV_ITEMS: NavItem[] = [
-  { label: 'Campaign Wizard', href: '/campaign-wizard', icon: DraftingCompassIcon, isAdvanced: true, isGenAI: true, disabled: false },
+  // { label: 'Campaign Wizard', href: '/campaign-wizard', icon: DraftingCompassIcon, isAdvanced: true, isGenAI: true, disabled: false }, // Removed
   { label: 'Quest Web', href: '/quest-web', icon: Landmark, isAdvanced: true, disabled: true },
   { label: 'Improvisation Asst.', href: '/improvisation-assistant', icon: Wand2, isAdvanced: true, isGenAI: true, disabled: true },
   { label: 'Backstory Integrator', href: '/backstory-integrator', icon: ShieldQuestion, isAdvanced: true, isGenAI: true, disabled: true },
@@ -65,6 +65,7 @@ export const ADVANCED_NAV_ITEMS: NavItem[] = [
 
 
 export const SETTINGS_NAV_ITEMS: NavItem[] = [
+ { label: 'Log Out', href: '#', icon: LogOut, disabled: true }, // Placeholder action
  { label: 'Settings', href: '/settings', icon: Cog, disabled: true },
 ];
 
@@ -233,8 +234,8 @@ export const SPELLBOOK_HOMEBREW_STORAGE_KEY = `${SHARED_DATA_PREFIX}Spellbook_Ho
 // Item Shop Feature Key
 export const ITEM_SHOP_STORAGE_KEY = `${SHARED_DATA_PREFIX}ItemShop_GlobalItems`;
 export const ITEM_TYPES: string[] = [
-  "Potion", "Scroll", "Wand", "Rod", "Staff", "Weapon", "Armor", "Shield", 
-  "Ring", "Amulet", "Cloak", "Boots", "Gloves", "Helm", "Wondrous Item", 
+  "Potion", "Scroll", "Wand", "Rod", "Staff", "Weapon", "Armor", "Shield",
+  "Ring", "Amulet", "Cloak", "Boots", "Gloves", "Helm", "Wondrous Item",
   "Adventuring Gear", "Tool", "Treasure", "Mount", "Vehicle", "Other"
 ];
 
@@ -283,4 +284,10 @@ export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
   REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX,
   REFACTORED_GOALS_KEY_PREFIX,
   CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX, // Added CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX here
+];
+
+export const DND_CLASSES_PLACEHOLDER = [
+    { class: "Barbarian", subclasses: ["Path of the Berserker", "Path of the Totem Warrior"] },
+    { class: "Bard", subclasses: ["College of Lore", "College of Valor"] },
+    // ... add all other classes and subclasses
 ];
