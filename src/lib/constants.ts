@@ -1,17 +1,17 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut, Beaker, PanelLeftOpen, PanelLeftClose, PanelRight, PanelBottomOpen, PanelBottomClose, UserPlus } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut, Beaker, PanelLeftOpen, PanelLeftClose, PanelRight, PanelBottomOpen, PanelBottomClose, UserPlus, Users2 } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
 export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
 
 // Drawer and Tab IDs
-export const COMBAT_TRACKER_DRAWER_ID = "combat-tracker-drawer"; // New ID for the main Combat Tracker drawer
+export const COMBAT_TRACKER_DRAWER_ID = "combat-tracker-drawer";
 export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const SPELLBOOK_DRAWER_ID = "spellbook";
 export const ITEM_SHOP_DRAWER_ID = "item-shop";
-// TEST_DRAWER_ID will be removed as it's repurposed or replaced by CombatTrackerDrawer
+export const TEST_DRAWER_ID = "test-drawer";
 
 export interface NavItem {
   label: string;
@@ -25,12 +25,12 @@ export interface NavItem {
 
 // Toolbar items
 export const TOOLBAR_ITEMS = [
-  { id: COMBAT_TRACKER_DRAWER_ID, label: 'Combat Tracker', icon: Swords }, // Updated ID
+  { id: COMBAT_TRACKER_DRAWER_ID, label: 'Combat Tracker', icon: Swords },
   { id: MONSTER_MASH_DRAWER_ID, label: 'Monster Mash', icon: Skull },
   { id: STATUS_CONDITIONS_DRAWER_ID, label: 'Status Conditions', icon: ShieldQuestion },
   { id: SPELLBOOK_DRAWER_ID, label: 'Spellbook', icon: BookOpen },
   { id: ITEM_SHOP_DRAWER_ID, label: 'Item Shop', icon: Store },
-  // { id: TEST_DRAWER_ID, label: 'Test Drawer', icon: Beaker }, // Will be removed or repurposed
+  // { id: TEST_DRAWER_ID, label: 'Test Drawer', icon: Beaker }, // Test Drawer removed from toolbar
 ];
 
 export const NAV_ITEMS: NavItem[] = [
@@ -40,15 +40,15 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const STORY_NAV_ITEMS: NavItem[] = [
-  { label: 'Adventure Recap', href: '/story-so-far-refactored', icon: History, isGenAI: true, disabled: false },
-  { label: 'Next Session Goals', href: '/next-session-goals-refactored', icon: ClipboardList, isGenAI: true, disabled: false },
+  { label: 'Adventure Recap', href: '/story-so-far-refactored', icon: History, isGenAI: false, disabled: false }, // isGenAI was true, set to false as mock
+  { label: 'Next Session Goals', href: '/next-session-goals-refactored', icon: ClipboardList, isGenAI: false, disabled: false }, // isGenAI was true, set to false as mock
   { label: 'Encounter Planner', href: '/encounter-planner', icon: Swords },
 ];
 
 export const WORLD_NAV_ITEMS: NavItem[] = [
   { label: 'Factions', href: '/world/factions', icon: ShieldCheck, disabled: false },
   { label: 'Locations', href: '/world/locations', icon: MapPinIcon, disabled: true },
-  { label: 'NPCs List', href: '/world/npcs', icon: Users, disabled: true },
+  { label: 'NPCs List', href: '/world/npcs', icon: Users2, disabled: false },
 ];
 
 export const ADVANCED_NAV_ITEMS: NavItem[] = [
@@ -201,6 +201,8 @@ export const MAPS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}Maps_`;
 export const JOURNAL_NOTES_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}JournalNotes_`;
 export const ENCOUNTER_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}CurrentEncounter_`;
 export const SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}SavedEncounters_`;
+export const NPCS_PAGE_STORAGE_KEY_PREFIX = `${SHARED_DATA_PREFIX}CampaignNpcs_`; // For the new NPCs List page
+
 
 // Adventure Recap Page Keys (Refactored)
 export const REFACTORED_PLOT_POINTS_KEY_PREFIX = `${SHARED_DATA_PREFIX}AdventureRecap_PlotPoints_`;
@@ -216,8 +218,8 @@ export const REFACTORED_GOALS_KEY_PREFIX = `${SHARED_DATA_PREFIX}NextSessionGoal
 // Campaign Wizard Draft
 export const CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX = `${SHARED_DATA_PREFIX}CampaignWizardDraft_`;
 
-// Global NPC list (not campaign-specific)
-export const NPCS_STORAGE_KEY = `${SHARED_DATA_PREFIX}Npcs_Global`;
+// Global NPC list (not campaign-specific) for the NPC Builder tool
+export const NPCS_STORAGE_KEY = `${SHARED_DATA_PREFIX}Npcs_GlobalBuilder`;
 
 // Monster Mash Feature Keys
 export const MONSTER_MASH_FAVORITES_STORAGE_KEY = `${SHARED_DATA_PREFIX}MonsterMash_Favorites`;
@@ -280,4 +282,5 @@ export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
   REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX,
   REFACTORED_GOALS_KEY_PREFIX,
   CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX,
+  NPCS_PAGE_STORAGE_KEY_PREFIX, // Added for campaign-specific NPCs
 ];

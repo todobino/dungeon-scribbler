@@ -1,33 +1,39 @@
 
-// Removed: import type { DndClass } from './constants'; // DndClass is no longer defined in constants
 
 export interface PlayerCharacter {
   id: string;
   name: string;
   level: number;
-  class: string;
-  armorClass: number;
+  class: string; // Changed from DndClass
   race: string;
   subclass?: string;
+  armorClass: number;
   initiativeModifier?: number;
   color?: string;
-  imageUrl?: string; 
+  imageUrl?: string;
 }
 
 export interface NPC {
   id: string;
   name: string;
+  campaignId: string; // Added to scope NPCs to a campaign for the new page
   race?: string;
-  occupation?: string;
-  setting?: string;
+  class?: string; // For Class/Role text input
+  occupation?: string; // Kept from original NPC builder
+  setting?: string; // Kept from original NPC builder - might be redundant if campaignId is primary
   description?: string;
-  personalityTraits?: string;
-  backstory?: string;
-  motivations?: string;
-  linkedQuestIds?: string[];
-  linkedRegionIds?: string[];
-  linkedFactionIds?: string[];
+  personalityTraits?: string; // Kept from original NPC builder
+  backstory?: string; // Kept from original NPC builder
+  motivations?: string; // Kept from original NPC builder
+  notes?: string;
+  isFavorite?: boolean;
+  factionId?: string;
+  locationId?: string;
+  reputationWithParty?: number;
+  associations?: string; // New field for relationships, plot hooks etc.
+  // linkedQuestIds, linkedRegionIds, linkedFactionIds from NPC Builder might be replaced by factionId/locationId and associations
 }
+
 
 export interface CampaignNote {
   id: string;
@@ -78,14 +84,13 @@ export interface Campaign {
 export interface CharacterFormData {
   name: string;
   level: number;
-  class: string;
+  class: string; // Changed from DndClass
   race: string;
   customRaceInput?: string;
   subclass?: string;
   armorClass: number;
   initiativeModifier?: number;
   color?: string;
-  // imageUrl?: string; // Removed as per request
 }
 
 
@@ -95,14 +100,14 @@ export interface Combatant {
   initiative: number;
   type: 'player' | 'enemy';
   color?: string;
-  playerId?: string; // Link to PlayerCharacter ID if applicable
+  playerId?: string; 
   ac?: number;
   hp?: number;
   currentHp?: number;
   tempHp?: number;
   initiativeModifier?: number;
-  monsterIndex?: string; // For API monsters
-  cr?: string; // For API monsters
+  monsterIndex?: string; 
+  cr?: string; 
 }
 
 export interface Faction {
@@ -127,10 +132,11 @@ export interface Location {
   campaignId: string;
   name: string;
   description?: string;
-  mapId?: string;
-  factionId?: string;
+  mapId?: string; // Optional ID of a map from MapIntegrationPage
+  factionId?: string; // Optional ID of an associated faction
   notes?: string;
 }
+
 
 export interface PlotPoint {
   id: string;
@@ -149,7 +155,7 @@ export interface MonsterSummary {
 export interface MonsterSummaryWithCR {
   index: string;
   name: string;
-  cr?: number;
+  cr?: number; // CR is now a number
   type?: string;
   url?: string;
   source?: 'api' | 'homebrew';
@@ -243,7 +249,7 @@ export interface MonsterDetail extends MonsterSummary {
   armor_class?: ArmorClass[] | { value: number; type: string; desc?: string }[];
   hit_points?: number;
   hit_dice?: string;
-  hit_points_roll?: string;
+  hit_points_roll?: string; // This is a string like "10d10 + 20"
   speed?: Speed | string;
   strength?: number;
   dexterity?: number;
@@ -258,7 +264,7 @@ export interface MonsterDetail extends MonsterSummary {
   condition_immunities?: { index: string; name: string; url: string }[] | string[] | string;
   senses?: Sense | string;
   languages?: string;
-  challenge_rating?: number;
+  challenge_rating?: number | string; // Can be number or string like "1/2"
   xp?: number;
   special_abilities?: SpecialAbility[] | string;
   actions?: MonsterAction[] | string;
@@ -272,7 +278,7 @@ export interface MonsterDetail extends MonsterSummary {
 export interface FavoriteMonster {
   index: string;
   name: string;
-  cr: number;
+  cr: number; // Storing as number for easier sorting/filtering
   type: string;
   source: 'api' | 'homebrew';
   acValue?: number;
@@ -374,13 +380,13 @@ export interface SpellDetail {
   classes: {
     index: string;
     name: string;
-    url: string;
-  }[] | string;
+    url?: string;
+  }[] | string; // API uses object array, homebrew might be string
   subclasses?: {
     index: string;
     name: string;
-    url: string;
-  }[] | string;
+    url?: string;
+  }[] | string; // API uses object array, homebrew might be string
   area_of_effect?: {
     type: string;
     size: number;
@@ -419,8 +425,8 @@ export interface EncounterMonster {
   name: string;
   quantity: number;
   cr?: string;
-  ac?: string;
-  hp?: string;
+  ac?: string; // Changed to string to match input
+  hp?: string; // Changed to string to match input
   initiativeModifier?: number;
   monsterIndex?: string;
 }
@@ -473,9 +479,7 @@ export interface ShopItem {
   id: string;
   name: string;
   description?: string;
-  cost?: string; // e.g., "10 gp", "5 sp"
+  cost?: string; // e.g., "10 gp", "25 sp"
   type?: string; // e.g., Potion, Weapon, Armor
   rarity?: string; // e.g., Common, Uncommon, Rare
-  // Add other properties as needed, like weight, damage, AC, etc.
 }
-
