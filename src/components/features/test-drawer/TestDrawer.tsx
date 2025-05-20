@@ -1,7 +1,10 @@
+
+"use client";
+
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Beaker, PanelLeftOpen, PanelLeftClose } from "lucide-react"; // Removed PanelRight as it wasn't used
+import { ChevronRight, Beaker, PanelLeftOpen, PanelLeftClose } from "lucide-react"; // Reverted PanelRight to PanelLeftClose for consistency
 import { cn } from "@/lib/utils";
 
 interface TestDrawerProps {
@@ -9,10 +12,10 @@ interface TestDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Updated widths to make secondary panel effectively double the primary's width
+// Define widths for clarity
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px]";
-const SECONDARY_PANEL_WIDTH_CLASS = "w-[380px]"; // Same as primary
-const COMBINED_WIDTH_CLASS = "w-[760px]"; // 380px (primary) + 380px (secondary)
+const SECONDARY_PANEL_WIDTH_CLASS = "w-[300px]";
+const COMBINED_WIDTH_CLASS = "w-[680px]"; // 380px (primary) + 300px (secondary)
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
@@ -27,14 +30,14 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
       <SheetContent
         side="right"
         className={cn(
-          "flex flex-col p-0 overflow-hidden", // Removed: transition-all duration-300 ease-in-out
+          "flex flex-col p-0 overflow-hidden sm:max-w-none", // Added sm:max-w-none
           isSecondaryPanelVisible ? COMBINED_WIDTH_CLASS : PRIMARY_PANEL_BASE_WIDTH
         )}
-        hideCloseButton={true}
+        hideCloseButton={true} // Hide default X, we use the vertical bar
       >
         {/* Main wrapper for content + close bar */}
         <div className="flex flex-col h-full relative">
-          <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex-shrink-0 pr-8">
+          <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex-shrink-0 pr-8"> {/* Added pr-8 for close bar */}
             <SheetTitle className="flex items-center text-xl text-primary-foreground">
               <Beaker className="mr-2 h-6 w-6" />
               Primary Test Drawer
@@ -42,14 +45,13 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
           </SheetHeader>
 
           {/* Horizontal layout for primary and secondary panels */}
-          <div className="flex flex-row flex-1 min-h-0">
+          <div className="flex flex-row flex-1 min-h-0 pr-8"> {/* Added pr-8 for close bar */}
             {/* Secondary Panel (Left side when visible) */}
             {isSecondaryPanelVisible && (
               <div
                 className={cn(
-                  "h-full bg-muted border-r border-border p-4 flex flex-col overflow-y-auto",
                   SECONDARY_PANEL_WIDTH_CLASS,
-                  "flex-shrink-0"
+                  "h-full bg-muted border-r border-border p-4 flex flex-col overflow-y-auto flex-shrink-0"
                 )}
               >
                 <h3 className="text-lg font-semibold mb-2">Secondary Panel</h3>
@@ -70,8 +72,8 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
             {/* Primary Panel (Right side, or full width) */}
             <div
               className={cn(
-                "h-full p-4 flex flex-col overflow-y-auto pr-8", // Always pr-8 for the main close bar
-                isSecondaryPanelVisible ? cn(PRIMARY_PANEL_BASE_WIDTH, "flex-shrink-0") : "flex-1 w-full" // Base width when secondary is visible, else fills
+                "h-full p-4 flex flex-col overflow-y-auto flex-shrink-0",
+                isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full"
               )}
             >
               <h3 className="text-lg font-semibold mb-2">Primary Panel Content</h3>
@@ -88,7 +90,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
               </Button>
               <div className="mt-auto">
                 <p className="text-xs text-muted-foreground">
-                  Current Drawer Width: {isSecondaryPanelVisible ? COMBINED_WIDTH_CLASS : PRIMARY_PANEL_BASE_WIDTH}
+                  Drawer Width: {isSecondaryPanelVisible ? COMBINED_WIDTH_CLASS : PRIMARY_PANEL_BASE_WIDTH}
                 </p>
               </div>
             </div>
