@@ -13,10 +13,11 @@ interface TestDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Width for the primary panel when it's the only one visible or when both are visible
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px] sm:w-[500px]";
-// Make secondary panel as wide as the primary panel
+// Width for the secondary panel when it's visible
 const SECONDARY_PANEL_WIDTH_CLASS = "w-[380px] sm:w-[500px]"; 
-// Combined width is now primary + new secondary
+// Total width when both panels are visible (primary + secondary)
 const COMBINED_WIDTH_CLASS = "w-[760px] sm:w-[1000px]"; 
 
 
@@ -27,7 +28,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
     setIsSecondaryPanelVisible(!isSecondaryPanelVisible);
   };
 
-  // Close secondary panel when the main drawer is closed via external trigger (e.g., clicking another toolbar icon)
+  // Close secondary panel when the main drawer is closed
   useEffect(() => {
     if (!open) {
       setIsSecondaryPanelVisible(false);
@@ -45,60 +46,52 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
         side="right"
         className={cn(
           "flex flex-col p-0 overflow-hidden",
-          COMBINED_WIDTH_CLASS // Drawer is always the combined width
+          isSecondaryPanelVisible ? COMBINED_WIDTH_CLASS : PRIMARY_PANEL_BASE_WIDTH
         )}
         hideCloseButton={true} 
       >
         {/* Main content wrapper that has padding for the close bar */}
-        <div className="flex flex-col h-full pr-8 relative"> {/* Added relative for absolute positioning of close bar */}
+        <div className="flex flex-col h-full pr-8 relative"> 
           <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex-shrink-0">
             <SheetTitle className="flex items-center text-xl text-primary-foreground">
               <Beaker className="mr-2 h-6 w-6" /> Test Drawer
             </SheetTitle>
           </SheetHeader>
 
-          {/* Flex container for primary and secondary panels */}
+          {/* Flex container for primary and conditionally secondary panels */}
           <div className="flex flex-1 min-h-0"> {/* Horizontal layout */}
             
-            {/* Secondary Panel (Left) - Always rendered, content visibility toggled */}
-            <div className={cn(
-                "h-full bg-muted/50 border-r border-border p-4 flex flex-col flex-shrink-0",
-                SECONDARY_PANEL_WIDTH_CLASS
-            )}>
-              {isSecondaryPanelVisible && (
-                <>
-                  <div className="flex justify-between items-center mb-2 flex-shrink-0">
-                    <h3 className="text-lg font-semibold text-primary">Secondary Panel</h3>
-                    <Button onClick={() => setIsSecondaryPanelVisible(false)} variant="ghost" size="sm" className="p-1 h-auto">
-                      <PanelLeftClose className="h-4 w-4" />
-                       <span className="sr-only">Close Secondary Panel</span>
-                    </Button>
+            {/* Secondary Panel (Left) - Conditionally Rendered */}
+            {isSecondaryPanelVisible && (
+              <div className={cn(
+                  "h-full bg-muted/50 border-r border-border p-4 flex flex-col flex-shrink-0",
+                  SECONDARY_PANEL_WIDTH_CLASS
+              )}>
+                <div className="flex justify-between items-center mb-2 flex-shrink-0">
+                  <h3 className="text-lg font-semibold text-primary">Secondary Panel</h3>
+                  <Button onClick={() => setIsSecondaryPanelVisible(false)} variant="ghost" size="sm" className="p-1 h-auto">
+                    <PanelLeftClose className="h-4 w-4" />
+                     <span className="sr-only">Close Secondary Panel</span>
+                  </Button>
+                </div>
+                <ScrollArea className="flex-1">
+                  <p>This is the secondary panel content.</p>
+                  <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
+                    Secondary Placeholder
                   </div>
-                  <ScrollArea className="flex-1">
-                    <p>This is the secondary panel content.</p>
-                    <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
-                      Secondary Placeholder
-                    </div>
-                    <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
-                      More Secondary Content
-                    </div>
-                    <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
-                      And Even More
-                    </div>
-                  </ScrollArea>
-                </>
-              )}
-              {!isSecondaryPanelVisible && (
-                 <div className="flex-1 flex items-center justify-center">
-                    {/* Optionally, show a placeholder or keep it blank when secondary is hidden */}
-                 </div>
-              )}
-            </div>
+                  <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
+                    More Secondary Content
+                  </div>
+                  <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
+                    And Even More
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
 
             {/* Primary Panel (Right) */}
             <div className={cn(
-              "flex flex-col min-h-0 flex-shrink-0 p-4", 
-              PRIMARY_PANEL_BASE_WIDTH 
+              "flex flex-col min-h-0 p-4 flex-1" // Always flex-1 to fill available space
             )}>
               <ScrollArea className="flex-1">
                 <div> 
@@ -115,7 +108,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
                     )}
                   </Button>
                   <p className="mt-4 text-sm text-muted-foreground">
-                    This drawer always opens to its full combined width.
+                    This drawer {!isSecondaryPanelVisible ? 'is at its base width.' : 'has expanded to show the secondary panel.'}
                   </p>
                   <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 1</div>
                   <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 2</div>
@@ -132,7 +125,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
         <button
           onClick={() => {
             onOpenChange(false);
-            // setIsSecondaryPanelVisible(false); // Also ensure secondary is hidden when main drawer closes
+            // setIsSecondaryPanelVisible(false); // Also ensure secondary is hidden when main drawer closes (already handled by useEffect)
           }}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
           aria-label="Close Test Drawer"
