@@ -1,3 +1,4 @@
+
 "use client"; // Add this directive
 
 import { Button } from "@/components/ui/button";
@@ -28,14 +29,7 @@ export default function HomePage() {
             {APP_NAME} is designed to be your trusted companion, helping you track everything
             from player characters and cunning NPC's to sprawling maps and thrilling encounters.
           </p>
-          <div className="flex justify-center">
-            <Button asChild size="lg" className="text-lg px-8 py-6 shadow-lg hover:shadow-primary/50 transition-shadow duration-300">
-              <Link href="/campaign-management">
-                <Zap className="mr-2 h-6 w-6" />
-                Enter the Forge
-              </Link>
-            </Button>
-          </div>
+          
           <div className="pt-6">
             <h3 className="text-lg font-semibold mb-3 text-foreground/80">User Account</h3>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
@@ -50,6 +44,16 @@ export default function HomePage() {
               (User accounts are coming soon to save your campaigns online!)
             </p>
           </div>
+
+          <div className="flex justify-center">
+            <Button asChild size="lg" className="text-lg px-8 py-6 shadow-lg hover:shadow-primary/50 transition-shadow duration-300">
+              <Link href="/campaign-management">
+                <Zap className="mr-2 h-6 w-6" />
+                Enter the Forge
+              </Link>
+            </Button>
+          </div>
+
         </CardContent>
       </Card>
     </div>
