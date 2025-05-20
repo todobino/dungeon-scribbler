@@ -1,10 +1,7 @@
-
-"use client";
-
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Beaker, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { ChevronRight, Beaker, PanelLeftOpen, PanelLeftClose } from "lucide-react"; // Removed PanelRight as it wasn't used
 import { cn } from "@/lib/utils";
 
 interface TestDrawerProps {
@@ -12,10 +9,10 @@ interface TestDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Updated widths based on user's CSS example
+// Updated widths to make secondary panel effectively double the primary's width
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px]";
-const SECONDARY_PANEL_WIDTH_CLASS = "w-[300px]"; 
-const COMBINED_WIDTH_CLASS = "w-[680px]"; // 380px (primary) + 300px (secondary)
+const SECONDARY_PANEL_WIDTH_CLASS = "w-[380px]"; // Same as primary
+const COMBINED_WIDTH_CLASS = "w-[760px]"; // 380px (primary) + 380px (secondary)
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
@@ -30,12 +27,13 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
       <SheetContent
         side="right"
         className={cn(
-          "flex flex-col p-0 overflow-hidden transition-all duration-300 ease-in-out",
+          "flex flex-col p-0 overflow-hidden", // Removed: transition-all duration-300 ease-in-out
           isSecondaryPanelVisible ? COMBINED_WIDTH_CLASS : PRIMARY_PANEL_BASE_WIDTH
         )}
-        hideCloseButton={true} 
+        hideCloseButton={true}
       >
-        <div className="flex flex-col h-full relative"> {/* Main wrapper for content + close bar */}
+        {/* Main wrapper for content + close bar */}
+        <div className="flex flex-col h-full relative">
           <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex-shrink-0 pr-8">
             <SheetTitle className="flex items-center text-xl text-primary-foreground">
               <Beaker className="mr-2 h-6 w-6" />
@@ -47,11 +45,13 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
           <div className="flex flex-row flex-1 min-h-0">
             {/* Secondary Panel (Left side when visible) */}
             {isSecondaryPanelVisible && (
-              <div className={cn(
-                "h-full bg-muted border-r border-border p-4 flex flex-col overflow-y-auto",
-                SECONDARY_PANEL_WIDTH_CLASS,
-                "flex-shrink-0" // Prevent shrinking
-              )}>
+              <div
+                className={cn(
+                  "h-full bg-muted border-r border-border p-4 flex flex-col overflow-y-auto",
+                  SECONDARY_PANEL_WIDTH_CLASS,
+                  "flex-shrink-0"
+                )}
+              >
                 <h3 className="text-lg font-semibold mb-2">Secondary Panel</h3>
                 <p className="text-sm text-muted-foreground flex-grow">
                   This is the secondary panel content. It appears to the left of the primary content.
@@ -68,10 +68,12 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
             )}
 
             {/* Primary Panel (Right side, or full width) */}
-            <div className={cn(
-              "h-full p-4 flex flex-col overflow-y-auto pr-8 flex-shrink-0", // Always pr-8 for the main close bar
-              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full"
-            )}>
+            <div
+              className={cn(
+                "h-full p-4 flex flex-col overflow-y-auto pr-8", // Always pr-8 for the main close bar
+                isSecondaryPanelVisible ? cn(PRIMARY_PANEL_BASE_WIDTH, "flex-shrink-0") : "flex-1 w-full" // Base width when secondary is visible, else fills
+              )}
+            >
               <h3 className="text-lg font-semibold mb-2">Primary Panel Content</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 This is the main content of the Test Drawer.
