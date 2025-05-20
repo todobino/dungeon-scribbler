@@ -9,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod'; // Changed from 'genkit'
 
 // Define which fields the AI can provide suggestions for
 const SuggestibleCampaignFieldsSchema = z.enum([
@@ -17,7 +17,7 @@ const SuggestibleCampaignFieldsSchema = z.enum([
     "factionTypes"
 ]);
 
-export const GenerateCampaignIdeaInputSchema = z.object({
+const GenerateCampaignIdeaInputSchema = z.object({ // Keep as local constant
   currentName: z.string().optional().describe("The current draft name of the campaign, if any."),
   currentConcept: z.string().optional().describe("The current overall concept of the campaign, if any."),
   currentTone: z.string().optional().describe("The current selected tone, if any."),
@@ -34,7 +34,7 @@ export const GenerateCampaignIdeaInputSchema = z.object({
 });
 export type GenerateCampaignIdeaInput = z.infer<typeof GenerateCampaignIdeaInputSchema>;
 
-export const GenerateCampaignIdeaOutputSchema = z.object({
+const GenerateCampaignIdeaOutputSchema = z.object({ // Keep as local constant
   suggestedValue: z.string().describe("The AI-generated suggestion for the requested field."),
 });
 export type GenerateCampaignIdeaOutput = z.infer<typeof GenerateCampaignIdeaOutputSchema>;
@@ -44,27 +44,27 @@ export async function generateCampaignIdea(
   input: GenerateCampaignIdeaInput
 ): Promise<GenerateCampaignIdeaOutput> {
   // MOCK IMPLEMENTATION
-  await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Simulate delay
+  // await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Simulate delay
 
-  let suggestion = `Mock suggestion for ${input.fieldToSuggest}.`;
-  if (input.currentName) suggestion += ` Considering campaign name: "${input.currentName}".`;
+  // let suggestion = `Mock suggestion for ${input.fieldToSuggest}.`;
+  // if (input.currentName) suggestion += ` Considering campaign name: "${input.currentName}".`;
   
-  if (input.fieldToSuggest === "factionTypes") {
-    if (input.currentWorldStyle === "Steampunk") {
-      suggestion = "Clockwork Artisans Guild (Inventors pushing dangerous tech)\nSky-Pirate Confederacy (Rebels ruling the airwaves)\nAlchemists' Collective (Seekers of forbidden knowledge)";
-    } else if (input.currentConcept) {
-        suggestion = `The Silent Watchers (Guardians of ancient secrets)\nThe Crimson Banner Mercenaries (Sellswords with a surprisingly strict code of honor)\nThe Scholars of the Lost Age (Academics obsessed with forgotten lore for "${input.currentConcept.substring(0,20)}...")`;
-    } else {
-        suggestion = "The Midnight Circle (Practitioners of dark magic)\nKeepers of the Green (Protectors of the natural world)\nGuild of Iron (Master crafters and traders)";
-    }
-  } else if (input.fieldToSuggest === "campaignConcept" && input.currentName) {
-    suggestion = `A thrilling adventure where heroes must uncover the secrets of the ${input.currentName} to save the land from an ancient evil.`;
-  } else if (input.fieldToSuggest === "campaignConcept") {
-    suggestion = `The players awaken with amnesia in a world on the brink of magical catastrophe.`;
-  }
+  // if (input.fieldToSuggest === "factionTypes") {
+  //   if (input.currentWorldStyle === "Steampunk") {
+  //     suggestion = "Clockwork Artisans Guild (Inventors pushing dangerous tech)\nSky-Pirate Confederacy (Rebels ruling the airwaves)\nAlchemists' Collective (Seekers of forbidden knowledge)";
+  //   } else if (input.currentConcept) {
+  //       suggestion = `The Silent Watchers (Guardians of ancient secrets)\nThe Crimson Banner Mercenaries (Sellswords with a surprisingly strict code of honor)\nThe Scholars of the Lost Age (Academics obsessed with forgotten lore for "${input.currentConcept.substring(0,20)}...")`;
+  //   } else {
+  //       suggestion = "The Midnight Circle (Practitioners of dark magic)\nKeepers of the Green (Protectors of the natural world)\nGuild of Iron (Master crafters and traders)";
+  //   }
+  // } else if (input.fieldToSuggest === "campaignConcept" && input.currentName) {
+  //   suggestion = `A thrilling adventure where heroes must uncover the secrets of the ${input.currentName} to save the land from an ancient evil.`;
+  // } else if (input.fieldToSuggest === "campaignConcept") {
+  //   suggestion = `The players awaken with amnesia in a world on the brink of magical catastrophe.`;
+  // }
 
-  return { suggestedValue: suggestion };
-  // return campaignWizardFlow(input); // Actual flow call
+  // return { suggestedValue: suggestion };
+  return campaignWizardFlow(input); // Actual flow call
 }
 
 const promptTemplate = `
