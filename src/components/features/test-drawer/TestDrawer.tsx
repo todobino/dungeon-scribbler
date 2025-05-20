@@ -15,8 +15,8 @@ interface TestDrawerProps {
 
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px] sm:w-[500px]";
 const SECONDARY_PANEL_WIDTH_CLASS = "w-[250px] sm:w-[300px]";
-// Approximate combined widths - adjust as needed for your design
-const COMBINED_WIDTH_CLASS = "w-[630px] sm:w-[800px]"; // 380+250, 500+300
+// Approximate combined widths
+const COMBINED_WIDTH_CLASS = "w-[calc(380px+250px)] sm:w-[calc(500px+300px)]"; // More precise calculation for Tailwind JIT
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
@@ -56,7 +56,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
             {/* Secondary Panel (Conditionally Rendered on the Left) */}
             {isSecondaryPanelVisible && (
               <div className={cn(
-                "h-full bg-muted/50 border-r p-4 flex flex-col",
+                "h-full bg-muted/50 border-r p-4 flex flex-col flex-shrink-0",
                 SECONDARY_PANEL_WIDTH_CLASS
               )}>
                 <h3 className="text-lg font-semibold mb-2 text-primary flex-shrink-0">Secondary Panel</h3>
@@ -72,8 +72,11 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
               </div>
             )}
 
-            {/* Primary Panel (Always Visible on the Right of secondary, or takes full if secondary hidden) */}
-            <div className="flex-1 flex flex-col min-h-0">
+            {/* Primary Panel (Always Visible) */}
+            <div className={cn(
+              "flex flex-col min-h-0 flex-shrink-0", 
+              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full"
+            )}>
               <ScrollArea className="flex-1">
                 <div className="p-4"> 
                   <h3 className="text-lg font-semibold mb-2">Primary Panel</h3>
@@ -90,7 +93,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
                     )}
                   </Button>
                   <p className="mt-4 text-sm text-muted-foreground">
-                    Try clicking the button to toggle the secondary panel to the left.
+                    Try clicking the button to toggle the secondary panel to the left. The drawer should now expand.
                   </p>
                   <div className="h-[200px] bg-background/30 my-4 flex items-center justify-center border rounded-md">Primary Placeholder Content</div>
                    <div className="h-[200px] bg-background/30 my-4 flex items-center justify-center border rounded-md">More Primary Content</div>
