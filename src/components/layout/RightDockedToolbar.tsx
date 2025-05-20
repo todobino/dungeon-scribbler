@@ -9,7 +9,7 @@ import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMas
 import { StatusConditionsDrawer } from "@/components/features/status-conditions/StatusConditionsDrawer";
 import { SpellbookDrawer } from "@/components/features/spellbook/SpellbookDrawer";
 import { ItemShopDrawer } from "@/components/features/item-shop/ItemShopDrawer";
-import { TestOverlayPanel } from "@/components/features/test-overlay/TestOverlayPanel"; // New import
+import { TestOverlayPanel } from "@/components/features/test-overlay/TestOverlayPanel";
 import { 
   TOOLBAR_ITEMS, 
   COMBINED_TOOLS_DRAWER_ID, 
@@ -17,25 +17,25 @@ import {
   STATUS_CONDITIONS_DRAWER_ID,
   SPELLBOOK_DRAWER_ID,
   ITEM_SHOP_DRAWER_ID,
-  TEST_OVERLAY_ID, // Updated ID
+  TEST_OVERLAY_ID,
   DICE_ROLLER_TAB_ID, 
   COMBAT_TRACKER_TAB_ID 
 } from "@/lib/constants";
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store, Beaker, XCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react"; // Added Panel icons
+import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store, Beaker, LogOut, Settings, PanelLeftOpen, PanelLeftClose, PanelRight, PanelBottomOpen, PanelBottomClose } from "lucide-react";
 import { useCampaign } from "@/contexts/campaign-context";
-
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
   const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
   const { notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
-  const [isTestOverlayVisible, setIsTestOverlayVisible] = useState(false); // New state for Test Overlay
+  const [isTestOverlayVisible, setIsTestOverlayVisible] = useState(false);
 
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const rollIdCounterRef = useRef(0);
+
   const getNewRollId = useCallback(() => {
     rollIdCounterRef.current += 1;
     return `${Date.now()}-${rollIdCounterRef.current}`;
@@ -96,9 +96,11 @@ export function RightDockedToolbar() {
     setCombatants([]);
   }, []);
 
-
   const handleToggleDrawer = (itemId: string) => {
-    if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
+    if (itemId === TEST_OVERLAY_ID) {
+      setOpenDrawerId(null); // Close other drawers
+      setIsTestOverlayVisible(prev => !prev);
+    } else if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
       const newTab = itemId;
       setIsTestOverlayVisible(false); // Close test overlay if open
       if (openDrawerId === COMBINED_TOOLS_DRAWER_ID && activeCombinedTab === newTab) {
@@ -110,9 +112,6 @@ export function RightDockedToolbar() {
     } else if ([MONSTER_MASH_DRAWER_ID, STATUS_CONDITIONS_DRAWER_ID, SPELLBOOK_DRAWER_ID, ITEM_SHOP_DRAWER_ID].includes(itemId)) {
       setIsTestOverlayVisible(false); // Close test overlay if open
       setOpenDrawerId(prev => (prev === itemId ? null : itemId));
-    } else if (itemId === TEST_OVERLAY_ID) {
-      setOpenDrawerId(null); // Close other drawers
-      setIsTestOverlayVisible(prev => !prev);
     }
   };
   
@@ -138,7 +137,7 @@ export function RightDockedToolbar() {
                                 (openDrawerId === STATUS_CONDITIONS_DRAWER_ID && item.id === STATUS_CONDITIONS_DRAWER_ID) ||
                                 (openDrawerId === SPELLBOOK_DRAWER_ID && item.id === SPELLBOOK_DRAWER_ID) ||
                                 (openDrawerId === ITEM_SHOP_DRAWER_ID && item.id === ITEM_SHOP_DRAWER_ID) ||
-                                (isTestOverlayVisible && item.id === TEST_OVERLAY_ID); // Check for test overlay
+                                (isTestOverlayVisible && item.id === TEST_OVERLAY_ID); 
             
             let isThisCombatTrackerIcon = item.id === COMBAT_TRACKER_TAB_ID;
 
@@ -189,7 +188,7 @@ export function RightDockedToolbar() {
         onAddCombatant={handleAddCombatant}
         onAddCombatants={handleAddCombatants}
         onRemoveCombatant={handleRemoveCombatant}
-        onUpdateCombatant={onUpdateCombatant}
+        onUpdateCombatant={handleUpdateCombatant}
         onEndCombat={handleEndCombat}
       />
       <MonsterMashDrawer
