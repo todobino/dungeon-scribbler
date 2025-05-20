@@ -9,17 +9,17 @@ import { ChevronRight, Beaker, PanelLeftOpen, PanelLeftClose } from "lucide-reac
 import { cn } from "@/lib/utils";
 
 interface TestDrawerProps {
-  open: boolean;
+  open: boolean; // This is isPrimaryOpen from your example
   onOpenChange: (open: boolean) => void;
 }
 
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px] sm:w-[500px]";
 const SECONDARY_PANEL_WIDTH_CLASS = "w-[250px] sm:w-[300px]";
-// Approximate combined widths
-const COMBINED_WIDTH_CLASS = "w-[calc(380px+250px)] sm:w-[calc(500px+300px)]"; // More precise calculation for Tailwind JIT
+// Approximate combined widths using calc() for Tailwind JIT
+const COMBINED_WIDTH_CLASS = "w-[calc(380px+250px)] sm:w-[calc(500px+300px)]"; 
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
-  const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
+  const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false); // This is isSecondaryOpen
 
   const handleToggleSecondaryPanel = () => {
     setIsSecondaryPanelVisible(!isSecondaryPanelVisible);
@@ -56,31 +56,36 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
             {/* Secondary Panel (Conditionally Rendered on the Left) */}
             {isSecondaryPanelVisible && (
               <div className={cn(
-                "h-full bg-muted/50 border-r p-4 flex flex-col flex-shrink-0",
+                "h-full bg-muted/50 border-r border-border p-4 flex flex-col flex-shrink-0",
                 SECONDARY_PANEL_WIDTH_CLASS
               )}>
-                <h3 className="text-lg font-semibold mb-2 text-primary flex-shrink-0">Secondary Panel</h3>
+                <div className="flex justify-between items-center mb-2 flex-shrink-0">
+                  <h3 className="text-lg font-semibold text-primary">Secondary Panel</h3>
+                  <Button onClick={() => setIsSecondaryPanelVisible(false)} variant="ghost" size="sm">Close Secondary</Button>
+                </div>
                 <ScrollArea className="flex-1">
-                  <p>This is the secondary panel content. It appears to the left of the primary panel.</p>
-                  <div className="h-[300px] bg-background/30 my-4 flex items-center justify-center border rounded-md">
-                    Secondary Placeholder Content
+                  <p>This is the secondary panel content.</p>
+                  <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
+                    Secondary Placeholder
                   </div>
-                   <div className="h-[300px] bg-background/30 my-4 flex items-center justify-center border rounded-md">
+                   <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
                     More Secondary Content
+                  </div>
+                   <div className="h-[150px] bg-background/30 my-2 flex items-center justify-center border rounded-md">
+                    And Even More
                   </div>
                 </ScrollArea>
               </div>
             )}
 
-            {/* Primary Panel (Always Visible) */}
+            {/* Primary Panel (Always Visible, takes remaining space or full width) */}
             <div className={cn(
               "flex flex-col min-h-0 flex-shrink-0", 
-              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full"
+              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full" // Adjusts width based on secondary panel
             )}>
               <ScrollArea className="flex-1">
                 <div className="p-4"> 
                   <h3 className="text-lg font-semibold mb-2">Primary Panel</h3>
-                  <p className="mb-4">This is the primary test drawer content.</p>
                   <Button onClick={handleToggleSecondaryPanel} variant="outline">
                     {isSecondaryPanelVisible ? (
                       <>
@@ -88,22 +93,23 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
                       </>
                     ) : (
                       <>
-                        <PanelLeftOpen className="mr-2 h-4 w-4" /> Show Secondary Panel Left
+                        <PanelLeftOpen className="mr-2 h-4 w-4" /> Show Secondary Panel (Left)
                       </>
                     )}
                   </Button>
                   <p className="mt-4 text-sm text-muted-foreground">
-                    Try clicking the button to toggle the secondary panel to the left. The drawer should now expand.
+                    This drawer demonstrates extending its width to accommodate a secondary panel to the left.
                   </p>
-                  <div className="h-[200px] bg-background/30 my-4 flex items-center justify-center border rounded-md">Primary Placeholder Content</div>
-                   <div className="h-[200px] bg-background/30 my-4 flex items-center justify-center border rounded-md">More Primary Content</div>
+                  <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 1</div>
+                   <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 2</div>
+                   <div className="h-[100px] bg-background/30 my-2 flex items-center justify-center border rounded-md">Primary Content Block 3</div>
                 </div>
               </ScrollArea>
             </div>
           </div>
         </div>
 
-        {/* Custom Vertical Close Bar */}
+        {/* Custom Vertical Close Bar for the main Sheet */}
         <button
           onClick={() => onOpenChange(false)}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[60]"
