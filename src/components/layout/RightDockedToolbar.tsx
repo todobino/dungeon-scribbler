@@ -4,34 +4,68 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CombinedToolDrawer } from "@/components/features/shared/CombinedToolDrawer";
+import { CombatTrackerDrawer } from "@/components/features/combat-tracker/CombatTrackerDrawer"; // New/Renamed
 import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { StatusConditionsDrawer } from "@/components/features/status-conditions/StatusConditionsDrawer";
 import { SpellbookDrawer } from "@/components/features/spellbook/SpellbookDrawer";
 import { ItemShopDrawer } from "@/components/features/item-shop/ItemShopDrawer";
-import { TestDrawer } from "@/components/features/test-drawer/TestDrawer"; 
 import { 
   TOOLBAR_ITEMS, 
-  COMBINED_TOOLS_DRAWER_ID, 
+  COMBAT_TRACKER_DRAWER_ID, 
   MONSTER_MASH_DRAWER_ID, 
   STATUS_CONDITIONS_DRAWER_ID,
   SPELLBOOK_DRAWER_ID,
   ITEM_SHOP_DRAWER_ID,
-  TEST_DRAWER_ID,
-  DICE_ROLLER_TAB_ID, 
-  COMBAT_TRACKER_TAB_ID 
 } from "@/lib/constants";
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store, Beaker, LogOut, Settings, PanelLeftOpen, PanelLeftClose, PanelRight, PanelBottomOpen, PanelBottomClose, XCircle, ChevronsRight } from "lucide-react";
+import { Swords, Skull, ShieldQuestion, BookOpen, Store, Beaker } from "lucide-react"; // Added Swords, Skull, etc.
 import { useCampaign } from "@/contexts/campaign-context";
+
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
-  const [activeCombinedTab, setActiveCombinedTab] = useState<string>(DICE_ROLLER_TAB_ID);
   const { notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
 
+  // Combatants state and handlers are now managed here
+  const [combatants, setCombatants] = useState<Combatant[]>([]);
+  const combatUniqueId = useId(); // Moved from CombinedToolDrawer
+
+  const handleAddCombatant = useCallback((combatant: Combatant) => {
+    setCombatants(prevCombatants => 
+        [...prevCombatants, combatant].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
+    );
+  }, []);
+
+  const handleAddCombatants = useCallback((newCombatants: Combatant[]) => {
+    setCombatants(prevCombatants => 
+        [...prevCombatants, ...newCombatants].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
+    );
+  }, []);
+  
+  const handleRemoveCombatant = useCallback((combatantId: string) => {
+    setCombatants(prevCombatants => prevCombatants.filter(c => c.id !== combatantId));
+  }, []);
+
+  const handleUpdateCombatant = useCallback((combatantId: string, updates: Partial<Combatant>) => {
+    setCombatants(prevCombatants =>
+      prevCombatants.map(c =>
+        c.id === combatantId ? { ...c, ...updates } : c
+      ).sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
+    );
+  }, []);
+
+  const handleEndCombat = useCallback(() => {
+    setCombatants([]);
+    // Potentially close the Combat Tracker Drawer if desired
+    // if (openDrawerId === COMBAT_TRACKER_DRAWER_ID) {
+    //   setOpenDrawerId(null);
+    // }
+  }, []);
+
+
+  // Roll Log state and handlers are now managed here
   const [rollLog, setRollLog] = useState<RollLogEntry[]>([]);
   const rollIdCounterRef = useRef(0);
 
@@ -65,57 +99,11 @@ export function RightDockedToolbar() {
     setRollLog([]);
   }, []);
 
-  const [combatants, setCombatants] = useState<Combatant[]>([]);
 
-  const handleAddCombatant = useCallback((combatant: Combatant) => {
-    setCombatants(prevCombatants => 
-        [...prevCombatants, combatant].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
-    );
-  }, []);
-
-  const handleAddCombatants = useCallback((newCombatants: Combatant[]) => {
-    setCombatants(prevCombatants => 
-        [...prevCombatants, ...newCombatants].sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
-    );
-  }, []);
-  
-  const handleRemoveCombatant = useCallback((combatantId: string) => {
-    setCombatants(prevCombatants => prevCombatants.filter(c => c.id !== combatantId));
-  }, []);
-
-  const handleUpdateCombatant = useCallback((combatantId: string, updates: Partial<Combatant>) => {
-    setCombatants(prevCombatants =>
-      prevCombatants.map(c =>
-        c.id === combatantId ? { ...c, ...updates } : c
-      ).sort((a, b) => b.initiative - a.initiative || a.name.localeCompare(b.name))
-    );
-  }, []);
-
-  const handleEndCombat = useCallback(() => {
-    setCombatants([]);
-  }, []);
-
-
-  const handleToggleDrawer = (itemId: string) => {
-    if (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) {
-      const newTab = itemId;
-      if (openDrawerId === COMBINED_TOOLS_DRAWER_ID && activeCombinedTab === newTab) {
-        setOpenDrawerId(null);
-      } else {
-        setOpenDrawerId(COMBINED_TOOLS_DRAWER_ID);
-        setActiveCombinedTab(newTab);
-      }
-    } else if ([MONSTER_MASH_DRAWER_ID, STATUS_CONDITIONS_DRAWER_ID, SPELLBOOK_DRAWER_ID, ITEM_SHOP_DRAWER_ID, TEST_DRAWER_ID].includes(itemId)) {
-      setOpenDrawerId(prev => (prev === itemId ? null : itemId));
-    }
+  const handleToggleDrawer = (drawerId: string) => {
+    setOpenDrawerId(prevId => (prevId === drawerId ? null : drawerId));
   };
   
-  const isCombinedToolActive = (itemId: string) => {
-    return openDrawerId === COMBINED_TOOLS_DRAWER_ID &&
-           (itemId === DICE_ROLLER_TAB_ID || itemId === COMBAT_TRACKER_TAB_ID) &&
-           activeCombinedTab === itemId;
-  };
-
   const isCombatActive = combatants.length > 0;
 
   return (
@@ -127,14 +115,9 @@ export function RightDockedToolbar() {
             let iconCn = "h-6 w-6"; 
             let buttonBaseCn = "h-10 w-10 rounded-md"; 
             
-            let isActiveTool = isCombinedToolActive(item.id) || 
-                                (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID) ||
-                                (openDrawerId === STATUS_CONDITIONS_DRAWER_ID && item.id === STATUS_CONDITIONS_DRAWER_ID) ||
-                                (openDrawerId === SPELLBOOK_DRAWER_ID && item.id === SPELLBOOK_DRAWER_ID) ||
-                                (openDrawerId === ITEM_SHOP_DRAWER_ID && item.id === ITEM_SHOP_DRAWER_ID) ||
-                                (openDrawerId === TEST_DRAWER_ID && item.id === TEST_DRAWER_ID);
+            let isActiveTool = openDrawerId === item.id;
             
-            let isThisCombatTrackerIcon = item.id === COMBAT_TRACKER_TAB_ID;
+            let isThisCombatTrackerIcon = item.id === COMBAT_TRACKER_DRAWER_ID;
 
             let finalButtonCn = cn(
               buttonBaseCn,
@@ -144,8 +127,8 @@ export function RightDockedToolbar() {
             );
             
             const isLastItem = index === TOOLBAR_ITEMS.length - 1;
-            const isTestDrawerItem = item.id === TEST_DRAWER_ID;
-            const nextItemIsTestDrawer = TOOLBAR_ITEMS[index + 1]?.id === TEST_DRAWER_ID;
+            const isMonsterMashItem = item.id === MONSTER_MASH_DRAWER_ID;
+            const nextItemIsMonsterMash = TOOLBAR_ITEMS[index + 1]?.id === MONSTER_MASH_DRAWER_ID;
 
 
             return (
@@ -166,35 +149,29 @@ export function RightDockedToolbar() {
                     <p>{item.label}</p>
                   </TooltipContent>
                 </Tooltip>
-                 { (item.id === COMBAT_TRACKER_TAB_ID || 
-                    item.id === MONSTER_MASH_DRAWER_ID || 
-                    item.id === SPELLBOOK_DRAWER_ID || 
-                    item.id === ITEM_SHOP_DRAWER_ID ||
-                    (item.id === TEST_DRAWER_ID && !isLastItem) || // Separator if Test isn't last
-                    (nextItemIsTestDrawer && !isTestDrawerItem) // Separator before Test if Test isn't first
-                   ) && !isLastItem && item.id !== TOOLBAR_ITEMS[index + 1]?.id && // Avoid double separators
-                   <Separator className="my-0.5 bg-border/70" />}
+                 {item.id === COMBAT_TRACKER_DRAWER_ID && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
+                 {item.id === MONSTER_MASH_DRAWER_ID && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
+                 {item.id === SPELLBOOK_DRAWER_ID && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
               </React.Fragment>
             );
           })}
         </div>
       </TooltipProvider>
 
-      <CombinedToolDrawer
-        open={openDrawerId === COMBINED_TOOLS_DRAWER_ID}
+      <CombatTrackerDrawer
+        open={openDrawerId === COMBAT_TRACKER_DRAWER_ID}
         onOpenChange={(isOpen) => {
             if(!isOpen) setOpenDrawerId(null);
         }}
-        defaultTab={activeCombinedTab}
-        rollLog={rollLog}
-        onInternalRoll={addRollToLog}
-        onClearRollLog={handleClearRollLog}
         combatants={combatants}
         onAddCombatant={handleAddCombatant}
         onAddCombatants={handleAddCombatants}
         onRemoveCombatant={handleRemoveCombatant}
         onUpdateCombatant={handleUpdateCombatant}
         onEndCombat={handleEndCombat}
+        rollLog={rollLog}
+        onInternalRoll={addRollToLog}
+        onClearRollLog={handleClearRollLog}
       />
       <MonsterMashDrawer
         open={openDrawerId === MONSTER_MASH_DRAWER_ID}
@@ -211,10 +188,6 @@ export function RightDockedToolbar() {
       />
       <ItemShopDrawer
         open={openDrawerId === ITEM_SHOP_DRAWER_ID}
-        onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
-      />
-      <TestDrawer
-        open={openDrawerId === TEST_DRAWER_ID}
         onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
       />
     </>

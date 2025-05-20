@@ -1,9 +1,17 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut, Beaker, PanelLeftOpen, PanelLeftClose, PanelRight, PanelBottomOpen, PanelBottomClose } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut, Beaker, PanelLeftOpen, PanelLeftClose, PanelRight, PanelBottomOpen, PanelBottomClose, UserPlus } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
 export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
+
+// Drawer and Tab IDs
+export const COMBAT_TRACKER_DRAWER_ID = "combat-tracker-drawer"; // New ID for the main Combat Tracker drawer
+export const MONSTER_MASH_DRAWER_ID = "monster-mash";
+export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
+export const SPELLBOOK_DRAWER_ID = "spellbook";
+export const ITEM_SHOP_DRAWER_ID = "item-shop";
+// TEST_DRAWER_ID will be removed as it's repurposed or replaced by CombatTrackerDrawer
 
 export interface NavItem {
   label: string;
@@ -15,26 +23,14 @@ export interface NavItem {
   isGenAI?: boolean;
 }
 
-// Toolbar IDs & Tab IDs
-export const DICE_ROLLER_TAB_ID = "dice-roller";
-export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
-export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
-export const MONSTER_MASH_DRAWER_ID = "monster-mash";
-export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
-export const SPELLBOOK_DRAWER_ID = "spellbook";
-export const ITEM_SHOP_DRAWER_ID = "item-shop";
-export const TEST_DRAWER_ID = "test-drawer";
-
-
 // Toolbar items
 export const TOOLBAR_ITEMS = [
-  { id: DICE_ROLLER_TAB_ID, label: 'Dice Roller', icon: Dice5 },
-  { id: COMBAT_TRACKER_TAB_ID, label: 'Combat Tracker', icon: Swords },
+  { id: COMBAT_TRACKER_DRAWER_ID, label: 'Combat Tracker', icon: Swords }, // Updated ID
   { id: MONSTER_MASH_DRAWER_ID, label: 'Monster Mash', icon: Skull },
   { id: STATUS_CONDITIONS_DRAWER_ID, label: 'Status Conditions', icon: ShieldQuestion },
   { id: SPELLBOOK_DRAWER_ID, label: 'Spellbook', icon: BookOpen },
   { id: ITEM_SHOP_DRAWER_ID, label: 'Item Shop', icon: Store },
-  { id: TEST_DRAWER_ID, label: 'Test Drawer', icon: Beaker },
+  // { id: TEST_DRAWER_ID, label: 'Test Drawer', icon: Beaker }, // Will be removed or repurposed
 ];
 
 export const NAV_ITEMS: NavItem[] = [
