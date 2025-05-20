@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,23 +9,22 @@ import { ChevronRight, Beaker, PanelLeftOpen, PanelLeftClose } from "lucide-reac
 import { cn } from "@/lib/utils";
 
 interface TestDrawerProps {
-  open: boolean; // This is isPrimaryOpen from your example
+  open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px] sm:w-[500px]";
 const SECONDARY_PANEL_WIDTH_CLASS = "w-[250px] sm:w-[300px]";
-// Approximate combined widths using calc() for Tailwind JIT
-const COMBINED_WIDTH_CLASS = "w-[calc(380px+250px)] sm:w-[calc(500px+300px)]"; 
+// Pre-calculated: 380 + 250 = 630; 500 + 300 = 800
+const COMBINED_WIDTH_CLASS = "w-[630px] sm:w-[800px]"; 
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
-  const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false); // This is isSecondaryOpen
+  const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
 
   const handleToggleSecondaryPanel = () => {
     setIsSecondaryPanelVisible(!isSecondaryPanelVisible);
   };
 
-  // Ensure secondary panel closes if the main drawer is closed externally
   useEffect(() => {
     if (!open) {
       setIsSecondaryPanelVisible(false);
@@ -33,7 +32,12 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   }, [open]);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        setIsSecondaryPanelVisible(false); // Also close secondary panel if main drawer closes
+      }
+      onOpenChange(isOpen);
+    }}>
       <SheetContent
         side="right"
         className={cn(
@@ -43,7 +47,7 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
         hideCloseButton={true} 
       >
         {/* Main content wrapper that has padding for the close bar */}
-        <div className="flex flex-col h-full pr-8 relative"> {/* pr-8 for the main close bar */}
+        <div className="flex flex-col h-full pr-8 relative">
           <SheetHeader className="p-4 border-b bg-primary text-primary-foreground flex-shrink-0">
             <SheetTitle className="flex items-center text-xl text-primary-foreground">
               <Beaker className="mr-2 h-6 w-6" /> Test Drawer
@@ -61,7 +65,9 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
               )}>
                 <div className="flex justify-between items-center mb-2 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-primary">Secondary Panel</h3>
-                  <Button onClick={() => setIsSecondaryPanelVisible(false)} variant="ghost" size="sm">Close Secondary</Button>
+                  <Button onClick={() => setIsSecondaryPanelVisible(false)} variant="ghost" size="sm" className="p-1 h-auto">
+                    <PanelLeftClose className="h-4 w-4" />
+                  </Button>
                 </div>
                 <ScrollArea className="flex-1">
                   <p>This is the secondary panel content.</p>
@@ -78,10 +84,10 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
               </div>
             )}
 
-            {/* Primary Panel (Always Visible, takes remaining space or full width) */}
+            {/* Primary Panel */}
             <div className={cn(
               "flex flex-col min-h-0 flex-shrink-0", 
-              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full" // Adjusts width based on secondary panel
+              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full"
             )}>
               <ScrollArea className="flex-1">
                 <div className="p-4"> 
