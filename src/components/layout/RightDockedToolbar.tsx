@@ -9,6 +9,7 @@ import { MonsterMashDrawer } from "@/components/features/monster-mash/MonsterMas
 import { StatusConditionsDrawer } from "@/components/features/status-conditions/StatusConditionsDrawer";
 import { SpellbookDrawer } from "@/components/features/spellbook/SpellbookDrawer";
 import { ItemShopDrawer } from "@/components/features/item-shop/ItemShopDrawer";
+import { TestDrawer } from "@/components/features/test-drawer/TestDrawer"; 
 import { 
   TOOLBAR_ITEMS, 
   COMBINED_TOOLS_DRAWER_ID, 
@@ -16,13 +17,14 @@ import {
   STATUS_CONDITIONS_DRAWER_ID,
   SPELLBOOK_DRAWER_ID,
   ITEM_SHOP_DRAWER_ID,
+  TEST_DRAWER_ID,
   DICE_ROLLER_TAB_ID, 
   COMBAT_TRACKER_TAB_ID 
 } from "@/lib/constants";
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store } from "lucide-react";
+import { Dice5, Swords, Skull, ShieldQuestion, BookOpen, Store, Beaker } from "lucide-react";
 import { useCampaign } from "@/contexts/campaign-context";
 
 
@@ -103,7 +105,7 @@ export function RightDockedToolbar() {
         setOpenDrawerId(COMBINED_TOOLS_DRAWER_ID);
         setActiveCombinedTab(newTab);
       }
-    } else if ([MONSTER_MASH_DRAWER_ID, STATUS_CONDITIONS_DRAWER_ID, SPELLBOOK_DRAWER_ID, ITEM_SHOP_DRAWER_ID].includes(itemId)) {
+    } else if ([MONSTER_MASH_DRAWER_ID, STATUS_CONDITIONS_DRAWER_ID, SPELLBOOK_DRAWER_ID, ITEM_SHOP_DRAWER_ID, TEST_DRAWER_ID].includes(itemId)) {
       setOpenDrawerId(prev => (prev === itemId ? null : itemId));
     }
   };
@@ -129,7 +131,8 @@ export function RightDockedToolbar() {
                                 (openDrawerId === MONSTER_MASH_DRAWER_ID && item.id === MONSTER_MASH_DRAWER_ID) ||
                                 (openDrawerId === STATUS_CONDITIONS_DRAWER_ID && item.id === STATUS_CONDITIONS_DRAWER_ID) ||
                                 (openDrawerId === SPELLBOOK_DRAWER_ID && item.id === SPELLBOOK_DRAWER_ID) ||
-                                (openDrawerId === ITEM_SHOP_DRAWER_ID && item.id === ITEM_SHOP_DRAWER_ID);
+                                (openDrawerId === ITEM_SHOP_DRAWER_ID && item.id === ITEM_SHOP_DRAWER_ID) ||
+                                (openDrawerId === TEST_DRAWER_ID && item.id === TEST_DRAWER_ID);
             
             let isThisCombatTrackerIcon = item.id === COMBAT_TRACKER_TAB_ID;
 
@@ -141,9 +144,6 @@ export function RightDockedToolbar() {
             );
             
             const isLastItem = index === TOOLBAR_ITEMS.length - 1;
-            const nextItemIsSeparatorTarget = TOOLBAR_ITEMS[index + 1]?.id === MONSTER_MASH_DRAWER_ID || 
-                                              TOOLBAR_ITEMS[index + 1]?.id === SPELLBOOK_DRAWER_ID ||
-                                              TOOLBAR_ITEMS[index + 1]?.id === ITEM_SHOP_DRAWER_ID; 
 
             return (
               <React.Fragment key={item.id}>
@@ -163,7 +163,7 @@ export function RightDockedToolbar() {
                     <p>{item.label}</p>
                   </TooltipContent>
                 </Tooltip>
-                { (item.id === COMBAT_TRACKER_TAB_ID || item.id === MONSTER_MASH_DRAWER_ID || item.id === SPELLBOOK_DRAWER_ID) && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
+                { (item.id === COMBAT_TRACKER_TAB_ID || item.id === MONSTER_MASH_DRAWER_ID || item.id === SPELLBOOK_DRAWER_ID || item.id === ITEM_SHOP_DRAWER_ID ) && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
               </React.Fragment>
             );
           })}
@@ -178,7 +178,6 @@ export function RightDockedToolbar() {
         defaultTab={activeCombinedTab}
         rollLog={rollLog}
         onInternalRoll={addRollToLog}
-        getNewRollId={getNewRollId}
         onClearRollLog={handleClearRollLog}
         combatants={combatants}
         onAddCombatant={handleAddCombatant}
@@ -202,6 +201,10 @@ export function RightDockedToolbar() {
       />
       <ItemShopDrawer
         open={openDrawerId === ITEM_SHOP_DRAWER_ID}
+        onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
+      />
+      <TestDrawer
+        open={openDrawerId === TEST_DRAWER_ID}
         onOpenChange={(isOpen) => !isOpen && setOpenDrawerId(null)}
       />
     </>

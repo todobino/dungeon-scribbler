@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut } from 'lucide-react';
+import { Users, UserCog, MapIcon, Cog, Wand2, HelpCircle, FileText, Landmark, ShieldQuestion, Library, Shield as ShieldIcon, MapPin as MapPinIcon, ShieldCheck, History, ClipboardList, Edit3, ClipboardCheck, DraftingCompassIcon, Swords, Skull, VenetianMask, Dice5, ListOrdered, BookOpen, Dna, MessageSquare, Star, DraftingCompass, Activity, Link2, User, ArrowUpDown, Store, PlusCircle, LogOut, Beaker } from 'lucide-react';
 
 export const APP_NAME = "Adventure Architect";
 export const DND5E_API_BASE_URL = "https://www.dnd5eapi.co";
@@ -15,7 +15,7 @@ export interface NavItem {
   isGenAI?: boolean;
 }
 
-// Toolbar IDs - DEFINE THESE FIRST
+// Toolbar IDs
 export const DICE_ROLLER_TAB_ID = "dice-roller";
 export const COMBAT_TRACKER_TAB_ID = "combat-tracker";
 export const COMBINED_TOOLS_DRAWER_ID = "combined-tools";
@@ -23,6 +23,7 @@ export const MONSTER_MASH_DRAWER_ID = "monster-mash";
 export const STATUS_CONDITIONS_DRAWER_ID = "status-conditions";
 export const SPELLBOOK_DRAWER_ID = "spellbook";
 export const ITEM_SHOP_DRAWER_ID = "item-shop";
+export const TEST_DRAWER_ID = "test-drawer";
 
 
 // Toolbar items
@@ -33,10 +34,10 @@ export const TOOLBAR_ITEMS = [
   { id: STATUS_CONDITIONS_DRAWER_ID, label: 'Status Conditions', icon: ShieldQuestion },
   { id: SPELLBOOK_DRAWER_ID, label: 'Spellbook', icon: BookOpen },
   { id: ITEM_SHOP_DRAWER_ID, label: 'Item Shop', icon: Store },
+  { id: TEST_DRAWER_ID, label: 'Test Drawer', icon: Beaker },
 ];
 
 export const NAV_ITEMS: NavItem[] = [
-  // { label: 'Party Manager', href: '/party-manager', icon: User }, // Removed
   { label: 'NPC Builder', href: '/npc-builder', icon: UserCog, isGenAI: true },
   { label: 'Map Integration', href: '/map-integration', icon: MapIcon },
   { label: 'Random Tables', href: '/random-tables', icon: Dice5, disabled: false },
@@ -55,7 +56,6 @@ export const WORLD_NAV_ITEMS: NavItem[] = [
 ];
 
 export const ADVANCED_NAV_ITEMS: NavItem[] = [
-  // { label: 'Campaign Wizard', href: '/campaign-wizard', icon: DraftingCompassIcon, isAdvanced: true, isGenAI: true, disabled: false }, // Removed
   { label: 'Quest Web', href: '/quest-web', icon: Landmark, isAdvanced: true, disabled: true },
   { label: 'Improvisation Asst.', href: '/improvisation-assistant', icon: Wand2, isAdvanced: true, isGenAI: true, disabled: true },
   { label: 'Backstory Integrator', href: '/backstory-integrator', icon: ShieldQuestion, isAdvanced: true, isGenAI: true, disabled: true },
@@ -65,7 +65,7 @@ export const ADVANCED_NAV_ITEMS: NavItem[] = [
 
 
 export const SETTINGS_NAV_ITEMS: NavItem[] = [
- { label: 'Log Out', href: '#', icon: LogOut, disabled: true }, // Placeholder action
+ { label: 'Log Out', href: '#', icon: LogOut, disabled: true },
  { label: 'Settings', href: '/settings', icon: Cog, disabled: true },
 ];
 
@@ -283,7 +283,7 @@ export const CAMPAIGN_SPECIFIC_STORAGE_KEY_PREFIXES = [
   REFACTORED_FULL_CAMPAIGN_SUMMARY_KEY_PREFIX,
   REFACTORED_SUMMARY_DETAIL_LEVEL_KEY_PREFIX,
   REFACTORED_GOALS_KEY_PREFIX,
-  CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX, // Added CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX here
+  CAMPAIGN_WIZARD_DRAFT_KEY_PREFIX,
 ];
 
 export const DND_CLASSES_PLACEHOLDER = [
