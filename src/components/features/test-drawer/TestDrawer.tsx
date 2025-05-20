@@ -12,9 +12,10 @@ interface TestDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Updated widths based on user's CSS example
 const PRIMARY_PANEL_BASE_WIDTH = "w-[380px]";
-const SECONDARY_PANEL_WIDTH_CLASS = "w-[380px]"; 
-const COMBINED_WIDTH_CLASS = "w-[760px]";
+const SECONDARY_PANEL_WIDTH_CLASS = "w-[300px]"; 
+const COMBINED_WIDTH_CLASS = "w-[680px]"; // 380px (primary) + 300px (secondary)
 
 export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
@@ -49,12 +50,11 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
               <div className={cn(
                 "h-full bg-muted border-r border-border p-4 flex flex-col overflow-y-auto",
                 SECONDARY_PANEL_WIDTH_CLASS,
-                "flex-shrink-0"
+                "flex-shrink-0" // Prevent shrinking
               )}>
                 <h3 className="text-lg font-semibold mb-2">Secondary Panel</h3>
                 <p className="text-sm text-muted-foreground flex-grow">
-                  This is the secondary panel content. It appears to the left of the primary content
-                  when the main drawer expands.
+                  This is the secondary panel content. It appears to the left of the primary content.
                 </p>
                 <Button
                   onClick={() => setIsSecondaryPanelVisible(false)}
@@ -69,9 +69,8 @@ export function TestDrawer({ open, onOpenChange }: TestDrawerProps) {
 
             {/* Primary Panel (Right side, or full width) */}
             <div className={cn(
-              "h-full p-4 flex flex-col overflow-y-auto pr-8", // pr-8 to avoid overlap with main close bar
-              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full",
-              "flex-shrink-0"
+              "h-full p-4 flex flex-col overflow-y-auto pr-8 flex-shrink-0", // Always pr-8 for the main close bar
+              isSecondaryPanelVisible ? PRIMARY_PANEL_BASE_WIDTH : "flex-1 w-full"
             )}>
               <h3 className="text-lg font-semibold mb-2">Primary Panel Content</h3>
               <p className="text-sm text-muted-foreground mb-4">
