@@ -9,28 +9,26 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader as UIAlertDialogHeader, AlertDialogTitle as UIAlertDialogTitle, AlertDialogFooter as UIAlertDialogFooter } from "@/components/ui/alert-dialog"; // Keep UI prefix for AlertDialog subcomponents if that's how they are used in existing dialogs
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   ChevronRight, UserPlus, Dice5, XCircle, Skull, Loader2, Swords, FolderOpen,
-  MinusCircle, BookOpen, Star, Bandage, Shield, PanelLeftOpen, PanelLeftClose, PlusCircle, Users as UsersIcon, Trash2, ChevronLeft
+  MinusCircle, BookOpen, Star, Bandage, Shield, PanelLeftOpen, PlusCircle, Users as UsersIcon, Trash2, ChevronLeft, ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDiceNotation, rollMultipleDice, rollDie } from "@/lib/dice-utils";
 import type { PlayerCharacter, Combatant, RollLogEntry, SavedEncounter, EncounterMonster, FavoriteMonster, MonsterDetail, ArmorClass, SpecialAbility, MonsterAction, LegendaryAction } from "@/lib/types";
-import { useCampaign } from "@/contexts/campaign-context";
 import { SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX, MONSTER_MASH_FAVORITES_STORAGE_KEY, DND5E_API_BASE_URL } from "@/lib/constants";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCRDisplay } from "@/components/features/monster-mash/MonsterMashDrawer";
 import { useToast } from "@/hooks/use-toast";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
 
 // Width definitions
 const PRIMARY_PANEL_CONTENT_WIDTH_VAL = 380;
-const SECONDARY_PANEL_CONTENT_WIDTH_VAL = 380; // Secondary panel now same width as primary
+const SECONDARY_PANEL_CONTENT_WIDTH_VAL = 380;
 const CLOSE_BAR_WIDTH_VAL = 32; // approx 2rem or w-8
 
 const PRIMARY_SHEET_WIDTH_CLASS = `w-[${PRIMARY_PANEL_CONTENT_WIDTH_VAL + CLOSE_BAR_WIDTH_VAL}px]`;
@@ -43,7 +41,8 @@ const SECONDARY_PANEL_CLASS = `w-[${SECONDARY_PANEL_CONTENT_WIDTH_VAL}px]`;
 interface CombatTrackerDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  activeCampaign: ReturnType<typeof useCampaign>['activeCampaign'];
+  activeCampaign: PlayerCharacter['campaignId'] | null; // campaignId or full Campaign object
+  activeCampaignParty: PlayerCharacter[];
   combatants: Combatant[];
   onAddCombatant: (combatant: Combatant) => void;
   onAddCombatants: (newCombatants: Combatant[]) => void;
@@ -53,16 +52,17 @@ interface CombatTrackerDrawerProps {
   rollLog: RollLogEntry[];
   onInternalRoll: (rollData: Omit<RollLogEntry, 'id' | 'isRolling'> & { isRolling?: boolean }, idToUpdate?: string) => void;
   onClearRollLog: () => void;
-  savedEncountersUpdateKey: number; // For re-fetching saved encounters
+  savedEncountersUpdateKey: number;
 }
 
 type RollMode = "normal" | "advantage" | "disadvantage";
 
-
 const formatDetailArmorClass = (acArray: MonsterDetail["armor_class"] | undefined): string => {
     if (!acArray || acArray.length === 0) return "N/A";
-    if (typeof acArray[0] === 'object' && acArray[0] !== null && 'value' in acArray[0] && 'type' in acArray[0]) {
-        const mainAc = acArray[0] as ArmorClass;
+    // Handle both array of AC objects and single AC object scenarios
+    const mainAcObj = Array.isArray(acArray) ? acArray[0] : acArray;
+    if (typeof mainAcObj === 'object' && mainAcObj !== null && 'value' in mainAcObj && 'type' in mainAcObj) {
+        const mainAc = mainAcObj as ArmorClass;
         let str = `${mainAc.value} (${mainAc.type})`;
         if (mainAc.desc) { str += ` - ${mainAc.desc}`; }
         return str;
@@ -75,7 +75,7 @@ type DetailActionType = MonsterAction | SpecialAbility | LegendaryAction;
 const renderDetailActions = (actions: DetailActionType[] | undefined | string, actionTypeLabel: string) => {
     if (!actions || (typeof actions === 'string' && actions.trim() === "") || (Array.isArray(actions) && actions.length === 0)) { return null; }
     if (typeof actions === 'string') {
-      const paragraphs = actions.split('\\n\\n').map(para => para.trim()).filter(Boolean);
+      const paragraphs = actions.split('\n\n').map(para => para.trim()).filter(Boolean);
       return ( <div className="mb-2"> <h4 className="font-semibold text-primary text-sm">{actionTypeLabel}</h4> {paragraphs.map((paragraph, index) => {
             const parts = paragraph.split(/\*\*(.*?)\*\*/g);
             return ( <p key={index} className="text-xs mb-1"> {parts.map((part, i) => i % 2 === 1 ? <strong key={i} className="font-medium">{part}</strong> : part )} </p> );
@@ -94,37 +94,31 @@ const renderDetailActions = (actions: DetailActionType[] | undefined | string, a
 };
 
 
-export function CombatTrackerDrawer({
-  open,
-  onOpenChange,
-  activeCampaign,
-  combatants = [],
-  onAddCombatant,
-  onAddCombatants,
-  onRemoveCombatant,
-  onUpdateCombatant,
-  onEndCombat,
-  rollLog = [],
-  onInternalRoll,
-  onClearRollLog,
-  savedEncountersUpdateKey
-}: CombatTrackerDrawerProps) {
+export function CombatTrackerDrawer(props: CombatTrackerDrawerProps) {
+  const {
+    open, onOpenChange, activeCampaign, activeCampaignParty, combatants = [],
+    onAddCombatant, onAddCombatants, onRemoveCombatant, onUpdateCombatant, onEndCombat,
+    rollLog = [], onInternalRoll, onClearRollLog, savedEncountersUpdateKey
+  } = props;
+
   const { toast } = useToast();
   const combatUniqueId = useId();
   const diceUniqueId = useId();
 
   const [isSecondaryPanelVisible, setIsSecondaryPanelVisible] = useState(false);
-  const [secondaryPanelMode, setSecondaryPanelMode] = useState<'addCombatant' | 'diceRoller' | null>(null);
+  const [secondaryPanelMode, setSecondaryPanelMode] = useState<'addCombatantForms' | 'diceRoller' | null>(null);
 
   // Dice Roller states
   const [diceInputValue, setDiceInputValue] = useState("");
-  const [diceRollMode, setDiceRollMode] = useState<RollMode>("normal"); // Renamed to avoid conflict
+  const [rollMode, setRollMode] = useState<RollMode>("normal");
 
   // Add Player Character states
   const [selectedPlayerToAdd, setSelectedPlayerToAdd] = useState<PlayerCharacter | null>(null);
   const [playerInitiativeInput, setPlayerInitiativeInput] = useState<string>("");
+  const [manualPlayerInitiatives, setManualPlayerInitiatives] = useState<Record<string, string>>({});
 
-  // Add Single Combatant states
+
+  // Add Custom Friendly/Enemy states (Single/Group Tab)
   const [newCombatantType, setNewCombatantType] = useState<'enemy' | 'player'>('enemy');
   const [enemyName, setEnemyName] = useState("");
   const [enemyAC, setEnemyAC] = useState<string>("");
@@ -134,6 +128,7 @@ export function CombatTrackerDrawer({
   const [enemyQuantityInput, setEnemyQuantityInput] = useState<string>("1");
   const [rollGroupInitiativeFlag, setRollGroupInitiativeFlag] = useState<boolean>(false);
   const [selectedMonsterIndexFromFavorite, setSelectedMonsterIndexFromFavorite] = useState<string | undefined>(undefined);
+
 
   // Load Saved Encounter states
   const [addCombatantActiveTab, setAddCombatantActiveTab] = useState<'single-enemy' | 'load-encounter'>('single-enemy');
@@ -158,8 +153,8 @@ export function CombatTrackerDrawer({
   const [fullEnemyDetailsCache, setFullEnemyDetailsCache] = useState<Record<string, MonsterDetail>>({});
   const [isLoadingFullEnemyDetailsFor, setIsLoadingFullEnemyDetailsFor] = useState<string | null>(null);
 
-  const availablePartyMembers = activeCampaign?.activeParty
-    ? activeCampaign.activeParty.filter(p => !combatants.some(c => c.playerId === p.id))
+  const availablePartyMembers = activeCampaignParty
+    ? activeCampaignParty.filter(p => !combatants.some(c => c.playerId === p.id))
     : [];
 
 
@@ -171,6 +166,7 @@ export function CombatTrackerDrawer({
       setSelectedCombatantId(null);
       setSelectedPlayerToAdd(null);
       setPlayerInitiativeInput("");
+      setManualPlayerInitiatives({});
       setNewCombatantType('enemy');
       setEnemyName(""); setEnemyAC(""); setEnemyHP("");
       setEnemyInitiativeModifierInput("0"); setEnemyInitiativeInput(""); setEnemyQuantityInput("1");
@@ -184,10 +180,10 @@ export function CombatTrackerDrawer({
 
 
   useEffect(() => {
-    if (isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' && addCombatantActiveTab === "load-encounter" && activeCampaign) {
+    if (isSecondaryPanelVisible && secondaryPanelMode === 'addCombatantForms' && addCombatantActiveTab === "load-encounter" && activeCampaign) {
       setIsLoadingSavedEncounters(true);
       try {
-        const storageKey = `${SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX}${activeCampaign.id}`;
+        const storageKey = `${SAVED_ENCOUNTERS_STORAGE_KEY_PREFIX}${typeof activeCampaign === 'string' ? activeCampaign : activeCampaign?.id}`;
         const storedEncounters = localStorage.getItem(storageKey);
         setSavedEncountersForCombat(storedEncounters ? JSON.parse(storedEncounters) : []);
       } catch (error) {
@@ -199,7 +195,7 @@ export function CombatTrackerDrawer({
   }, [isSecondaryPanelVisible, secondaryPanelMode, addCombatantActiveTab, activeCampaign, savedEncountersUpdateKey]);
 
   useEffect(() => {
-    if (isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' && addCombatantActiveTab === "single-enemy") {
+    if (isSecondaryPanelVisible && secondaryPanelMode === 'addCombatantForms' && addCombatantActiveTab === "single-enemy") {
       try {
         const storedFavorites = localStorage.getItem(MONSTER_MASH_FAVORITES_STORAGE_KEY);
         setFavoritesList(storedFavorites ? JSON.parse(storedFavorites) : []);
@@ -220,8 +216,8 @@ export function CombatTrackerDrawer({
       inputText: notationToParse,
       resultText: "...",
       detailText: "Rolling...",
-      isAdvantage: diceRollMode === "advantage",
-      isDisadvantage: diceRollMode === "disadvantage",
+      isAdvantage: rollMode === "advantage",
+      isDisadvantage: rollMode === "disadvantage",
       isRolling: true,
     }, newRollId);
 
@@ -235,7 +231,7 @@ export function CombatTrackerDrawer({
         return;
       }
       let finalResult: number; let resultRolls: number[] = []; let detailText = ""; let chosen: number | undefined = undefined;
-      if (diceRollMode === "normal") {
+      if (rollMode === "normal") {
         const { rolls, sum } = rollMultipleDice(parsed.count, parsed.sides); resultRolls = rolls; finalResult = sum + parsed.modifier;
         detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
       } else {
@@ -244,20 +240,20 @@ export function CombatTrackerDrawer({
             detailText = `Rolled ${parsed.count}d${parsed.sides}${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${rolls.join(", ")}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult} (Mode ignored for non-1d20)`;
         } else {
           const roll1Result = rollMultipleDice(1, 20); const roll2Result = rollMultipleDice(1, 20); const roll1 = roll1Result.sum; const roll2 = roll2Result.sum;
-          if (diceRollMode === "advantage") { chosen = Math.max(roll1, roll2); } else { chosen = Math.min(roll1, roll2); }
+          if (rollMode === "advantage") { chosen = Math.max(roll1, roll2); } else { chosen = Math.min(roll1, roll2); }
           finalResult = chosen + parsed.modifier; resultRolls = [roll1, roll2];
-          detailText = `Rolled 1d20 (${diceRollMode}) ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${roll1 === chosen ? `**${roll1}**` : roll1}, ${roll2 === chosen ? `**${roll2}**` : roll2}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
+          detailText = `Rolled 1d20 (${rollMode}) ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+" : "") + parsed.modifier : ""}: [${roll1 === chosen ? `**${roll1}**` : roll1}, ${roll2 === chosen ? `**${roll2}**` : roll2}] ${parsed.modifier !== 0 ? (parsed.modifier > 0 ? "+ " : "- ") + Math.abs(parsed.modifier) : ""} = ${finalResult}`;
         }
       }
-      onInternalRoll({ inputText: notationToParse, resultText: finalResult.toString(), detailText, isAdvantage: diceRollMode === "advantage", isDisadvantage: diceRollMode === "disadvantage", rolls: resultRolls, chosenRoll: chosen, modifier: parsed.modifier, sides: parsed.sides, isRolling: false }, newRollId);
+      onInternalRoll({ inputText: notationToParse, resultText: finalResult.toString(), detailText, isAdvantage: rollMode === "advantage", isDisadvantage: rollMode === "disadvantage", rolls: resultRolls, chosenRoll: chosen, modifier: parsed.modifier, sides: parsed.sides, isRolling: false }, newRollId);
     }, 500);
   };
 
   const handlePlayerSelectForAdd = (playerId: string) => {
-    const player = activeCampaign?.activeParty?.find(p => p.id === playerId);
+    const player = activeCampaignParty?.find(p => p.id === playerId);
     if (player) {
       setSelectedPlayerToAdd(player);
-      setPlayerInitiativeInput((player.initiativeModifier ?? 0).toString()); // Default to modifier or 0
+      setPlayerInitiativeInput((player.initiativeModifier ?? 0).toString());
     } else {
       setSelectedPlayerToAdd(null);
       setPlayerInitiativeInput("");
@@ -289,17 +285,18 @@ export function CombatTrackerDrawer({
       color: selectedPlayerToAdd.color,
       playerId: selectedPlayerToAdd.id,
       ac: selectedPlayerToAdd.armorClass,
-      hp: undefined, 
+      hp: undefined,
       currentHp: undefined,
       tempHp: 0,
       initiativeModifier: selectedPlayerToAdd.initiativeModifier,
-      monsterIndex: undefined, 
+      monsterIndex: undefined,
     };
     onAddCombatant(newCombatant);
     if (currentTurnIndex === null && combatants.length + 1 > 0) setCurrentTurnIndex(0);
     setSelectedPlayerToAdd(null);
     setPlayerInitiativeInput("");
   };
+
 
   const parseModifierString = (modStr: string): number => { const num = parseInt(modStr.trim()); return isNaN(num) ? 0 : num; };
 
@@ -308,7 +305,7 @@ export function CombatTrackerDrawer({
     setEnemyAC(fav.acValue !== undefined ? fav.acValue.toString() : "");
     setEnemyHP(fav.hpValue !== undefined ? fav.hpValue.toString() : "");
     setSelectedMonsterIndexFromFavorite(fav.index);
-    setEnemyInitiativeModifierInput("0"); 
+    setEnemyInitiativeModifierInput("0");
     setIsFavoriteMonsterDialogOpen(false);
   };
 
@@ -321,6 +318,7 @@ export function CombatTrackerDrawer({
     const quantity = parseInt(enemyQuantityInput) || 1; if (quantity <= 0) { toast({ title: "Invalid Quantity", variant: "destructive" }); return; }
     const acValue = enemyAC.trim() === "" ? undefined : parseInt(enemyAC);
     const hpValue = enemyHP.trim() === "" ? undefined : parseInt(enemyHP);
+    const crValue = undefined; // CR not directly used for combatant object, but could be stored if needed
     if (enemyAC.trim() !== "" && (isNaN(acValue!) || acValue! < 0)) { toast({ title: "Invalid AC", variant: "destructive" }); return; }
     if (enemyHP.trim() !== "" && (isNaN(hpValue!) || hpValue! <= 0)) { toast({ title: "Invalid HP", variant: "destructive" }); return; }
 
@@ -348,7 +346,7 @@ export function CombatTrackerDrawer({
       newCombatantsToAdd.push({
         id: `${combatUniqueId}-${newCombatantType}-${Date.now()}-${i}`, name: currentCombatantName, initiative: initiativeValue,
         type: newCombatantType,
-        ac: acValue, hp: hpValue, currentHp: hpValue, tempHp: 0,
+        ac: acValue, hp: hpValue, currentHp: hpValue, tempHp: 0, cr: crValue,
         initiativeModifier: initModValue, monsterIndex: selectedMonsterIndexFromFavorite
       });
     }
@@ -460,12 +458,16 @@ export function CombatTrackerDrawer({
       }
       return combatant.id;
     });
+    // Close details if selecting another combatant or deselecting
+    if (selectedMonsterForDetailDialog && selectedMonsterForDetailDialog.id !== combatant.id) {
+        setIsMonsterDetailDialogOpen(false);
+    }
   };
 
   const fetchFullEnemyDetails = useCallback(async (combatant: Combatant) => {
     if (!combatant.monsterIndex) {
       toast({title: "No API Data", description: "This combatant was manually added or has no API link.", variant: "default"});
-      setSelectedMonsterForDetailDialog(combatant); // Still show what we know
+      setSelectedMonsterForDetailDialog(combatant);
       setIsMonsterDetailDialogOpen(true);
       return;
     }
@@ -475,8 +477,8 @@ export function CombatTrackerDrawer({
       return;
     }
     setIsLoadingFullEnemyDetailsFor(combatant.id);
-    setSelectedMonsterForDetailDialog(combatant); // Select first to open dialog
-    setIsMonsterDetailDialogOpen(true); // Open dialog
+    setSelectedMonsterForDetailDialog(combatant);
+    setIsMonsterDetailDialogOpen(true);
     try {
       const response = await fetch(`${DND5E_API_BASE_URL}/api/monsters/${combatant.monsterIndex}`);
       if (!response.ok) throw new Error(`Failed to fetch details for ${combatant.name}`);
@@ -485,7 +487,6 @@ export function CombatTrackerDrawer({
     } catch (err: any) {
       console.error(err);
       toast({ title: "Error Loading Details", description: `Could not load API details for ${combatant.name}. ${err.message}`, variant: "destructive" });
-      // Keep dialog open with selectedMonsterForDetailDialog showing partial data
     } finally {
       setIsLoadingFullEnemyDetailsFor(null);
     }
@@ -494,24 +495,20 @@ export function CombatTrackerDrawer({
   const handleOpenMonsterDetailDialog = (combatant: Combatant) => {
     if (combatant.type === 'enemy') {
         if (selectedMonsterForDetailDialog?.id === combatant.id && isMonsterDetailDialogOpen) {
-             setIsMonsterDetailDialogOpen(false); // Close if already open for this one
+             setIsMonsterDetailDialogOpen(false);
         } else {
-            fetchFullEnemyDetails(combatant); // Fetch (or use cache) and open
+            fetchFullEnemyDetails(combatant);
         }
     }
   };
 
-  const handleToggleSecondaryPanel = (mode: 'addCombatant' | 'diceRoller') => {
+  const handleToggleSecondaryPanel = (mode: 'addCombatantForms' | 'diceRoller') => {
     if (isSecondaryPanelVisible && secondaryPanelMode === mode) {
       setIsSecondaryPanelVisible(false);
       setSecondaryPanelMode(null);
     } else {
       setSecondaryPanelMode(mode);
       setIsSecondaryPanelVisible(true);
-    }
-    if (mode !== 'addCombatant' || !isSecondaryPanelVisible) {
-        setSelectedPlayerToAdd(null);
-        setPlayerInitiativeInput("");
     }
   };
 
@@ -533,34 +530,42 @@ export function CombatTrackerDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className={cn("flex flex-col p-0 sm:max-w-none", isSecondaryPanelVisible ? COMBINED_SHEET_WIDTH_CLASS : PRIMARY_SHEET_WIDTH_CLASS)} hideCloseButton={true}>
-        {/* Visually hidden header for accessibility */}
+      <SheetContent
+        side="right"
+        className={cn(
+            "flex flex-col p-0 sm:max-w-none overflow-hidden",
+            isSecondaryPanelVisible ? COMBINED_SHEET_WIDTH_CLASS : PRIMARY_SHEET_WIDTH_CLASS
+        )}
+        hideCloseButton={true}
+      >
         <SheetHeader className="sr-only">
           <SheetTitle>DM Tools</SheetTitle>
         </SheetHeader>
-        <div className="relative h-full pr-8"> {/* Main wrapper to reserve space for close bar */}
+        <div className="relative h-full pr-8">
           <div className="flex flex-row h-full">
             {/* Secondary Panel (Left - Add Combatant / Dice Roller) */}
             {isSecondaryPanelVisible && (
               <div className={cn(SECONDARY_PANEL_CLASS, "h-full flex flex-col bg-card border-r border-border flex-shrink-0")}>
                 <div className="bg-primary text-primary-foreground p-3 flex items-center justify-between sticky top-0 z-10 shrink-0">
                     <h3 className="text-lg font-semibold text-primary-foreground">
-                        {secondaryPanelMode === 'addCombatant' ? 'Add to Combat' : 'Dice Roller'}
+                        {secondaryPanelMode === 'addCombatantForms' ? 'Add to Combat' : 'Dice Roller'}
                     </h3>
                 </div>
-                <ScrollArea className="flex-1 p-4"> {/* Scroll for entire secondary panel content */}
-                  {secondaryPanelMode === 'addCombatant' && (
-                    <div className="space-y-4">
+                <ScrollArea className="flex-1">
+                  {secondaryPanelMode === 'addCombatantForms' && (
+                    <div className="p-4 space-y-4">
                       <Accordion type="single" collapsible className="w-full" defaultValue="add-players">
                         <AccordionItem value="add-players">
-                          <AccordionTrigger className="text-base font-medium">Add Player Character</AccordionTrigger>
+                          <AccordionTrigger className="text-base font-medium hover:no-underline">
+                            <div className="flex items-center"><UsersIcon className="mr-2 h-4 w-4"/>Add Player Character</div>
+                          </AccordionTrigger>
                           <AccordionContent className="pt-3 space-y-3">
                             <Select onValueChange={handlePlayerSelectForAdd} value={selectedPlayerToAdd?.id || ""}>
                               <SelectTrigger><SelectValue placeholder="Select Player..." /></SelectTrigger>
                               <SelectContent>
-                                {activeCampaign?.activeParty?.map(p => <SelectItem key={p.id} value={p.id} disabled={combatants.some(c => c.playerId === p.id)}>{p.name} (Lvl {p.level} {p.race} {p.class})</SelectItem>)}
-                                {(activeCampaign?.activeParty?.length === 0 || !activeCampaign?.activeParty) && <SelectItem value="none" disabled>No players in active campaign</SelectItem>}
-                                {activeCampaign?.activeParty && activeCampaign.activeParty.every(p => combatants.some(c => c.playerId === p.id)) && <SelectItem value="all-added" disabled>All players added</SelectItem>}
+                                {activeCampaignParty?.map(p => <SelectItem key={p.id} value={p.id} disabled={combatants.some(c => c.playerId === p.id)}>{p.name} (Lvl {p.level} {p.race} {p.class})</SelectItem>)}
+                                {(activeCampaignParty?.length === 0) && <SelectItem value="none" disabled>No players in active campaign party</SelectItem>}
+                                {activeCampaignParty && activeCampaignParty.every(p => combatants.some(c => c.playerId === p.id)) && <SelectItem value="all-added" disabled>All players added</SelectItem>}
                               </SelectContent>
                             </Select>
                             {selectedPlayerToAdd && (
@@ -570,17 +575,23 @@ export function CombatTrackerDrawer({
                                   <Input id="player-initiative-input" type="number" value={playerInitiativeInput} onChange={(e) => setPlayerInitiativeInput(e.target.value)} className="flex-grow text-sm h-9" />
                                   <Button onClick={handleRollPlayerInitiative} variant="outline" size="sm" className="shrink-0 h-9 text-xs">{playerInitiativeButtonText}</Button>
                                 </div>
-                                <Button onClick={handleAddSelectedPlayerToCombat} className="w-full mt-2" size="sm">Add {selectedPlayerToAdd.name}</Button>
+                                <Button onClick={handleAddSelectedPlayerToCombat} className="w-full mt-2 bg-primary hover:bg-primary/90" size="sm">Add {selectedPlayerToAdd.name}</Button>
                               </div>
                             )}
+                             {availablePartyMembers.length === 0 && !selectedPlayerToAdd && activeCampaignParty?.length > 0 &&
+                                <p className="text-sm text-muted-foreground text-center">All party members added.</p>
+                             }
+                             {!activeCampaignParty || activeCampaignParty.length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center">No players in active campaign party.</p>
+                             )}
                           </AccordionContent>
                         </AccordionItem>
                       </Accordion>
 
                       <Tabs defaultValue="single-enemy" className="flex flex-col flex-grow" onValueChange={(value) => setAddCombatantActiveTab(value as 'single-enemy' | 'load-encounter')}>
-                        <TabsList className="grid w-full grid-cols-2 shrink-0">
-                          <TabsTrigger value="single-enemy">Single/Group</TabsTrigger>
-                          <TabsTrigger value="load-encounter" disabled={!activeCampaign}>Load Encounter</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-2 shrink-0 bg-primary text-primary-foreground">
+                          <TabsTrigger value="single-enemy" className="data-[state=active]:bg-primary-foreground data-[state=active]:text-primary data-[state=inactive]:text-primary-foreground/70">Single/Group</TabsTrigger>
+                          <TabsTrigger value="load-encounter" disabled={!activeCampaign} className="data-[state=active]:bg-primary-foreground data-[state=active]:text-primary data-[state=inactive]:text-primary-foreground/70">Load Encounter</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="single-enemy" className="mt-4 space-y-3 flex-grow flex flex-col">
@@ -611,13 +622,16 @@ export function CombatTrackerDrawer({
                               <div><Label htmlFor="enemy-ac-input">AC</Label><Input id="enemy-ac-input" type="number" value={enemyAC} onChange={(e) => setEnemyAC(e.target.value)} /></div>
                               <div><Label htmlFor="enemy-hp-input">HP</Label><Input id="enemy-hp-input" type="number" value={enemyHP} onChange={(e) => setEnemyHP(e.target.value)} /></div>
                             </div>
+                             <div><Label htmlFor="enemy-cr-input">CR</Label><Input id="enemy-cr-input" type="text" value={selectedMonsterIndexFromFavorite ? formatCRDisplay(favoritesList.find(f=>f.index === selectedMonsterIndexFromFavorite)?.cr) : ""} readOnly={!!selectedMonsterIndexFromFavorite} placeholder={selectedMonsterIndexFromFavorite ? "" : "e.g., 1/2 or 5"} /></div>
+
+
                             <div><Label htmlFor="enemy-init-mod-input">Init. Mod.</Label><Input id="enemy-init-mod-input" value={enemyInitiativeModifierInput} onChange={(e) => setEnemyInitiativeModifierInput(e.target.value)} /></div>
                             
                             <div className="flex items-end gap-3">
                                 <div className="w-20"><Label htmlFor="enemy-quantity-input">Quantity</Label><Input id="enemy-quantity-input" type="number" value={enemyQuantityInput} onChange={(e) => setEnemyQuantityInput(e.target.value)} min="1" /></div>
                                 <div className="flex items-center space-x-2 pb-1">
-                                <Switch id="roll-group-initiative-flag" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} disabled={isGroupSwitchDisabled}/>
-                                <Label htmlFor="roll-group-initiative-flag" className="cursor-pointer text-sm">Group</Label>
+                                  <Switch id="roll-group-initiative-flag" checked={rollGroupInitiativeFlag} onCheckedChange={setRollGroupInitiativeFlag} disabled={isGroupSwitchDisabled}/>
+                                  <Label htmlFor="roll-group-initiative-flag" className="cursor-pointer text-sm">Group</Label>
                                 </div>
                             </div>
                             <div>
@@ -660,7 +674,7 @@ export function CombatTrackerDrawer({
                                       {selectedEncounterDetails.monsters.map(monster => (
                                         <li key={monster.id}>{monster.name} (x{monster.quantity})
                                           <span className="text-xs text-muted-foreground ml-1">
-                                            {monster.cr && `CR:${monster.cr} `}
+                                            {monster.cr && `CR:${formatCRDisplay(monster.cr)} `}
                                             {monster.ac && `AC:${monster.ac} `}
                                             {monster.hp && `HP:${monster.hp}`}
                                             {monster.initiativeModifier !== undefined && ` Init Mod:${monster.initiativeModifier >=0 ? '+' : ''}${monster.initiativeModifier}`}
@@ -680,22 +694,22 @@ export function CombatTrackerDrawer({
                     </div>
                   )}
                   {secondaryPanelMode === 'diceRoller' && (
-                     <div className="space-y-4 h-full flex flex-col">
+                     <div className="p-4 space-y-4 h-full flex flex-col">
                       <div>
                         <Label htmlFor="dice-notation">Dice Notation</Label>
                         <Input id="dice-notation" value={diceInputValue} onChange={(e) => setDiceInputValue(e.target.value)} placeholder="e.g., 2d6+3" />
                       </div>
                       <div>
                           <Label>Roll Mode</Label>
-                          <Tabs defaultValue="normal" value={diceRollMode} onValueChange={(value) => setDiceRollMode(value as RollMode)} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3">
-                              <TabsTrigger value="normal">Normal</TabsTrigger>
-                              <TabsTrigger value="advantage">Advantage</TabsTrigger>
-                              <TabsTrigger value="disadvantage">Disadvantage</TabsTrigger>
+                           <Tabs defaultValue="normal" value={rollMode} onValueChange={(value) => setRollMode(value as RollMode)} className="w-full">
+                            <TabsList className="grid w-full grid-cols-3 bg-primary text-primary-foreground">
+                              <TabsTrigger value="normal" className="data-[state=active]:bg-primary-foreground data-[state=active]:text-primary data-[state=inactive]:text-primary-foreground/70">Normal</TabsTrigger>
+                              <TabsTrigger value="advantage" className="data-[state=active]:bg-primary-foreground data-[state=active]:text-primary data-[state=inactive]:text-primary-foreground/70">Advantage</TabsTrigger>
+                              <TabsTrigger value="disadvantage" className="data-[state=active]:bg-primary-foreground data-[state=active]:text-primary data-[state=inactive]:text-primary-foreground/70">Disadvantage</TabsTrigger>
                             </TabsList>
                           </Tabs>
                       </div>
-                      <Button onClick={handleDiceRoll} className={cn("w-full bg-primary hover:bg-primary/90", diceRollMode === "advantage" && "border-2 border-green-500 hover:border-green-600", diceRollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600")}>
+                      <Button onClick={handleDiceRoll} className={cn("w-full bg-primary hover:bg-primary/90", rollMode === "advantage" && "border-2 border-green-500 hover:border-green-600", rollMode === "disadvantage" && "border-2 border-red-500 hover:border-red-600")}>
                           {diceInputValue.trim() === "" ? <Dice5 className="mr-2 h-5 w-5" /> : <Zap className="mr-2 h-5 w-5" />}
                           {diceInputValue.trim() === "" ? "Roll d20" : "Roll"}
                       </Button>
@@ -735,39 +749,42 @@ export function CombatTrackerDrawer({
                 "flex flex-col h-full bg-sidebar-background flex-shrink-0",
                 isSecondaryPanelVisible ? PRIMARY_PANEL_CLASS : "flex-1 w-full"
             )}>
-              {/* Primary Panel Header */}
-              <div className="bg-primary text-primary-foreground p-3 flex items-center justify-between shrink-0">
-                <h3 className="text-lg font-semibold flex items-center"><Swords className="mr-2 h-5 w-5"/>Combat Tracker</h3>
-                <div className="flex items-center gap-1">
-                  <Button
-                      onClick={() => handleToggleSecondaryPanel('addCombatant')}
-                      variant={isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' ? "default" : "outline"}
-                      size="sm"
-                      className={cn(isSecondaryPanelVisible && secondaryPanelMode === 'addCombatant' ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" : "text-primary-foreground border-primary-foreground/50 hover:bg-primary/80 hover:text-sidebar-accent-foreground")}
-                  >
-                      <UserPlus className="mr-1.5 h-4 w-4"/>Add Combatant
-                  </Button>
-                  <Button
-                      onClick={() => handleToggleSecondaryPanel('diceRoller')}
-                      variant={isSecondaryPanelVisible && secondaryPanelMode === 'diceRoller' ? "default" : "outline"}
-                      size="sm"
-                       className={cn(isSecondaryPanelVisible && secondaryPanelMode === 'diceRoller' ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" : "text-primary-foreground border-primary-foreground/50 hover:bg-primary/80 hover:text-sidebar-accent-foreground")}
-                  >
-                      <Dice5 className="mr-1.5 h-4 w-4"/>Dice
-                  </Button>
-                  {combatants.length > 0 && (
-                      <Button onClick={handleEndCombatLocal} variant="destructive" size="sm" className="ml-1">
-                          <XCircle className="mr-1.5 h-4 w-4"/>End
-                      </Button>
-                  )}
-                </div>
-              </div>
+              <SheetHeader className="bg-primary text-primary-foreground p-3 flex flex-row items-center justify-between shrink-0 sticky top-0 z-10">
+                <SheetTitle className="text-lg font-semibold flex items-center text-primary-foreground"><Swords className="mr-2 h-5 w-5"/>Combat Tracker</SheetTitle>
+                <Button onClick={() => props.onEndCombat()} variant="destructive" size="sm" className="ml-auto" disabled={combatants.length === 0}>
+                    <XCircle className="mr-1.5 h-4 w-4"/>End Combat
+                </Button>
+              </SheetHeader>
 
-              {/* Combat Order List */}
               <div className="p-4 flex flex-col flex-grow min-h-0">
+                  <div className="flex items-center gap-2 mb-3 shrink-0">
+                      <Button
+                          onClick={() => handleToggleSecondaryPanel('addCombatantForms')}
+                          variant={isSecondaryPanelVisible && secondaryPanelMode === 'addCombatantForms' ? "default" : "outline"}
+                          size="sm"
+                          className={cn(
+                              isSecondaryPanelVisible && secondaryPanelMode === 'addCombatantForms' ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" : "text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                              "flex-1"
+                          )}
+                      >
+                          <UserPlus className="mr-1.5 h-4 w-4"/> Add Combatant
+                      </Button>
+                      <Button
+                          onClick={() => handleToggleSecondaryPanel('diceRoller')}
+                          variant={isSecondaryPanelVisible && secondaryPanelMode === 'diceRoller' ? "default" : "outline"}
+                          size="sm"
+                          className={cn(
+                              isSecondaryPanelVisible && secondaryPanelMode === 'diceRoller' ? "bg-primary-foreground text-primary hover:bg-primary-foreground/90" : "text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                              "flex-1"
+                          )}
+                      >
+                          <Dice5 className="mr-1.5 h-4 w-4"/>Dice Roller
+                      </Button>
+                  </div>
+
                   <Label className="mb-1 shrink-0 text-sidebar-foreground/80">Combat Order (Highest to Lowest)</Label>
                   <ScrollArea className="border border-sidebar-border rounded-md p-1 flex-grow bg-secondary h-full">
-                      {combatants.length === 0 && <p className="text-sm text-sidebar-foreground/70 text-center py-8">No combatants yet.</p>}
+                      {combatants.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No combatants yet.</p>}
                       <ul className="space-y-1.5">
                       {combatants.map((c, index) => (
                           <li key={c.id} ref={(el) => combatantRefs.current.set(c.id, el)}
@@ -794,13 +811,13 @@ export function CombatTrackerDrawer({
                                 </div>
                                 {c.type === 'enemy' && c.monsterIndex && (<Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={(e) => { e.stopPropagation(); handleOpenMonsterDetailDialog(c); }}><BookOpen className="h-4 w-4 text-muted-foreground" /></Button>)}
                             </div>
-                            {c.type === 'enemy' && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
+                            {(c.type === 'enemy' || (c.type === 'player' && c.hp !== undefined)) && c.hp !== undefined && c.hp > 0 && c.currentHp !== undefined && (
                               <div className={cn("mt-1 rounded-full", c.tempHp && c.tempHp > 0 && "ring-1 ring-blue-500 ring-offset-1 ring-offset-card p-px")}>
-                                <Progress value={Math.max(0, (c.currentHp / c.hp) * 100)} className="h-1.5 [&>div]:bg-destructive rounded-full" />
+                                <Progress value={Math.max(0, (c.currentHp / c.hp) * 100)} className={cn("h-1.5 [&>div]:rounded-full", c.type === 'enemy' ? "[&>div]:bg-destructive" : "[&>div]:bg-green-500")} />
                               </div>
                             )}
 
-                            {c.id === selectedCombatantId && c.type === 'enemy' && c.currentHp !== undefined && c.currentHp > 0 && (
+                            {c.id === selectedCombatantId && (c.type === 'enemy' || c.hp !== undefined) && c.currentHp !== undefined && c.currentHp > 0 && (
                               <div className="flex items-center justify-center gap-1.5 pt-1">
                                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c);}} title="Remove Combatant"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                   <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'damage'); }}><Swords className="mr-1 h-3 w-3" /> Hit</Button>
@@ -808,7 +825,7 @@ export function CombatTrackerDrawer({
                                   <Button size="sm" variant="outline" className="px-2 py-1 h-8 text-xs border-green-600 text-green-600 hover:bg-green-500/10 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleApplyDamage(c.id, 'heal'); }}><Bandage className="mr-1 h-3 w-3" /> Heal</Button>
                                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleAddTempHp(c.id);}} title="Add Temporary HP"><Shield className="h-4 w-4 text-blue-500"/></Button>
                               </div> )}
-                            {c.type === 'enemy' && c.currentHp !== undefined && c.currentHp <= 0 && (<Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>)}
+                            {(c.type === 'enemy' || c.hp !== undefined) && c.currentHp !== undefined && c.currentHp <= 0 && (<Button variant="destructive" className="w-full mt-1.5 py-1 h-auto text-sm" onClick={(e) => { e.stopPropagation(); handleOpenDeleteConfirm(c); }}><Skull className="mr-2 h-4 w-4" /> Dead (Remove)</Button>)}
                           </li> ))}
                       </ul>
                   </ScrollArea>
@@ -822,11 +839,10 @@ export function CombatTrackerDrawer({
             </div>
           </div>
         </div>
-        {/* Main Vertical Close Bar */}
         <button
           onClick={() => {
             onOpenChange(false);
-            setIsSecondaryPanelVisible(false); // Ensure secondary panel closes with main drawer
+            setIsSecondaryPanelVisible(false);
             setSecondaryPanelMode(null);
           }}
           className="absolute top-0 right-0 h-full w-8 bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center cursor-pointer z-[70]"
@@ -836,7 +852,6 @@ export function CombatTrackerDrawer({
         </button>
       </SheetContent>
 
-      {/* Favorite Monster Dialog (used by inline Add Enemy section) */}
       <Dialog open={isFavoriteMonsterDialogOpen} onOpenChange={setIsFavoriteMonsterDialogOpen}>
         <DialogContent className="max-w-md min-h-[480px] flex flex-col">
           <DialogHeader className="bg-primary text-primary-foreground p-4 rounded-t-md -mx-6 -mt-0 mb-4">
@@ -850,15 +865,13 @@ export function CombatTrackerDrawer({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Combatant Confirmation Dialog */}
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
-            <UIAlertDialogHeader><UIAlertDialogTitle>Remove Combatant?</UIAlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{combatantToDelete?.name}" from the combat?</AlertDialogDescription></UIAlertDialogHeader>
-            <UIAlertDialogFooter><AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteCombatant} className={cn(buttonVariants({variant: 'destructive'}))}>Remove</AlertDialogAction></UIAlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Remove Combatant?</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{combatantToDelete?.name}" from the combat?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel onClick={() => { setIsDeleteConfirmOpen(false); setCombatantToDelete(null); }}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteCombatant} className={cn(buttonVariants({variant: 'destructive'}))}>Remove</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Monster Detail Dialog */}
       <Dialog open={isMonsterDetailDialogOpen} onOpenChange={setIsMonsterDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -891,7 +904,7 @@ export function CombatTrackerDrawer({
                     {typeof detail.damage_vulnerabilities === 'string' && detail.damage_vulnerabilities.length > 0 ? <div><strong>Vulnerabilities:</strong> {detail.damage_vulnerabilities}</div> : Array.isArray(detail.damage_vulnerabilities) && detail.damage_vulnerabilities.length > 0 && <div><strong>Vulnerabilities:</strong> {detail.damage_vulnerabilities.join(', ')}</div>}
                     {typeof detail.damage_resistances === 'string' && detail.damage_resistances.length > 0 ? <div><strong>Resistances:</strong> {detail.damage_resistances}</div> : Array.isArray(detail.damage_resistances) && detail.damage_resistances.length > 0 && <div><strong>Resistances:</strong> {detail.damage_resistances.join(', ')}</div>}
                     {typeof detail.damage_immunities === 'string' && detail.damage_immunities.length > 0 ? <div><strong>Immunities:</strong> {detail.damage_immunities}</div> : Array.isArray(detail.damage_immunities) && detail.damage_immunities.length > 0 && <div><strong>Immunities:</strong> {detail.damage_immunities.join(', ')}</div>}
-                    {detail.condition_immunities && (typeof detail.condition_immunities === 'string' ? detail.condition_immunities.length > 0 : detail.condition_immunities.length > 0) && <div><strong>Condition Immunities:</strong> {(Array.isArray(detail.condition_immunities) && detail.condition_immunities.length > 0 && typeof detail.condition_immunities[0] !== 'string') ? (detail.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (Array.isArray(detail.condition_immunities) ? detail.condition_immunities.join(', ') : detail.condition_immunities) }</div>}
+                    {detail.condition_immunities && (typeof detail.condition_immunities === 'string' ? detail.condition_immunities.length > 0 : (Array.isArray(detail.condition_immunities) && detail.condition_immunities.length > 0)) && <div><strong>Condition Immunities:</strong> {(Array.isArray(detail.condition_immunities) && detail.condition_immunities.length > 0 && typeof detail.condition_immunities[0] !== 'string') ? (detail.condition_immunities as { index: string; name: string; url: string }[]).map(ci => ci.name).join(', ') : (Array.isArray(detail.condition_immunities) ? detail.condition_immunities.join(', ') : detail.condition_immunities) }</div>}
                     <div><strong>Senses:</strong> {typeof detail.senses === 'string' ? detail.senses : detail.senses ? Object.entries(detail.senses).map(([key, val]) => `${key.replace("_", " ")} ${val}`).join(', ') : 'N/A'}</div>
                     <div><strong>Languages:</strong> {detail.languages || "None"}</div>
 

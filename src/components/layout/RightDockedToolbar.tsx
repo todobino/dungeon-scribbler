@@ -20,17 +20,17 @@ import {
 import type { RollLogEntry, Combatant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Swords, Skull, ShieldQuestion, BookOpen, Store, UserPlus } from "lucide-react"; // Added Swords, Skull, ShieldQuestion, BookOpen, Store
+import { Swords, Skull, ShieldQuestion, BookOpen, Store, Beaker, UserPlus } from "lucide-react";
 import { useCampaign } from "@/contexts/campaign-context";
 
 
 export function RightDockedToolbar() {
   const [openDrawerId, setOpenDrawerId] = useState<string | null>(null);
-  const { activeCampaign, notifyEncounterUpdate, notifySavedEncountersUpdate } = useCampaign();
+  const { activeCampaign, activeCampaignParty, notifyEncounterUpdate, savedEncountersUpdateKey, notifySavedEncountersUpdate } = useCampaign();
 
   // Combatants state and handlers are now managed here
   const [combatants, setCombatants] = useState<Combatant[]>([]);
-  const combatUniqueId = useId();
+  const combatUniqueId = useId(); // Moved from CombinedToolDrawer
 
   const handleAddCombatant = useCallback((combatant: Combatant) => {
     setCombatants(prevCombatants =>
@@ -58,10 +58,6 @@ export function RightDockedToolbar() {
 
   const handleEndCombat = useCallback(() => {
     setCombatants([]);
-    // Optionally close the Combat Tracker Drawer if desired
-    // if (openDrawerId === COMBAT_TRACKER_DRAWER_ID) {
-    //   setOpenDrawerId(null);
-    // }
   }, []);
 
 
@@ -145,9 +141,9 @@ export function RightDockedToolbar() {
                     <p>{item.label}</p>
                   </TooltipContent>
                 </Tooltip>
-                 {item.id === COMBAT_TRACKER_DRAWER_ID && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
-                 {item.id === MONSTER_MASH_DRAWER_ID && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
-                 {item.id === SPELLBOOK_DRAWER_ID && !isLastItem && <Separator className="my-0.5 bg-border/70" />}
+                 {item.id === COMBAT_TRACKER_DRAWER_ID && <Separator className="my-0.5 bg-border/70" />}
+                 {item.id === MONSTER_MASH_DRAWER_ID && <Separator className="my-0.5 bg-border/70" />}
+                 {item.id === SPELLBOOK_DRAWER_ID && <Separator className="my-0.5 bg-border/70" />}
               </React.Fragment>
             );
           })}
@@ -157,9 +153,10 @@ export function RightDockedToolbar() {
       <CombatTrackerDrawer
         open={openDrawerId === COMBAT_TRACKER_DRAWER_ID}
         onOpenChange={(isOpen) => {
-            if(!isOpen) setOpenDrawerId(null);
+            if (!isOpen) setOpenDrawerId(null);
         }}
         activeCampaign={activeCampaign}
+        activeCampaignParty={activeCampaignParty}
         combatants={combatants}
         onAddCombatant={handleAddCombatant}
         onAddCombatants={handleAddCombatants}
@@ -169,6 +166,7 @@ export function RightDockedToolbar() {
         rollLog={rollLog}
         onInternalRoll={addRollToLog}
         onClearRollLog={handleClearRollLog}
+        savedEncountersUpdateKey={savedEncountersUpdateKey}
       />
       <MonsterMashDrawer
         open={openDrawerId === MONSTER_MASH_DRAWER_ID}
